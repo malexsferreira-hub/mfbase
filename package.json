@@ -1,0 +1,17 @@
+{
+  "name": "mfbase-server",
+  "version": "1.0.0",
+  "description": "MF Base (Touchline) — football scouting & recruitment database. Standalone server: static app + password gate + JSON API backed by Postgres.",
+  "private": true,
+  "main": "bin/www.js",
+  "scripts": {
+    "start": "node bin/www.js",
+    "test": "node lib/auth.test.js && node tests/server.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "pg": "^8.13.0"
+  }
+}

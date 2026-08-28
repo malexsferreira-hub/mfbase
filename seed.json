@@ -1,0 +1,3831 @@
+{
+  "schemaVersion": 1,
+  "scouts": [
+    {
+      "id": "scout-1",
+      "name": "Miguel Ferreira",
+      "email": "m.alexsferreira@gmail.com",
+      "role": "Scout"
+    }
+  ],
+  "currentScoutId": "scout-1",
+  "clubs": [],
+  "players": [],
+  "matches": [],
+  "matchPlayers": [],
+  "evaluations": [],
+  "playerNotes": [],
+  "fixtures": [
+    {
+      "id": "fx_1",
+      "date": "2026-08-11",
+      "time": "19:00",
+      "competition": "ACL Elite 2026- 2027",
+      "team1": "Aljazira UAE",
+      "team2": "Al Ittihad",
+      "venue": "Mohammed Bin Zayed Stadium (Abu Dhabi)",
+      "matchId": null
+    },
+    {
+      "id": "fx_2",
+      "date": "2026-08-17",
+      "time": "19:00",
+      "competition": "U20 NT Friendlies",
+      "team1": "Saudi Arabia",
+      "team2": "Palestine",
+      "venue": "Aspire Academy 5 Stadium (Doha)",
+      "matchId": null
+    },
+    {
+      "id": "fx_3",
+      "date": "2026-08-20",
+      "time": "19:00",
+      "competition": "U20 NT Friendlies",
+      "team1": "Saudi Arabia",
+      "team2": "Jordan",
+      "venue": "Aspire Academy 5 Stadium (Doha)",
+      "matchId": null
+    },
+    {
+      "id": "fx_4",
+      "date": "2026-08-24",
+      "time": "19:00",
+      "competition": "U20 NT Friendlies",
+      "team1": "Saudi Arabia",
+      "team2": "Syria",
+      "venue": "Aspire Academy 5 Stadium (Doha)",
+      "matchId": null
+    },
+    {
+      "id": "fx_5",
+      "date": "2026-08-25",
+      "time": "19:00",
+      "competition": "U17 NT Friendlies",
+      "team1": "Spain",
+      "team2": "Saudi Arabia",
+      "venue": "Campo Garden (Albir)",
+      "matchId": null
+    },
+    {
+      "id": "fx_6",
+      "date": "2026-08-26",
+      "time": "18:30",
+      "competition": "U16 NT Friendlies",
+      "team1": "Hungary",
+      "team2": "Saudi Arabia",
+      "venue": "Hungarian Football Federation Training Center (Telki)",
+      "matchId": null
+    },
+    {
+      "id": "fx_7",
+      "date": "2026-08-26",
+      "time": "21:00",
+      "competition": "FIFA Intercontinental Cup 2026",
+      "team1": "Al Ahli",
+      "team2": "Auckland FC - NZL",
+      "venue": "Alinma Stadium at KASC (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_8",
+      "date": "2026-08-27",
+      "time": "19:00",
+      "competition": "U17 NT Friendlies",
+      "team1": "Saudi Arabia",
+      "team2": "Uruguay",
+      "venue": "Campo Garden (Albir)",
+      "matchId": null
+    },
+    {
+      "id": "fx_9",
+      "date": "2026-08-28",
+      "time": "17:45",
+      "competition": "U16 NT Friendlies",
+      "team1": "Saudi Arabia",
+      "team2": "Italy",
+      "venue": "Hungarian Football Federation Training Center (Telki)",
+      "matchId": null
+    },
+    {
+      "id": "fx_10",
+      "date": "2026-08-30",
+      "time": "19:00",
+      "competition": "U16 NT Friendlies",
+      "team1": "Turkey",
+      "team2": "Saudi Arabia",
+      "venue": "Hungarian Football Federation Training Center (Telki)",
+      "matchId": null
+    },
+    {
+      "id": "fx_11",
+      "date": "2026-08-30",
+      "time": "19:05",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Okhdood",
+      "team2": "Al Faisaly",
+      "venue": "Damac Club Stadium (Khamis Mushait)",
+      "matchId": null
+    },
+    {
+      "id": "fx_12",
+      "date": "2026-08-30",
+      "time": "19:05",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Najmah",
+      "team2": "NEOM",
+      "venue": "Department of Education Stadium (Unayzah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_13",
+      "date": "2026-08-30",
+      "time": "19:20",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Ansar",
+      "team2": "Al Fayha",
+      "venue": "Al-Ansar Club Stadium (Al-Madinah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_14",
+      "date": "2026-08-30",
+      "time": "19:20",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Ittihad",
+      "team2": "Al Tadamon",
+      "venue": "Al-Ittihad Club Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_15",
+      "date": "2026-08-30",
+      "time": "21:00",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Hilal",
+      "team2": "Al Kholood",
+      "venue": "Al-Hilal Club Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_16",
+      "date": "2026-08-31",
+      "time": "18:40",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Khaleej",
+      "team2": "Al Wehda",
+      "venue": "Al-Khaleej Club Stadium (Saihat)",
+      "matchId": null
+    },
+    {
+      "id": "fx_17",
+      "date": "2026-08-31",
+      "time": "18:40",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Ettifaq",
+      "team2": "Damac",
+      "venue": "Al-Ettifaq Club Stadium (Dammam)",
+      "matchId": null
+    },
+    {
+      "id": "fx_18",
+      "date": "2026-08-31",
+      "time": "18:50",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Riyadh",
+      "team2": "Al Qadisiyah",
+      "venue": "Al Riyadh Club Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_19",
+      "date": "2026-08-31",
+      "time": "19:00",
+      "competition": "AFC U-20 Championship qualification - 2027",
+      "team1": "Saudi Arabia",
+      "team2": "Hong Kong",
+      "venue": "Hamad bin Khalifa Stadium (Doha)",
+      "matchId": null
+    },
+    {
+      "id": "fx_20",
+      "date": "2026-08-31",
+      "time": "19:20",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Orobah",
+      "team2": "Al Taawoun",
+      "venue": "Al-Orobah Club Stadium (Al Jouf)",
+      "matchId": null
+    },
+    {
+      "id": "fx_21",
+      "date": "2026-08-31",
+      "time": "21:00",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Nassr",
+      "team2": "Al Jabalin",
+      "venue": "Al-Nassr Club Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_22",
+      "date": "2026-08-31",
+      "time": "21:00",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Ahli",
+      "team2": "Al Fateh",
+      "venue": "Al-Ahli Club Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_23",
+      "date": "2026-09-03",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Taawoun",
+      "team2": "Al Batin",
+      "venue": "Reserve of Taawoun Club Stadium (Buraidah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_24",
+      "date": "2026-09-03",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "AlUla",
+      "team2": "Al Ahli",
+      "venue": "Artificial stadium of Al Ula Club Academy (Al-Madinah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_25",
+      "date": "2026-09-03",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Khaleej",
+      "team2": "Najran",
+      "venue": "Reserve of Al-Khaleej Club Stadium (Saihat)",
+      "matchId": null
+    },
+    {
+      "id": "fx_26",
+      "date": "2026-09-03",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Najmah",
+      "team2": "Jeddah",
+      "venue": "Reserve of Alnajmah Club Stadium (Unayzah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_27",
+      "date": "2026-09-03",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Tai",
+      "team2": "Hetten",
+      "venue": "Artificial Turf Reserve of Al-Taee Club Stadium (Hail)",
+      "matchId": null
+    },
+    {
+      "id": "fx_28",
+      "date": "2026-09-03",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Orobah",
+      "team2": "Jeddah",
+      "venue": "Reserve of Al Orobah Club Stadium (Al Jouf)",
+      "matchId": null
+    },
+    {
+      "id": "fx_29",
+      "date": "2026-09-03",
+      "time": "19:00",
+      "competition": "AFC U-20 Championship qualification - 2027",
+      "team1": "Oman",
+      "team2": "Saudi Arabia",
+      "venue": "Hamad bin Khalifa Stadium (Doha)",
+      "matchId": null
+    },
+    {
+      "id": "fx_30",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Hilal",
+      "team2": "Abha",
+      "venue": "Al-Hilal Club Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_31",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Fateh",
+      "team2": "Al Riyadh",
+      "venue": "Reserve no. (3) of Alfateh Club Stadium (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_32",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "AlUla",
+      "team2": "Al Qadisiyah",
+      "venue": "Artificial stadium of Al Ula Club Academy (Al-Madinah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_33",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Shabab",
+      "team2": "Al Watan",
+      "venue": "Reserve Stadium in Prince Faisal bin Fahad Sports City (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_34",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Hazem",
+      "team2": "Al Nassr",
+      "venue": "Reserve of Alhazm Club Stadium (Al-Ras)",
+      "matchId": null
+    },
+    {
+      "id": "fx_35",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Orobah",
+      "team2": "Al Ahli",
+      "venue": "Reserve of Al Orobah Club Stadium (Al Jouf)",
+      "matchId": null
+    },
+    {
+      "id": "fx_36",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Qadisiyah",
+      "team2": "Al Batin",
+      "venue": "Artificial Turf Reserve of Al-Qadisiyah Club Stadium (Al-Khobar)",
+      "matchId": null
+    },
+    {
+      "id": "fx_37",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Riyadh",
+      "team2": "Al Ettifaq",
+      "venue": "Reserve of Al Riyadh Club Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_38",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Ittihad",
+      "team2": "Al Batin",
+      "venue": "Reserve No. (2) of Al-Ittihad Club Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_39",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Ettifaq",
+      "team2": "Ohod",
+      "venue": "Artificial Turf Reserve of Al-Ettifaq Club Stadium (Dammam)",
+      "matchId": null
+    },
+    {
+      "id": "fx_40",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Fateh",
+      "team2": "NEOM",
+      "venue": "Reserve of Alfateh Club Stadium No. (1) (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_41",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Adalah",
+      "team2": "Al Qadisiyah",
+      "venue": "Reserve of Prince Abdullah Bin Jalawi Sport City Stadium (3) (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_42",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Nassr",
+      "team2": "Al Raed",
+      "venue": "Reserve of Al-Nassr Club Stadium\t (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_43",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Shabab",
+      "team2": "Al Watan",
+      "venue": "Al Sayegh Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_44",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Okhdood",
+      "team2": "Al Hilal",
+      "venue": "Reserve of Al Okhdood Club Stadium (Najran)",
+      "matchId": null
+    },
+    {
+      "id": "fx_45",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Taawoun",
+      "team2": "Al Riyadh",
+      "venue": "Reserve of Taawoun Club Stadium (Buraidah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_46",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Ohod",
+      "team2": "Al Qala",
+      "venue": "Ohood Club Stadium (Al-Madinah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_47",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "NEOM",
+      "team2": "Al Jabalin",
+      "venue": "Artificial Turf Reserve Stadium at King Khalid Sport City (Tabuk)",
+      "matchId": null
+    },
+    {
+      "id": "fx_48",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Ansar",
+      "team2": "Al Adalah",
+      "venue": "Al-Ansar Club Stadium (Al-Madinah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_49",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Rawdah",
+      "team2": "Hajer",
+      "venue": "Alrawdah Club Stadium (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_50",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Wehda",
+      "team2": "Al Safa",
+      "venue": "Al-Wehda Club Stadium (Makkah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_51",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Jeel",
+      "team2": "ALQUNFIDAH",
+      "venue": "Reserve of Prince Abdullah Bin Jalawi Sport City Stadium (1) (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_52",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Khaleej",
+      "team2": "Abha",
+      "venue": "Reserve of Al-Khaleej Club Stadium (Saihat)",
+      "matchId": null
+    },
+    {
+      "id": "fx_53",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Fayha",
+      "team2": "Al Diraiyah",
+      "venue": "ALFAYHA Reserved Club Stadium (Al-Mjmaah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_54",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Tai",
+      "team2": "Al Jeel",
+      "venue": "Artificial Turf Reserve of Al-Taee Club Stadium (Hail)",
+      "matchId": null
+    },
+    {
+      "id": "fx_55",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Mowtwa",
+      "team2": "Al Wehda",
+      "venue": "Al Motawa Park Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_56",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Fao",
+      "team2": "Ajial Academy",
+      "venue": "Prince Nasser Bin Abdul Aziz Sport City Stadium (Wadi Addawasir)",
+      "matchId": null
+    },
+    {
+      "id": "fx_57",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Majd Alqunfudhah",
+      "team2": "Al Zulfi",
+      "venue": "Hope and Future Academy Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_58",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Safa",
+      "team2": "Al Jabalin",
+      "venue": "Reserve artificial of Al Safa Club Stadium (Safwa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_59",
+      "date": "2026-09-04",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Najmah",
+      "team2": "Hajer",
+      "venue": "Reserve of Alnajmah Club Stadium (Unayzah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_60",
+      "date": "2026-09-04",
+      "time": "19:15",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Ittihad",
+      "team2": "Al Raed",
+      "venue": "Reserve No. (1) of Al-Ittihad Club Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_61",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Qadisiyah",
+      "team2": "Al Hazem",
+      "venue": "Reserve of Al-Qadisiyah Club Stadium (Al-Khobar)",
+      "matchId": null
+    },
+    {
+      "id": "fx_62",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Nassr",
+      "team2": "Al Shabab",
+      "venue": "Al-Nassr Club Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_63",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Taawoun",
+      "team2": "Al Fayha",
+      "venue": "Old Taawoun Club Stadium (Buraidah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_64",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Riyadh",
+      "team2": "Al Ettifaq",
+      "venue": "Reserve of Al Riyadh Club Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_65",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Hilal",
+      "team2": "Muhayil",
+      "venue": "Al-Hilal Club Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_66",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Fateh",
+      "team2": "Al Watan",
+      "venue": "Reserve of Alfateh Club Stadium No. (1) (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_67",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Ettifaq",
+      "team2": "Al Fayha",
+      "venue": "Reserve of Al-Ettifaq Club Stadium (Dammam)",
+      "matchId": null
+    },
+    {
+      "id": "fx_68",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Ittihad",
+      "team2": "Al Watan",
+      "venue": "Reserve No. (2) of Al-Ittihad Club Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_69",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Hilal",
+      "team2": "Al Raed",
+      "venue": "Reserve No. (2) of Al-Hilal Club Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_70",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "AlUla",
+      "team2": "Al Khaleej",
+      "venue": "Artificial stadium of Al Ula Club Academy (Al-Madinah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_71",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Nassr",
+      "team2": "Ohod",
+      "venue": "Reserve of Al-Nassr Club Stadium\t (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_72",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Okhdood",
+      "team2": "Al Ahli",
+      "venue": "Reserve of Al Okhdood Club Stadium (Najran)",
+      "matchId": null
+    },
+    {
+      "id": "fx_73",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Fayha",
+      "team2": "Al Fateh",
+      "venue": "ALFAYHA Reserved Club Stadium (Al-Mjmaah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_74",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Taawoun",
+      "team2": "Al Shabab",
+      "venue": "Reserve Stadium in King Abdullah City (Buraidah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_75",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Jabalin",
+      "team2": "Al Rawdah",
+      "venue": "Aljableen Club Stadium (Hail)",
+      "matchId": null
+    },
+    {
+      "id": "fx_76",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Batin",
+      "team2": "Al Tai",
+      "venue": "Reserve of Al Batin Club Stadium (Hafar Al Batin)",
+      "matchId": null
+    },
+    {
+      "id": "fx_77",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Najmah",
+      "team2": "Al Amjad",
+      "venue": "Reserve of Alnajmah Club Stadium (Unayzah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_78",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Ansar",
+      "team2": "Al Arabi",
+      "venue": "Reserve of Al Ansar Club Stadium (Al-Madinah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_79",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Khaleej",
+      "team2": "Damac",
+      "venue": "Reserve of Al-Khaleej Club Stadium (Saihat)",
+      "matchId": null
+    },
+    {
+      "id": "fx_80",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "NEOM",
+      "team2": "Abha",
+      "venue": "Reserve Stadium at King Khalid Sport City (Tabuk)",
+      "matchId": null
+    },
+    {
+      "id": "fx_81",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Jeel",
+      "team2": "Al Shary",
+      "venue": "Reserve of Prince Abdullah Bin Jalawi Sport City Stadium (1) (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_82",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Wehda",
+      "team2": "Hajer",
+      "venue": "Al-Wehda Club Stadium (Makkah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_83",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Al Jabalin",
+      "team2": "Al Fao",
+      "venue": "Reserve of Aljableen Club Stadium (Hail)",
+      "matchId": null
+    },
+    {
+      "id": "fx_84",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Al Jeel",
+      "team2": "Jeddah",
+      "venue": "Reserve of Prince Abdullah Bin Jalawi Sport City Stadium (3) (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_85",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Al Safa",
+      "team2": "Al Adalah",
+      "venue": "Reserve artificial of Al Safa Club Stadium (Safwa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_86",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Radwa",
+      "team2": "Qassim",
+      "venue": "radwa Club Stadium (Yanbu)",
+      "matchId": null
+    },
+    {
+      "id": "fx_87",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Al Tai",
+      "team2": "Al Bukiryah",
+      "venue": "Artificial Turf Reserve of Al-Taee Club Stadium (Hail)",
+      "matchId": null
+    },
+    {
+      "id": "fx_88",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "NEOM",
+      "team2": "Al Wehda",
+      "venue": "Artificial Turf Reserve Stadium at King Khalid Sport City (Tabuk)",
+      "matchId": null
+    },
+    {
+      "id": "fx_89",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Al Orobah",
+      "team2": "Al Noor",
+      "venue": "Reserve of Al Orobah Club Stadium (Al Jouf)",
+      "matchId": null
+    },
+    {
+      "id": "fx_90",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Majd Alqunfudhah",
+      "team2": "Al Zulfi",
+      "venue": "Hope and Future Academy Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_91",
+      "date": "2026-09-05",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Abha",
+      "team2": "Al Faisaly",
+      "venue": "Abha Club Stadium (Abha)",
+      "matchId": null
+    },
+    {
+      "id": "fx_92",
+      "date": "2026-09-05",
+      "time": "19:00",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Ahli",
+      "team2": "Al Raed",
+      "venue": "Reserve of Al-Ahli Club Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_93",
+      "date": "2026-09-05",
+      "time": "19:15",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Ittihad",
+      "team2": "Al Faisaly",
+      "venue": "Reserve No. (1) of Al-Ittihad Club Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_94",
+      "date": "2026-09-06",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Orobah",
+      "team2": "AlUla",
+      "venue": "Reserve of Al Orobah Club Stadium (Al Jouf)",
+      "matchId": null
+    },
+    {
+      "id": "fx_95",
+      "date": "2026-09-06",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Adalah",
+      "team2": "Al Qala",
+      "venue": "Reserve of Prince Abdullah Bin Jalawi Sport City Stadium (1) (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_96",
+      "date": "2026-09-06",
+      "time": "18:30",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Qadisiyah",
+      "team2": "Al Ettifaq",
+      "venue": "Prince Saud Bin Jalawi Sport City Stadium (Al-Khobar)",
+      "matchId": null
+    },
+    {
+      "id": "fx_97",
+      "date": "2026-09-06",
+      "time": "18:35",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Fateh",
+      "team2": "Al Nassr",
+      "venue": "MAYDAN TAMWEEL ALOULA (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_98",
+      "date": "2026-09-06",
+      "time": "18:50",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Fayha",
+      "team2": "Al Hazem",
+      "venue": "ALFAYHA Club Stadium (Al-Mjmaah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_99",
+      "date": "2026-09-06",
+      "time": "19:00",
+      "competition": "AFC U-20 Championship qualification - 2027",
+      "team1": "Saudi Arabia",
+      "team2": "Qatar",
+      "venue": "Abdullah bin Khalifa Stadium (Doha)",
+      "matchId": null
+    },
+    {
+      "id": "fx_100",
+      "date": "2026-09-06",
+      "time": "19:25",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "NEOM",
+      "team2": "Al Okhdood",
+      "venue": "King Khalid Sport City Stadium (Tabuk)",
+      "matchId": null
+    },
+    {
+      "id": "fx_101",
+      "date": "2026-09-06",
+      "time": "21:00",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Jabalin",
+      "team2": "Al Ahli",
+      "venue": "Prince Abdul Aziz Bin Masaad Bin Jalawi Sport City Stadium (Hail)",
+      "matchId": null
+    },
+    {
+      "id": "fx_102",
+      "date": "2026-09-06",
+      "time": "21:00",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Wehda",
+      "team2": "Al Ittihad",
+      "venue": "King Abdul Aziz Sport City Stadium (Makkah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_103",
+      "date": "2026-09-07",
+      "time": "16:10",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Tadamon",
+      "team2": "Al Khaleej",
+      "venue": "Prince Abdullah Bin Masaad Sport City Stadium (Arar)",
+      "matchId": null
+    },
+    {
+      "id": "fx_104",
+      "date": "2026-09-07",
+      "time": "18:50",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Faisaly",
+      "team2": "Al Najmah",
+      "venue": "Majmaah Sports City (Al-Mjmaah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_105",
+      "date": "2026-09-07",
+      "time": "18:55",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Watan",
+      "team2": "Al Ansar",
+      "venue": "King Faisal Sport City Stadium (Jazan)",
+      "matchId": null
+    },
+    {
+      "id": "fx_106",
+      "date": "2026-09-07",
+      "time": "19:00",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Kholood",
+      "team2": "Al Orobah",
+      "venue": "Alhazm Club Stadium (Al-Ras)",
+      "matchId": null
+    },
+    {
+      "id": "fx_107",
+      "date": "2026-09-07",
+      "time": "19:00",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Damac",
+      "team2": "Al Riyadh",
+      "venue": "Damac Club Stadium (Khamis Mushait)",
+      "matchId": null
+    },
+    {
+      "id": "fx_108",
+      "date": "2026-09-07",
+      "time": "21:00",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Taawoun",
+      "team2": "Al Hilal",
+      "venue": "Taawoun Club Stadium (Buraidah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_109",
+      "date": "2026-09-10",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Watan",
+      "team2": "Al Ahli",
+      "venue": "Damad Municipality Stadium (Damad)",
+      "matchId": null
+    },
+    {
+      "id": "fx_110",
+      "date": "2026-09-10",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Ettifaq",
+      "team2": "Al Ittihad",
+      "venue": "Reserve of Al-Ettifaq Club Stadium (Dammam)",
+      "matchId": null
+    },
+    {
+      "id": "fx_111",
+      "date": "2026-09-10",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "AlUla",
+      "team2": "Al Qadisiyah",
+      "venue": "Artificial stadium of Al Ula Club Academy (Al-Madinah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_112",
+      "date": "2026-09-10",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Raed",
+      "team2": "Al Fateh",
+      "venue": "Old ALRAED Club Stadium (Buraidah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_113",
+      "date": "2026-09-10",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Fayha",
+      "team2": "Al Ittihad",
+      "venue": "ALFAYHA Reserved Club Stadium (Al-Mjmaah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_114",
+      "date": "2026-09-10",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Riyadh",
+      "team2": "Al Shabab",
+      "venue": "Reserve of Al Riyadh Club Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_115",
+      "date": "2026-09-10",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Ahli",
+      "team2": "Al Qadisiyah",
+      "venue": "Al-Ahli Club Academy Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_116",
+      "date": "2026-09-10",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Raed",
+      "team2": "Al Okhdood",
+      "venue": "Reserve artificial of ALRAED Club Stadium (Buraidah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_117",
+      "date": "2026-09-10",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Batin",
+      "team2": "Al Taawoun",
+      "venue": "Al Batin Club Academy Stadium (Hafar Al Batin)",
+      "matchId": null
+    },
+    {
+      "id": "fx_118",
+      "date": "2026-09-10",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Ohod",
+      "team2": "Al Taawoun",
+      "venue": "Reserve of Ohood Club Stadium (Al-Madinah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_119",
+      "date": "2026-09-10",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Hajer",
+      "team2": "Ohod",
+      "venue": "Reserve artificial of Hajer Club Stadium (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_120",
+      "date": "2026-09-10",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Jabalin",
+      "team2": "Al Najmah",
+      "venue": "Reserve of Aljableen Club Stadium (Hail)",
+      "matchId": null
+    },
+    {
+      "id": "fx_121",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Hazem",
+      "team2": "Al Riyadh",
+      "venue": "Reserve of Alhazm Club Stadium (Al-Ras)",
+      "matchId": null
+    },
+    {
+      "id": "fx_122",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Raed",
+      "team2": "Al Orobah",
+      "venue": "Old ALRAED Club Stadium (Buraidah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_123",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Muhayil",
+      "team2": "Al Nassr",
+      "venue": "Muhayil Club Stadium (Mahayil Asir)",
+      "matchId": null
+    },
+    {
+      "id": "fx_124",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Faisaly",
+      "team2": "Al Taawoun",
+      "venue": "AlFaisaly Club Stadium (Harmah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_125",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Fayha",
+      "team2": "Al Hilal",
+      "venue": "ALFAYHA Reserved Club Stadium (Al-Mjmaah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_126",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Shabab",
+      "team2": "Al Fateh",
+      "venue": "Reserve Stadium in Prince Faisal bin Fahad Sports City (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_127",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Nassr",
+      "team2": "Al Hilal",
+      "venue": "Reserve of Al-Nassr Club Stadium\t (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_128",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Watan",
+      "team2": "Al Taawoun",
+      "venue": "Damad Municipality Stadium (Damad)",
+      "matchId": null
+    },
+    {
+      "id": "fx_129",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Batin",
+      "team2": "Al Orobah",
+      "venue": "Al Batin Club Academy Stadium (Hafar Al Batin)",
+      "matchId": null
+    },
+    {
+      "id": "fx_130",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Ahli",
+      "team2": "Al Hazem",
+      "venue": "Reserve of Al-Ahli Club Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_131",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Abha",
+      "team2": "AlUla",
+      "venue": "Artificial Turf Reserve at Prince Sultan Bin Abdul Aziz Sport City (Abha)",
+      "matchId": null
+    },
+    {
+      "id": "fx_132",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Fateh",
+      "team2": "Al Ittihad",
+      "venue": "Reserve no. (3) of Alfateh Club Stadium (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_133",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Ohod",
+      "team2": "Al Hilal",
+      "venue": "Reserve of Ohood Club Stadium (Al-Madinah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_134",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Ettifaq",
+      "team2": "AlUla",
+      "venue": "Artificial Turf Reserve of Al-Ettifaq Club Stadium (Dammam)",
+      "matchId": null
+    },
+    {
+      "id": "fx_135",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Khaleej",
+      "team2": "Al Nassr",
+      "venue": "Reserve of Al-Khaleej Club Stadium (Saihat)",
+      "matchId": null
+    },
+    {
+      "id": "fx_136",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Shabab",
+      "team2": "Al Fayha",
+      "venue": "Al Sayegh Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_137",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Hilal",
+      "team2": "Al Ittihad",
+      "venue": "Reserve No. (2) of Al-Hilal Club Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_138",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Qadisiyah",
+      "team2": "Al Nassr",
+      "venue": "Artificial Turf Reserve of Al-Qadisiyah Club Stadium (Al-Khobar)",
+      "matchId": null
+    },
+    {
+      "id": "fx_139",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Raed",
+      "team2": "Al Shabab",
+      "venue": "Reserve artificial of ALRAED Club Stadium (Buraidah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_140",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "NEOM",
+      "team2": "AlUla",
+      "venue": "Artificial Turf Reserve Stadium at King Khalid Sport City (Tabuk)",
+      "matchId": null
+    },
+    {
+      "id": "fx_141",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Riyadh",
+      "team2": "Al Okhdood",
+      "venue": "Reserve of Al Riyadh Club Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_142",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Damac",
+      "team2": "Al Ansar",
+      "venue": "Reserve Stadium (2)  at Prince Sultan Bin Abdul Aziz Sport City (Abha)",
+      "matchId": null
+    },
+    {
+      "id": "fx_143",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Safa",
+      "team2": "Al Tai",
+      "venue": "Reserve artificial of Al Safa Club Stadium (Safwa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_144",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Adalah",
+      "team2": "Al Khaleej",
+      "venue": "Reserve of Prince Abdullah Bin Jalawi Sport City Stadium (1) (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_145",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Jeddah",
+      "team2": "Al Ansar",
+      "venue": "Jeddah Club Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_146",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Najran",
+      "team2": "Al Rawdah",
+      "venue": "Theep Stadium at Najran Club (Najran)",
+      "matchId": null
+    },
+    {
+      "id": "fx_147",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Qala",
+      "team2": "Al Jeel",
+      "venue": "Alqala Club Stadium (Al Jouf)",
+      "matchId": null
+    },
+    {
+      "id": "fx_148",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "ALQUNFIDAH",
+      "team2": "Al Wehda",
+      "venue": "Department of Education Stadium (Al Qunfudhah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_149",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Hetten",
+      "team2": "NEOM",
+      "venue": "Department of Education Stadium (Jazan)",
+      "matchId": null
+    },
+    {
+      "id": "fx_150",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Al Fao",
+      "team2": "Al Jeel",
+      "venue": "Prince Nasser Bin Abdul Aziz Sport City Stadium (Wadi Addawasir)",
+      "matchId": null
+    },
+    {
+      "id": "fx_151",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Jeddah",
+      "team2": "Al Khaleej",
+      "venue": "Reserve artificial Stadium (1) in King Abdullah Sports City (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_152",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Jabalin",
+      "team2": "Al Fayha",
+      "venue": "Reserve of Aljableen Club Stadium (Hail)",
+      "matchId": null
+    },
+    {
+      "id": "fx_153",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Zulfi",
+      "team2": "Al Tai",
+      "venue": "Reserve of Al Zulfi Club Stadium (Al Zulfi)",
+      "matchId": null
+    },
+    {
+      "id": "fx_154",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Wehda",
+      "team2": "Al Fao",
+      "venue": "Artificial Turf Reserve Stadium at King Abdul Aziz Sport City (Makkah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_155",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Ajial Academy",
+      "team2": "Majd Alqunfudhah",
+      "venue": "Reserve of Al Orobah Club Stadium (Al Jouf)",
+      "matchId": null
+    },
+    {
+      "id": "fx_156",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Jeel",
+      "team2": "Al Safa",
+      "venue": "Reserve of Prince Abdullah Bin Jalawi Sport City Stadium (2) (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_157",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Diraiyah",
+      "team2": "Al Najmah",
+      "venue": "O15 Academy Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_158",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Hajer",
+      "team2": "Al Orobah",
+      "venue": "Reserve artificial of Hajer Club Stadium (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_159",
+      "date": "2026-09-11",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Abha",
+      "team2": "Al Mowtwa",
+      "venue": "Abha Club Stadium (Abha)",
+      "matchId": null
+    },
+    {
+      "id": "fx_160",
+      "date": "2026-09-11",
+      "time": "18:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Qadisiyah",
+      "team2": "Al Ettifaq",
+      "venue": "Reserve of Al-Qadisiyah Club Stadium (Al-Khobar)",
+      "matchId": null
+    },
+    {
+      "id": "fx_161",
+      "date": "2026-09-11",
+      "time": "20:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Watan",
+      "team2": "Al Riyadh",
+      "venue": "Damad Municipality Stadium (Damad)",
+      "matchId": null
+    },
+    {
+      "id": "fx_162",
+      "date": "2026-09-12",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Ahli",
+      "team2": "Al Ettifaq",
+      "venue": "Al-Ahli Club Academy Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_163",
+      "date": "2026-09-12",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Watan",
+      "team2": "Al Fateh",
+      "venue": "Damad Municipality Stadium (Damad)",
+      "matchId": null
+    },
+    {
+      "id": "fx_164",
+      "date": "2026-09-12",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Batin",
+      "team2": "Al Adalah",
+      "venue": "Al Batin Club Academy Stadium (Hafar Al Batin)",
+      "matchId": null
+    },
+    {
+      "id": "fx_165",
+      "date": "2026-09-12",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Hajer",
+      "team2": "NEOM",
+      "venue": "Hajer Club Stadium (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_166",
+      "date": "2026-09-12",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Rawdah",
+      "team2": "Al Batin",
+      "venue": "Alrawdah Club Stadium (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_167",
+      "date": "2026-09-12",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Qala",
+      "team2": "Al Jabalin",
+      "venue": "Alqala Club Stadium (Al Jouf)",
+      "matchId": null
+    },
+    {
+      "id": "fx_168",
+      "date": "2026-09-12",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Shary",
+      "team2": "Al Najmah",
+      "venue": "Prince Nasser Bin Abdul Aziz Sport City Stadium (Wadi Addawasir)",
+      "matchId": null
+    },
+    {
+      "id": "fx_169",
+      "date": "2026-09-12",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Abha",
+      "team2": "Al Khaleej",
+      "venue": "Reserve Stadium (2)  at Prince Sultan Bin Abdul Aziz Sport City (Abha)",
+      "matchId": null
+    },
+    {
+      "id": "fx_170",
+      "date": "2026-09-12",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Arabi",
+      "team2": "Al Jeel",
+      "venue": "Al-Arabi Club Stadium (Unayzah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_171",
+      "date": "2026-09-12",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Amjad",
+      "team2": "Al Adalah",
+      "venue": "Reserve Stadium (2) in King Faisal Sport City (Jazan)",
+      "matchId": null
+    },
+    {
+      "id": "fx_172",
+      "date": "2026-09-12",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Tai",
+      "team2": "Al Wehda",
+      "venue": "Artificial Turf Reserve of Al-Taee Club Stadium (Hail)",
+      "matchId": null
+    },
+    {
+      "id": "fx_173",
+      "date": "2026-09-12",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Al Faisaly",
+      "team2": "NEOM",
+      "venue": "AlFaisaly Club Stadium (Harmah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_174",
+      "date": "2026-09-12",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Al Zulfi",
+      "team2": "Al Jabalin",
+      "venue": "Reserve of Al Zulfi Club Stadium (Al Zulfi)",
+      "matchId": null
+    },
+    {
+      "id": "fx_175",
+      "date": "2026-09-12",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Al Noor",
+      "team2": "Al Safa",
+      "venue": "Reserve Stadium at Prince Nayef Bin Abdul Aziz Sport City (Al Qatif)",
+      "matchId": null
+    },
+    {
+      "id": "fx_176",
+      "date": "2026-09-12",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Al Bukiryah",
+      "team2": "Radwa",
+      "venue": "Reserve of Al Bukayriyah Club Stadium (Al Bukayriyah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_177",
+      "date": "2026-09-12",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Al Wehda",
+      "team2": "Al Tai",
+      "venue": "Artificial Turf Reserve Stadium at King Abdul Aziz Sport City (Makkah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_178",
+      "date": "2026-09-12",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Qassim",
+      "team2": "Al Orobah",
+      "venue": "Al-Mahara Academy Stadium (Aldlemiyah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_179",
+      "date": "2026-09-12",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Al Adalah",
+      "team2": "Majd Alqunfudhah",
+      "venue": "Reserve of Prince Abdullah Bin Jalawi Sport City Stadium (2) (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_180",
+      "date": "2026-09-12",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Jeddah",
+      "team2": "Abha",
+      "venue": "Jeddah Club Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_181",
+      "date": "2026-09-13",
+      "time": "18:25",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Khaleej",
+      "team2": "Damac",
+      "venue": "Al-Khaleej Club Stadium (Saihat)",
+      "matchId": null
+    },
+    {
+      "id": "fx_182",
+      "date": "2026-09-13",
+      "time": "18:25",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Ettifaq",
+      "team2": "Al Wehda",
+      "venue": "Al-Ettifaq Club Stadium (Dammam)",
+      "matchId": null
+    },
+    {
+      "id": "fx_183",
+      "date": "2026-09-13",
+      "time": "18:35",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Riyadh",
+      "team2": "Al Tadamon",
+      "venue": "Al Riyadh Club Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_184",
+      "date": "2026-09-13",
+      "time": "18:35",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Nassr",
+      "team2": "Al Fayha",
+      "venue": "Al-Nassr Club Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_185",
+      "date": "2026-09-13",
+      "time": "18:45",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Okhdood",
+      "team2": "Al Taawoun",
+      "venue": "Prince Hathloul Bin Abdul Aziz Sport City Stadium (Najran)",
+      "matchId": null
+    },
+    {
+      "id": "fx_186",
+      "date": "2026-09-13",
+      "time": "18:50",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Najmah",
+      "team2": "Al Kholood",
+      "venue": "Department of Education Stadium (Unayzah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_187",
+      "date": "2026-09-13",
+      "time": "21:00",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Ahli",
+      "team2": "Al Watan",
+      "venue": "Al-Ahli Club Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_188",
+      "date": "2026-09-13",
+      "time": "21:00",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Hilal",
+      "team2": "NEOM",
+      "venue": "Al-Hilal Club Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_189",
+      "date": "2026-09-14",
+      "time": "18:50",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Hazem",
+      "team2": "Al Fateh",
+      "venue": "Alhazm Club Stadium (Al-Ras)",
+      "matchId": null
+    },
+    {
+      "id": "fx_190",
+      "date": "2026-09-14",
+      "time": "19:00",
+      "competition": "ACL Elite 2026- 2027",
+      "team1": "AlShamal - Qatar",
+      "team2": "Al Ittihad",
+      "venue": "Al Bayt Stadium (Al Khor)",
+      "matchId": null
+    },
+    {
+      "id": "fx_191",
+      "date": "2026-09-14",
+      "time": "19:05",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Ansar",
+      "team2": "Al Jabalin",
+      "venue": "Al-Ansar Club Stadium (Al-Madinah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_192",
+      "date": "2026-09-14",
+      "time": "19:05",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Orobah",
+      "team2": "Al Faisaly",
+      "venue": "Al-Orobah Club Stadium (Al Jouf)",
+      "matchId": null
+    },
+    {
+      "id": "fx_193",
+      "date": "2026-09-14",
+      "time": "21:00",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Ittihad",
+      "team2": "Al Qadisiyah",
+      "venue": "Al-Ittihad Club Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_194",
+      "date": "2026-09-14",
+      "time": "21:15",
+      "competition": "ACL Elite 2026- 2027",
+      "team1": "Al Ahli",
+      "team2": "Pakhtakor - Uzbekistan",
+      "venue": "Alinma Stadium at KASC (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_195",
+      "date": "2026-09-14",
+      "time": "21:15",
+      "competition": "ACL Elite 2026- 2027",
+      "team1": "Al Qadisiyah",
+      "team2": "Al-Wasl UAE",
+      "venue": "Prince Mohamed bin Fahd Stadium (Dammam)",
+      "matchId": null
+    },
+    {
+      "id": "fx_196",
+      "date": "2026-09-15",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Raed",
+      "team2": "Al Watan",
+      "venue": "Old ALRAED Club Stadium (Buraidah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_197",
+      "date": "2026-09-15",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Riyadh",
+      "team2": "AlUla",
+      "venue": "Reserve of Al Riyadh Club Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_198",
+      "date": "2026-09-15",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Nassr",
+      "team2": "Al Fayha",
+      "venue": "Al-Nassr Club Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_199",
+      "date": "2026-09-15",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Taawoun",
+      "team2": "Al Ettifaq",
+      "venue": "Old Taawoun Club Stadium (Buraidah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_200",
+      "date": "2026-09-15",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Fateh",
+      "team2": "Muhayil",
+      "venue": "Reserve of Alfateh Club Stadium No. (1) (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_201",
+      "date": "2026-09-15",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Hilal",
+      "team2": "Al Hazem",
+      "venue": "Al-Hilal Club Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_202",
+      "date": "2026-09-15",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Fateh",
+      "team2": "Al Fayha",
+      "venue": "Reserve no. (3) of Alfateh Club Stadium (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_203",
+      "date": "2026-09-15",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Ittihad",
+      "team2": "Al Qadisiyah",
+      "venue": "Reserve No. (1) of Al-Ittihad Club Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_204",
+      "date": "2026-09-15",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Ettifaq",
+      "team2": "Abha",
+      "venue": "Reserve of Al-Ettifaq Club Stadium (Dammam)",
+      "matchId": null
+    },
+    {
+      "id": "fx_205",
+      "date": "2026-09-15",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Shabab",
+      "team2": "Al Raed",
+      "venue": "Reserve Stadium in Prince Faisal bin Fahad Sports City (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_206",
+      "date": "2026-09-15",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Orobah",
+      "team2": "Al Watan",
+      "venue": "Reserve of Al Orobah Club Stadium (Al Jouf)",
+      "matchId": null
+    },
+    {
+      "id": "fx_207",
+      "date": "2026-09-15",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Ahli",
+      "team2": "Al Batin",
+      "venue": "Reserve of Al-Ahli Club Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_208",
+      "date": "2026-09-15",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Qadisiyah",
+      "team2": "Al Raed",
+      "venue": "Artificial Turf Reserve of Al-Qadisiyah Club Stadium (Al-Khobar)",
+      "matchId": null
+    },
+    {
+      "id": "fx_209",
+      "date": "2026-09-15",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Hilal",
+      "team2": "Al Khaleej",
+      "venue": "Reserve No. (2) of Al-Hilal Club Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_210",
+      "date": "2026-09-15",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Nassr",
+      "team2": "Al Ettifaq",
+      "venue": "Reserve of Al-Nassr Club Stadium\t (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_211",
+      "date": "2026-09-15",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "AlUla",
+      "team2": "Al Watan",
+      "venue": "Artificial stadium of Al Ula Club Academy (Al-Madinah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_212",
+      "date": "2026-09-15",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Okhdood",
+      "team2": "Ohod",
+      "venue": "Reserve of Al Okhdood Club Stadium (Najran)",
+      "matchId": null
+    },
+    {
+      "id": "fx_213",
+      "date": "2026-09-15",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Taawoun",
+      "team2": "Al Ahli",
+      "venue": "Reserve of Taawoun Club Stadium (Buraidah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_214",
+      "date": "2026-09-15",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Shabab",
+      "team2": "Al Batin",
+      "venue": "Al Sayegh Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_215",
+      "date": "2026-09-15",
+      "time": "19:00",
+      "competition": "ACL Elite 2026- 2027",
+      "team1": "ALAIN -UAE",
+      "team2": "Al Nassr",
+      "venue": "Hazza Bin Zayed Stadium (Al Ain)",
+      "matchId": null
+    },
+    {
+      "id": "fx_216",
+      "date": "2026-09-15",
+      "time": "19:05",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Ittihad",
+      "team2": "Al Fayha",
+      "venue": "Reserve No. (2) of Al-Ittihad Club Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_217",
+      "date": "2026-09-15",
+      "time": "20:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Ahli",
+      "team2": "Al Shabab",
+      "venue": "Reserve of Al-Ahli Club Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_218",
+      "date": "2026-09-15",
+      "time": "20:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Hilal",
+      "team2": "Al Faisaly",
+      "venue": "Al-Hilal Club Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_219",
+      "date": "2026-09-15",
+      "time": "20:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Qadisiyah",
+      "team2": "Al Orobah",
+      "venue": "Reserve of Al-Qadisiyah Club Stadium (Al-Khobar)",
+      "matchId": null
+    },
+    {
+      "id": "fx_220",
+      "date": "2026-09-15",
+      "time": "20:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Taawoun",
+      "team2": "Al Riyadh",
+      "venue": "Reserve of Taawoun Club Stadium (Buraidah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_221",
+      "date": "2026-09-15",
+      "time": "20:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "AlUla",
+      "team2": "Al Nassr",
+      "venue": "Artificial stadium of Al Ula Club Academy (Al-Madinah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_222",
+      "date": "2026-09-15",
+      "time": "20:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Riyadh",
+      "team2": "Al Fateh",
+      "venue": "Reserve of Al Riyadh Club Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_223",
+      "date": "2026-09-15",
+      "time": "21:00",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Ittihad",
+      "team2": "Al Hazem",
+      "venue": "Reserve No. (1) of Al-Ittihad Club Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_224",
+      "date": "2026-09-15",
+      "time": "21:15",
+      "competition": "ACL Elite 2026- 2027",
+      "team1": "Al Hilal",
+      "team2": "AlGharafa - Qatar",
+      "venue": "Kingdom Arena (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_225",
+      "date": "2026-09-16",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Ittihad",
+      "team2": "Al Okhdood",
+      "venue": "Reserve No. (2) of Al-Ittihad Club Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_226",
+      "date": "2026-09-16",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Ettifaq",
+      "team2": "NEOM",
+      "venue": "Artificial Turf Reserve of Al-Ettifaq Club Stadium (Dammam)",
+      "matchId": null
+    },
+    {
+      "id": "fx_227",
+      "date": "2026-09-16",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Fateh",
+      "team2": "Al Raed",
+      "venue": "Reserve of Alfateh Club Stadium No. (1) (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_228",
+      "date": "2026-09-16",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Shabab",
+      "team2": "Al Qadisiyah",
+      "venue": "Al Sayegh Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_229",
+      "date": "2026-09-16",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Nassr",
+      "team2": "Al Batin",
+      "venue": "Reserve of Al-Nassr Club Stadium\t (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_230",
+      "date": "2026-09-16",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "AlUla",
+      "team2": "Al Watan",
+      "venue": "Artificial stadium of Al Ula Club Academy (Al-Madinah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_231",
+      "date": "2026-09-16",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Adalah",
+      "team2": "Al Hilal",
+      "venue": "Reserve of Prince Abdullah Bin Jalawi Sport City Stadium (3) (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_232",
+      "date": "2026-09-16",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Taawoun",
+      "team2": "Al Ahli",
+      "venue": "Reserve of Taawoun Club Stadium (Buraidah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_233",
+      "date": "2026-09-16",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Riyadh",
+      "team2": "Ohod",
+      "venue": "Reserve of Al Riyadh Club Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_234",
+      "date": "2026-09-16",
+      "time": "19:00",
+      "competition": "ACL Two 2026- 2027",
+      "team1": "AL NAHDA OMA",
+      "team2": "Al Taawoun",
+      "venue": "Sultan Qaboos Sports Complex (Muscat)",
+      "matchId": null
+    },
+    {
+      "id": "fx_235",
+      "date": "2026-09-17",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Khaleej",
+      "team2": "Jeddah",
+      "venue": "Reserve of Al-Khaleej Club Stadium (Saihat)",
+      "matchId": null
+    },
+    {
+      "id": "fx_236",
+      "date": "2026-09-17",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "ALQUNFIDAH",
+      "team2": "Al Qala",
+      "venue": "Department of Education Stadium (Al Qunfudhah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_237",
+      "date": "2026-09-17",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Tai",
+      "team2": "Al Wehda",
+      "venue": "Artificial Turf Reserve of Al-Taee Club Stadium (Hail)",
+      "matchId": null
+    },
+    {
+      "id": "fx_238",
+      "date": "2026-09-17",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Najmah",
+      "team2": "Al Jabalin",
+      "venue": "Reserve of Alnajmah Club Stadium (Unayzah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_239",
+      "date": "2026-09-18",
+      "time": "13:30",
+      "competition": "Football at the Asian Games -Nagoya 2026",
+      "team1": "Saudi Arabia",
+      "team2": "Qatar",
+      "venue": "Paloma Mizuho Stadium (Nagoya)",
+      "matchId": null
+    },
+    {
+      "id": "fx_240",
+      "date": "2026-09-18",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Ohod",
+      "team2": "Najran",
+      "venue": "Ohood Club Stadium (Al-Madinah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_241",
+      "date": "2026-09-18",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Ansar",
+      "team2": "Al Jabalin",
+      "venue": "Al-Ansar Club Stadium (Al-Madinah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_242",
+      "date": "2026-09-18",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Najmah",
+      "team2": "Hetten",
+      "venue": "Reserve of Alnajmah Club Stadium (Unayzah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_243",
+      "date": "2026-09-18",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Rawdah",
+      "team2": "Al Adalah",
+      "venue": "Alrawdah Club Stadium (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_244",
+      "date": "2026-09-18",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "NEOM",
+      "team2": "Al Safa",
+      "venue": "Artificial Turf Reserve Stadium at King Khalid Sport City (Tabuk)",
+      "matchId": null
+    },
+    {
+      "id": "fx_245",
+      "date": "2026-09-18",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Jeel",
+      "team2": "Hajer",
+      "venue": "Reserve of Prince Abdullah Bin Jalawi Sport City Stadium (1) (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_246",
+      "date": "2026-09-18",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Al Orobah",
+      "team2": "Al Bukiryah",
+      "venue": "Reserve of Al Orobah Club Stadium (Al Jouf)",
+      "matchId": null
+    },
+    {
+      "id": "fx_247",
+      "date": "2026-09-18",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Khaleej",
+      "team2": "Al Orobah",
+      "venue": "Reserve of Al-Khaleej Club Stadium (Saihat)",
+      "matchId": null
+    },
+    {
+      "id": "fx_248",
+      "date": "2026-09-18",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Fayha",
+      "team2": "Al Jeel",
+      "venue": "ALFAYHA Reserved Club Stadium (Al-Mjmaah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_249",
+      "date": "2026-09-18",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Tai",
+      "team2": "Ajial Academy",
+      "venue": "Artificial Turf Reserve of Al-Taee Club Stadium (Hail)",
+      "matchId": null
+    },
+    {
+      "id": "fx_250",
+      "date": "2026-09-18",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Majd Alqunfudhah",
+      "team2": "Al Wehda",
+      "venue": "Hope and Future Academy Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_251",
+      "date": "2026-09-18",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Fao",
+      "team2": "Abha",
+      "venue": "Prince Nasser Bin Abdul Aziz Sport City Stadium (Wadi Addawasir)",
+      "matchId": null
+    },
+    {
+      "id": "fx_252",
+      "date": "2026-09-18",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Safa",
+      "team2": "Al Zulfi",
+      "venue": "Reserve artificial of Al Safa Club Stadium (Safwa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_253",
+      "date": "2026-09-18",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Mowtwa",
+      "team2": "Jeddah",
+      "venue": "Al Motawa Park Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_254",
+      "date": "2026-09-18",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Hajer",
+      "team2": "Al Diraiyah",
+      "venue": "Reserve artificial of Hajer Club Stadium (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_255",
+      "date": "2026-09-19",
+      "time": "16:00",
+      "competition": "FIFA Intercontinental Cup 2026",
+      "team1": "Mamelodi Sundowns",
+      "team2": "Al Ahli",
+      "venue": "Loftus Versfeld Stadium (Pretoria)",
+      "matchId": null
+    },
+    {
+      "id": "fx_256",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Faisaly",
+      "team2": "Al Riyadh",
+      "venue": "AlFaisaly Club Stadium (Harmah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_257",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "AlUla",
+      "team2": "Al Raed",
+      "venue": "Artificial stadium of Al Ula Club Academy (Al-Madinah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_258",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Taawoun",
+      "team2": "Muhayil",
+      "venue": "Old Taawoun Club Stadium (Buraidah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_259",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Shabab",
+      "team2": "Al Hilal",
+      "venue": "Reserve Stadium in Prince Faisal bin Fahad Sports City (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_260",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Ahli",
+      "team2": "Al Fateh",
+      "venue": "Reserve of Al-Ahli Club Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_261",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Qadisiyah",
+      "team2": "Al Hilal",
+      "venue": "Reserve of Al-Qadisiyah Club Stadium (Al-Khobar)",
+      "matchId": null
+    },
+    {
+      "id": "fx_262",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Orobah",
+      "team2": "Al Taawoun",
+      "venue": "Reserve of Al Orobah Club Stadium (Al Jouf)",
+      "matchId": null
+    },
+    {
+      "id": "fx_263",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Watan",
+      "team2": "Al Fateh",
+      "venue": "Damad Municipality Stadium (Damad)",
+      "matchId": null
+    },
+    {
+      "id": "fx_264",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Raed",
+      "team2": "Al Ettifaq",
+      "venue": "Old ALRAED Club Stadium (Buraidah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_265",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Ittihad",
+      "team2": "Al Riyadh",
+      "venue": "Reserve No. (1) of Al-Ittihad Club Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_266",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Hazem",
+      "team2": "Abha",
+      "venue": "Reserve of Alhazm Club Stadium (Al-Ras)",
+      "matchId": null
+    },
+    {
+      "id": "fx_267",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Ettifaq",
+      "team2": "Al Ittihad",
+      "venue": "Artificial Turf Reserve of Al-Ettifaq Club Stadium (Dammam)",
+      "matchId": null
+    },
+    {
+      "id": "fx_268",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Taawoun",
+      "team2": "Al Qadisiyah",
+      "venue": "Reserve of Taawoun Club Stadium (Buraidah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_269",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Ahli",
+      "team2": "Al Hilal",
+      "venue": "Al-Ahli Club Academy Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_270",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Ohod",
+      "team2": "AlUla",
+      "venue": "Reserve of Ohood Club Stadium (Al-Madinah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_271",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Nassr",
+      "team2": "Al Raed",
+      "venue": "Reserve of Al-Nassr Club Stadium\t (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_272",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Batin",
+      "team2": "Al Okhdood",
+      "venue": "Al Batin Club Academy Stadium (Hafar Al Batin)",
+      "matchId": null
+    },
+    {
+      "id": "fx_273",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Fateh",
+      "team2": "Al Shabab",
+      "venue": "Reserve no. (3) of Alfateh Club Stadium (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_274",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Fayha",
+      "team2": "Al Watan",
+      "venue": "ALFAYHA Reserved Club Stadium (Al-Mjmaah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_275",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-16 Premier League",
+      "team1": "Al Khaleej",
+      "team2": "Al Riyadh",
+      "venue": "Reserve of Al-Khaleej Club Stadium (Saihat)",
+      "matchId": null
+    },
+    {
+      "id": "fx_276",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Rawdah",
+      "team2": "Al Qala",
+      "venue": "Alrawdah Club Stadium (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_277",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Jabalin",
+      "team2": "Al Amjad",
+      "venue": "Aljableen Club Stadium (Hail)",
+      "matchId": null
+    },
+    {
+      "id": "fx_278",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "NEOM",
+      "team2": "Al Tai",
+      "venue": "Reserve Stadium at King Khalid Sport City (Tabuk)",
+      "matchId": null
+    },
+    {
+      "id": "fx_279",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Najmah",
+      "team2": "Al Arabi",
+      "venue": "Reserve of Alnajmah Club Stadium (Unayzah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_280",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Ansar",
+      "team2": "Abha",
+      "venue": "Reserve of Al Ansar Club Stadium (Al-Madinah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_281",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Jeel",
+      "team2": "Damac",
+      "venue": "Reserve of Prince Abdullah Bin Jalawi Sport City Stadium (1) (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_282",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Adalah",
+      "team2": "Al Shary",
+      "venue": "Reserve of Prince Abdullah Bin Jalawi Sport City Stadium (3) (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_283",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Wehda",
+      "team2": "Al Batin",
+      "venue": "Al-Wehda Club Stadium (Makkah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_284",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Al Fao",
+      "team2": "Al Zulfi",
+      "venue": "Prince Nasser Bin Abdul Aziz Sport City Stadium (Wadi Addawasir)",
+      "matchId": null
+    },
+    {
+      "id": "fx_285",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Al Jabalin",
+      "team2": "Al Adalah",
+      "venue": "Reserve of Aljableen Club Stadium (Hail)",
+      "matchId": null
+    },
+    {
+      "id": "fx_286",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "NEOM",
+      "team2": "Jeddah",
+      "venue": "Artificial Turf Reserve Stadium at King Khalid Sport City (Tabuk)",
+      "matchId": null
+    },
+    {
+      "id": "fx_287",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Al Safa",
+      "team2": "Qassim",
+      "venue": "Reserve artificial of Al Safa Club Stadium (Safwa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_288",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Al Tai",
+      "team2": "Al Faisaly",
+      "venue": "Artificial Turf Reserve of Al-Taee Club Stadium (Hail)",
+      "matchId": null
+    },
+    {
+      "id": "fx_289",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Radwa",
+      "team2": "Al Wehda",
+      "venue": "radwa Club Stadium (Yanbu)",
+      "matchId": null
+    },
+    {
+      "id": "fx_290",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Majd Alqunfudhah",
+      "team2": "Al Noor",
+      "venue": "Hope and Future Academy Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_291",
+      "date": "2026-09-19",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Abha",
+      "team2": "Al Jeel",
+      "venue": "Abha Club Stadium (Abha)",
+      "matchId": null
+    },
+    {
+      "id": "fx_292",
+      "date": "2026-09-19",
+      "time": "18:35",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Faisaly",
+      "team2": "Al Ittihad",
+      "venue": "Majmaah Sports City (Al-Mjmaah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_293",
+      "date": "2026-09-19",
+      "time": "18:40",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Taawoun",
+      "team2": "Al Riyadh",
+      "venue": "Taawoun Club Stadium (Buraidah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_294",
+      "date": "2026-09-19",
+      "time": "18:45",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Kholood",
+      "team2": "Al Ettifaq",
+      "venue": "Alhazm Club Stadium (Al-Ras)",
+      "matchId": null
+    },
+    {
+      "id": "fx_295",
+      "date": "2026-09-19",
+      "time": "19:00",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Wehda",
+      "team2": "Al Ansar",
+      "venue": "King Abdul Aziz Sport City Stadium (Makkah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_296",
+      "date": "2026-09-19",
+      "time": "19:10",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "NEOM",
+      "team2": "Al Khaleej",
+      "venue": "King Khalid Sport City Stadium (Tabuk)",
+      "matchId": null
+    },
+    {
+      "id": "fx_297",
+      "date": "2026-09-19",
+      "time": "20:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Watan",
+      "team2": "Al Nassr",
+      "venue": "Damad Municipality Stadium (Damad)",
+      "matchId": null
+    },
+    {
+      "id": "fx_298",
+      "date": "2026-09-19",
+      "time": "20:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Fayha",
+      "team2": "Al Ittihad",
+      "venue": "ALFAYHA Reserved Club Stadium (Al-Mjmaah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_299",
+      "date": "2026-09-19",
+      "time": "20:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Ettifaq",
+      "team2": "Al Qadisiyah",
+      "venue": "Reserve of Al-Ettifaq Club Stadium (Dammam)",
+      "matchId": null
+    },
+    {
+      "id": "fx_300",
+      "date": "2026-09-19",
+      "time": "20:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Khaleej",
+      "team2": "Hajer",
+      "venue": "Reserve of Al-Khaleej Club Stadium (Saihat)",
+      "matchId": null
+    },
+    {
+      "id": "fx_301",
+      "date": "2026-09-19",
+      "time": "21:00",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Damac",
+      "team2": "Al Nassr",
+      "venue": "Damac Club Stadium (Khamis Mushait)",
+      "matchId": null
+    },
+    {
+      "id": "fx_302",
+      "date": "2026-09-19",
+      "time": "21:00",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Jabalin",
+      "team2": "Al Hilal",
+      "venue": "Prince Abdul Aziz Bin Masaad Bin Jalawi Sport City Stadium (Hail)",
+      "matchId": null
+    },
+    {
+      "id": "fx_303",
+      "date": "2026-09-20",
+      "time": "16:30",
+      "competition": "Saudi U-18 Premier League",
+      "team1": "Al Orobah",
+      "team2": "Al Hazem",
+      "venue": "Reserve of Al Orobah Club Stadium (Al Jouf)",
+      "matchId": null
+    },
+    {
+      "id": "fx_304",
+      "date": "2026-09-20",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Batin",
+      "team2": "Al Shabab",
+      "venue": "Al Batin Club Academy Stadium (Hafar Al Batin)",
+      "matchId": null
+    },
+    {
+      "id": "fx_305",
+      "date": "2026-09-20",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Nassr",
+      "team2": "Al Ahli",
+      "venue": "Reserve of Al-Nassr Club Stadium\t (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_306",
+      "date": "2026-09-20",
+      "time": "16:30",
+      "competition": "Saudi U-17 Premier League",
+      "team1": "Al Fayha",
+      "team2": "AlUla",
+      "venue": "ALFAYHA Reserved Club Stadium (Al-Mjmaah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_307",
+      "date": "2026-09-20",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Qadisiyah",
+      "team2": "Al Ittihad",
+      "venue": "Artificial Turf Reserve of Al-Qadisiyah Club Stadium (Al-Khobar)",
+      "matchId": null
+    },
+    {
+      "id": "fx_308",
+      "date": "2026-09-20",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Taawoun",
+      "team2": "Al Ettifaq",
+      "venue": "Reserve of Taawoun Club Stadium (Buraidah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_309",
+      "date": "2026-09-20",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Ahli",
+      "team2": "Al Fateh",
+      "venue": "Al-Ahli Club Academy Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_310",
+      "date": "2026-09-20",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Watan",
+      "team2": "Al Nassr",
+      "venue": "Damad Municipality Stadium (Damad)",
+      "matchId": null
+    },
+    {
+      "id": "fx_311",
+      "date": "2026-09-20",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Shabab",
+      "team2": "NEOM",
+      "venue": "Al Sayegh Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_312",
+      "date": "2026-09-20",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Ohod",
+      "team2": "AlUla",
+      "venue": "Reserve of Ohood Club Stadium (Al-Madinah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_313",
+      "date": "2026-09-20",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Hilal",
+      "team2": "Al Riyadh",
+      "venue": "Reserve No. (2) of Al-Hilal Club Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_314",
+      "date": "2026-09-20",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Okhdood",
+      "team2": "Al Batin",
+      "venue": "Reserve of Al Okhdood Club Stadium (Najran)",
+      "matchId": null
+    },
+    {
+      "id": "fx_315",
+      "date": "2026-09-20",
+      "time": "16:30",
+      "competition": "Saudi U-15 Premier League",
+      "team1": "Al Raed",
+      "team2": "Al Adalah",
+      "venue": "Reserve artificial of ALRAED Club Stadium (Buraidah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_316",
+      "date": "2026-09-20",
+      "time": "17:15",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Tadamon",
+      "team2": "Al Hazem",
+      "venue": "Al Tadamun Club Stadium (Rafha)",
+      "matchId": null
+    },
+    {
+      "id": "fx_317",
+      "date": "2026-09-20",
+      "time": "18:20",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Fateh",
+      "team2": "Al Orobah",
+      "venue": "MAYDAN TAMWEEL ALOULA (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_318",
+      "date": "2026-09-20",
+      "time": "18:35",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Fayha",
+      "team2": "Al Najmah",
+      "venue": "Majmaah Sports City (Al-Mjmaah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_319",
+      "date": "2026-09-20",
+      "time": "18:45",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Watan",
+      "team2": "Al Okhdood",
+      "venue": "King Faisal Sport City Stadium (Jazan)",
+      "matchId": null
+    },
+    {
+      "id": "fx_320",
+      "date": "2026-09-20",
+      "time": "21:00",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Qadisiyah",
+      "team2": "Al Ahli",
+      "venue": "Prince Saud Bin Jalawi Sport City Stadium (Al-Khobar)",
+      "matchId": null
+    },
+    {
+      "id": "fx_321",
+      "date": "2026-09-22",
+      "time": "13:00",
+      "competition": "Football at the Asian Games -Nagoya 2026",
+      "team1": "Korea Republic",
+      "team2": "Saudi Arabia",
+      "venue": "Paloma Mizuho Stadium (Nagoya)",
+      "matchId": null
+    },
+    {
+      "id": "fx_322",
+      "date": "2026-09-23",
+      "time": "21:00",
+      "competition": "Gulf Cup 27",
+      "team1": "Saudi Arabia",
+      "team2": "Kuwait",
+      "venue": "Alinma Stadium at KASC (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_323",
+      "date": "2026-09-24",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Jabalin",
+      "team2": "Al Tai",
+      "venue": "Reserve of Aljableen Club Stadium (Hail)",
+      "matchId": null
+    },
+    {
+      "id": "fx_324",
+      "date": "2026-09-24",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Orobah",
+      "team2": "Abha",
+      "venue": "Reserve of Al Orobah Club Stadium (Al Jouf)",
+      "matchId": null
+    },
+    {
+      "id": "fx_325",
+      "date": "2026-09-25",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Abha",
+      "team2": "Al Wehda",
+      "venue": "Reserve Stadium (2)  at Prince Sultan Bin Abdul Aziz Sport City (Abha)",
+      "matchId": null
+    },
+    {
+      "id": "fx_326",
+      "date": "2026-09-25",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Jeel",
+      "team2": "Ohod",
+      "venue": "Reserve of Prince Abdullah Bin Jalawi Sport City Stadium (2) (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_327",
+      "date": "2026-09-25",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Hajer",
+      "team2": "Al Khaleej",
+      "venue": "Reserve artificial of Hajer Club Stadium (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_328",
+      "date": "2026-09-25",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Adalah",
+      "team2": "Al Najmah",
+      "venue": "Reserve of Prince Abdullah Bin Jalawi Sport City Stadium (1) (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_329",
+      "date": "2026-09-25",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Ansar",
+      "team2": "Najran",
+      "venue": "Al-Ansar Club Stadium (Al-Madinah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_330",
+      "date": "2026-09-25",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Qala",
+      "team2": "Al Rawdah",
+      "venue": "Alqala Club Stadium (Al Jouf)",
+      "matchId": null
+    },
+    {
+      "id": "fx_331",
+      "date": "2026-09-25",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Safa",
+      "team2": "ALQUNFIDAH",
+      "venue": "Reserve artificial of Al Safa Club Stadium (Safwa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_332",
+      "date": "2026-09-25",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Al Wehda",
+      "team2": "Hetten",
+      "venue": "Al-Wehda Club Stadium (Makkah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_333",
+      "date": "2026-09-25",
+      "time": "16:30",
+      "competition": "Saudi U-17 League Div.1",
+      "team1": "Jeddah",
+      "team2": "NEOM",
+      "venue": "Jeddah Club Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_334",
+      "date": "2026-09-25",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Wehda",
+      "team2": "Al Khaleej",
+      "venue": "Artificial Turf Reserve Stadium at King Abdul Aziz Sport City (Makkah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_335",
+      "date": "2026-09-25",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Najmah",
+      "team2": "Al Fayha",
+      "venue": "Reserve of Alnajmah Club Stadium (Unayzah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_336",
+      "date": "2026-09-25",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Jabalin",
+      "team2": "Al Tai",
+      "venue": "Reserve of Aljableen Club Stadium (Hail)",
+      "matchId": null
+    },
+    {
+      "id": "fx_337",
+      "date": "2026-09-25",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Zulfi",
+      "team2": "Al Fao",
+      "venue": "Reserve of Al Zulfi Club Stadium (Al Zulfi)",
+      "matchId": null
+    },
+    {
+      "id": "fx_338",
+      "date": "2026-09-25",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Majd Alqunfudhah",
+      "team2": "Al Jeel",
+      "venue": "Hope and Future Academy Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_339",
+      "date": "2026-09-25",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Al Diraiyah",
+      "team2": "Al Safa",
+      "venue": "O15 Academy Stadium (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_340",
+      "date": "2026-09-25",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Jeddah",
+      "team2": "Hajer",
+      "venue": "Reserve artificial Stadium (1) in King Abdullah Sports City (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_341",
+      "date": "2026-09-25",
+      "time": "16:30",
+      "competition": "Saudi U-15 League Div.1",
+      "team1": "Ajial Academy",
+      "team2": "Al Mowtwa",
+      "venue": "Reserve of Al Orobah Club Stadium (Al Jouf)",
+      "matchId": null
+    },
+    {
+      "id": "fx_342",
+      "date": "2026-09-26",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Damac",
+      "team2": "NEOM",
+      "venue": "Reserve Stadium (2)  at Prince Sultan Bin Abdul Aziz Sport City (Abha)",
+      "matchId": null
+    },
+    {
+      "id": "fx_343",
+      "date": "2026-09-26",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Batin",
+      "team2": "Hajer",
+      "venue": "Reserve of Al Batin Club Stadium (Hafar Al Batin)",
+      "matchId": null
+    },
+    {
+      "id": "fx_344",
+      "date": "2026-09-26",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Tai",
+      "team2": "Al Rawdah",
+      "venue": "Artificial Turf Reserve of Al-Taee Club Stadium (Hail)",
+      "matchId": null
+    },
+    {
+      "id": "fx_345",
+      "date": "2026-09-26",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Qala",
+      "team2": "Al Najmah",
+      "venue": "Alqala Club Stadium (Al Jouf)",
+      "matchId": null
+    },
+    {
+      "id": "fx_346",
+      "date": "2026-09-26",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Ansar",
+      "team2": "Al Shary",
+      "venue": "Reserve of Al Ansar Club Stadium (Al-Madinah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_347",
+      "date": "2026-09-26",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Arabi",
+      "team2": "Al Khaleej",
+      "venue": "Al-Arabi Club Stadium (Unayzah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_348",
+      "date": "2026-09-26",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Amjad",
+      "team2": "Al Jeel",
+      "venue": "Reserve Stadium (2) in King Faisal Sport City (Jazan)",
+      "matchId": null
+    },
+    {
+      "id": "fx_349",
+      "date": "2026-09-26",
+      "time": "16:30",
+      "competition": "Saudi U-18 League Div.1",
+      "team1": "Al Jabalin",
+      "team2": "Al Adalah",
+      "venue": "Aljableen Club Stadium (Hail)",
+      "matchId": null
+    },
+    {
+      "id": "fx_350",
+      "date": "2026-09-26",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Al Bukiryah",
+      "team2": "NEOM",
+      "venue": "Reserve of Al Bukayriyah Club Stadium (Al Bukayriyah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_351",
+      "date": "2026-09-26",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Jeddah",
+      "team2": "Al Fao",
+      "venue": "Jeddah Club Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_352",
+      "date": "2026-09-26",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Al Zulfi",
+      "team2": "Al Safa",
+      "venue": "Reserve of Al Zulfi Club Stadium (Al Zulfi)",
+      "matchId": null
+    },
+    {
+      "id": "fx_353",
+      "date": "2026-09-26",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Radwa",
+      "team2": "Al Noor",
+      "venue": "radwa Club Stadium (Yanbu)",
+      "matchId": null
+    },
+    {
+      "id": "fx_354",
+      "date": "2026-09-26",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Qassim",
+      "team2": "Al Tai",
+      "venue": "Al-Mahara Academy Stadium (Aldlemiyah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_355",
+      "date": "2026-09-26",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Al Adalah",
+      "team2": "Al Orobah",
+      "venue": "Reserve of Prince Abdullah Bin Jalawi Sport City Stadium (2) (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_356",
+      "date": "2026-09-26",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Al Jabalin",
+      "team2": "Majd Alqunfudhah",
+      "venue": "Reserve of Aljableen Club Stadium (Hail)",
+      "matchId": null
+    },
+    {
+      "id": "fx_357",
+      "date": "2026-09-26",
+      "time": "16:30",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Al Wehda",
+      "team2": "Abha",
+      "venue": "Artificial Turf Reserve Stadium at King Abdul Aziz Sport City (Makkah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_358",
+      "date": "2026-09-26",
+      "time": "19:25",
+      "competition": "Saudi U-16 League Div.1",
+      "team1": "Al Jeel",
+      "team2": "Al Faisaly",
+      "venue": "Reserve of Prince Abdullah Bin Jalawi Sport City Stadium (3) (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_359",
+      "date": "2026-09-26",
+      "time": "21:00",
+      "competition": "Gulf Cup 27",
+      "team1": "Oman",
+      "team2": "Saudi Arabia",
+      "venue": "Alinma Stadium at KASC (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_360",
+      "date": "2026-09-29",
+      "time": "20:30",
+      "competition": "Gulf Cup 27",
+      "team1": "Saudi Arabia",
+      "team2": "Iraq",
+      "venue": "Alinma Stadium at KASC (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_361",
+      "date": "2026-08-16",
+      "time": "19:15",
+      "competition": "King Cup",
+      "team1": "Al Bukiryah",
+      "team2": "Al Hazem",
+      "venue": "Al Bukayriyah Club Stadium (Al Bukayriyah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_362",
+      "date": "2026-08-16",
+      "time": "19:40",
+      "competition": "King Cup",
+      "team1": "Al Orobah",
+      "team2": "Abha",
+      "venue": "Al-Orobah Club Stadium (Al Jouf)",
+      "matchId": null
+    },
+    {
+      "id": "fx_363",
+      "date": "2026-08-16",
+      "time": "21:00",
+      "competition": "King Cup",
+      "team1": "Al Wehda",
+      "team2": "Al Shabab",
+      "venue": "King Abdul Aziz Sport City Stadium (Makkah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_364",
+      "date": "2026-08-18",
+      "time": "19:15",
+      "competition": "King Cup",
+      "team1": "Al Okhdood",
+      "team2": "Al Khaleej",
+      "venue": "Prince Sultan Bin Abdul Aziz Sport City Stadium (Abha)",
+      "matchId": null
+    },
+    {
+      "id": "fx_365",
+      "date": "2026-08-18",
+      "time": "19:15",
+      "competition": "King Cup",
+      "team1": "Al Jabalin",
+      "team2": "Al Ettifaq",
+      "venue": "Prince Abdul Aziz Bin Masaad Bin Jalawi Sport City Stadium (Hail)",
+      "matchId": null
+    },
+    {
+      "id": "fx_366",
+      "date": "2026-08-18",
+      "time": "19:15",
+      "competition": "King Cup",
+      "team1": "Al Najmah",
+      "team2": "Al Ittihad",
+      "venue": "King Abdullah Sport City Stadium (Buraidah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_367",
+      "date": "2026-08-18",
+      "time": "21:00",
+      "competition": "King Cup",
+      "team1": "Al Faisaly",
+      "team2": "NEOM",
+      "venue": "Majmaah Sports City (Al-Mjmaah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_368",
+      "date": "2026-08-18",
+      "time": "21:00",
+      "competition": "King Cup",
+      "team1": "Al Diraiyah",
+      "team2": "Al Nassr",
+      "venue": "ALAWWAL Park (Riyadh)",
+      "matchId": null
+    },
+    {
+      "id": "fx_369",
+      "date": "2026-08-19",
+      "time": "19:15",
+      "competition": "King Cup",
+      "team1": "Damac",
+      "team2": "Al Taawoun",
+      "venue": "Damac Club Stadium (Khamis Mushait)",
+      "matchId": null
+    },
+    {
+      "id": "fx_370",
+      "date": "2026-08-19",
+      "time": "19:30",
+      "competition": "King Cup",
+      "team1": "Jeddah",
+      "team2": "Al Kholood",
+      "venue": "Jeddah Club Stadium (Jeddah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_371",
+      "date": "2026-08-19",
+      "time": "21:00",
+      "competition": "King Cup",
+      "team1": "AlUla",
+      "team2": "Al Fateh",
+      "venue": "Prince Mohammed Bin Abdulaziz Sport City Stadium (Al-Madinah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_372",
+      "date": "2026-08-23",
+      "time": "16:45",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Tadamon",
+      "team2": "Al Ettifaq",
+      "venue": "Prince Abdullah Bin Masaad Sport City Stadium (Arar)",
+      "matchId": null
+    },
+    {
+      "id": "fx_373",
+      "date": "2026-08-23",
+      "time": "19:00",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Fayha",
+      "team2": "Al Ahli",
+      "venue": "Majmaah Sports City (Al-Mjmaah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_374",
+      "date": "2026-08-23",
+      "time": "19:00",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Taawoun",
+      "team2": "Al Najmah",
+      "venue": "Taawoun Club Stadium (Buraidah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_375",
+      "date": "2026-08-23",
+      "time": "19:20",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Wehda",
+      "team2": "Al Riyadh",
+      "venue": "King Abdul Aziz Sport City Stadium (Makkah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_376",
+      "date": "2026-08-23",
+      "time": "19:40",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "NEOM",
+      "team2": "Al Orobah",
+      "venue": "ALWATANI Club Stadium (Tabuk)",
+      "matchId": null
+    },
+    {
+      "id": "fx_377",
+      "date": "2026-08-23",
+      "time": "21:15",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Jabalin",
+      "team2": "Al Hazem",
+      "venue": "Prince Abdul Aziz Bin Masaad Bin Jalawi Sport City Stadium (Hail)",
+      "matchId": null
+    },
+    {
+      "id": "fx_378",
+      "date": "2026-08-24",
+      "time": "18:45",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Qadisiyah",
+      "team2": "Al Khaleej",
+      "venue": "Prince Saud Bin Jalawi Sport City Stadium (Al-Khobar)",
+      "matchId": null
+    },
+    {
+      "id": "fx_379",
+      "date": "2026-08-24",
+      "time": "18:45",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Fateh",
+      "team2": "Al Ansar",
+      "venue": "MAYDAN TAMWEEL ALOULA (Al-Ahsa)",
+      "matchId": null
+    },
+    {
+      "id": "fx_380",
+      "date": "2026-08-24",
+      "time": "19:05",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Al Faisaly",
+      "team2": "Al Hilal",
+      "venue": "Majmaah Sports City (Al-Mjmaah)",
+      "matchId": null
+    },
+    {
+      "id": "fx_381",
+      "date": "2026-08-24",
+      "time": "21:15",
+      "competition": "Jawwy Elite League U-21",
+      "team1": "Damac",
+      "team2": "Al Ittihad",
+      "venue": "Damac Club Stadium (Khamis Mushait)",
+      "matchId": null
+    }
+  ],
+  "agendaTasks": []
+}
