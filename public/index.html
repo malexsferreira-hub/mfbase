@@ -3047,6 +3047,7 @@ function pageAgenda(){
           '<div class="inline-edit roster-name" style="'+(t.done?"text-decoration:line-through;color:var(--text-faint);font-weight:600":"")+'" data-field="text" data-edit-key="task-text" data-raw="'+escAttr(t.text)+'" data-id="'+t.id+'">'+esc(t.text)+'</div>'+
           (t.dueDate?'<div class="roster-chars">Due '+fmtDate(t.dueDate)+(t.dueTime?" · "+esc(t.dueTime):"")+'</div>':'')+
         '</div>'+
+        '<button class="icon-btn" data-action="edit-task" data-id="'+t.id+'" title="Edit task">'+ic("edit")+'</button>'+
         '<button class="icon-btn" data-action="delete-task" data-id="'+t.id+'" title="Delete task">'+ic("trash")+'</button>'+
       '</div>';
     });
@@ -3165,12 +3166,40 @@ function openTaskPreviewModal(taskId){
     (t.dueDate?'<div style="font-size:12.5px;color:var(--text-muted);margin-top:6px">Due '+esc(fmtDate(t.dueDate))+(t.dueTime?" · "+esc(t.dueTime):"")+'</div>':'<div style="font-size:12.5px;color:var(--text-faint);margin-top:6px">No due date</div>')+
   '</div>';
   html += '<div style="display:flex;gap:8px;margin-top:14px">'+
+    '<button class="btn btn-block" data-action="edit-task" data-id="'+t.id+'">'+ic("edit")+' Edit</button>'+
     '<button class="btn btn-block" data-action="toggle-task-done" data-id="'+t.id+'" data-close-modal>'+(t.done?"Mark Not Done":"Mark Done")+'</button>'+
-    '<button class="btn btn-danger btn-block" data-action="delete-task" data-id="'+t.id+'" data-close-modal>'+ic("trash")+' Delete</button>'+
-  '</div></div>';
+  '</div>'+
+  '<button class="btn btn-danger btn-block" style="margin-top:8px" data-action="delete-task" data-id="'+t.id+'" data-close-modal>'+ic("trash")+' Delete</button>'+
+  '</div>';
   openModal(html);
 }
 ACTIONS["open-task-preview"] = function(el){ openTaskPreviewModal(el.dataset.id); };
+function openEditTaskModal(taskId){
+  var t = byId(DB.agendaTasks,taskId);
+  if(!t) return;
+  var html = '<div class="modal-pad"><div class="modal-head"><div class="modal-title">Edit Task</div><button class="icon-btn" data-close-modal>'+ic("close")+'</button></div>';
+  html += '<form data-form="edit-agenda-task" data-id="'+t.id+'" class="stack">';
+  html += '<div class="field"><label class="field-label">Task</label><input class="input" name="text" value="'+escAttr(t.text)+'" placeholder="What do you need to do?" required autofocus></div>';
+  html += '<div class="form-grid"><div class="field"><label class="field-label">Due Date</label><input class="input" type="date" name="dueDate" value="'+escAttr(t.dueDate||"")+'"></div>'+
+    '<div class="field"><label class="field-label">Time <span class="opt">optional</span></label><input class="input" type="time" name="dueTime" value="'+escAttr(t.dueTime||"")+'"></div></div>';
+  html += '<div style="display:flex;gap:8px"><button class="btn btn-primary btn-block" type="submit">Save Changes</button><button type="button" class="btn" data-action="cancel-edit-task" data-id="'+t.id+'">Cancel</button></div>';
+  html += '</form></div>';
+  openModal(html);
+}
+ACTIONS["edit-task"] = function(el){ openEditTaskModal(el.dataset.id); };
+ACTIONS["cancel-edit-task"] = function(){ closeModal(); };
+FORM_HANDLERS["edit-agenda-task"] = function(form){
+  var t = byId(DB.agendaTasks,form.dataset.id);
+  if(!t) return;
+  var fd = new FormData(form);
+  var text = (fd.get("text")||"").trim();
+  if(!text) return;
+  t.text = text;
+  t.dueDate = fd.get("dueDate")||"";
+  t.dueTime = fd.get("dueTime")||"";
+  closeModal();
+  persist({toast:"Task updated"});
+};
 
 /* ============================================================
    PAGE: ADD / EDIT MATCH
