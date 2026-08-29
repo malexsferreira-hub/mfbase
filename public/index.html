@@ -519,6 +519,15 @@ details.acc summary .count-chip{background:var(--surface-3);color:var(--text-mut
   .search-wrap{max-width:none;}
   .topbar-actions .btn-label{display:none;}
   .dash-header-actions{display:none;}
+  /* Filter bars (Matches/Players Database): smaller pills, tighter gaps, wrapping into
+     compact rows below the search box instead of sprawling across the page. */
+  .filterbar{justify-content:flex-start;gap:5px;}
+  .filter-toggle{padding:5px 9px;font-size:11px;min-height:28px;}
+  #mf_q,#pf_q{width:100%!important;}
+  /* iOS Safari zooms the whole page in on focus of any text field under 16px, and often fails
+     to zoom back out cleanly, leaving the layout looking broken until the user pinches back out.
+     Forcing every field to 16px on small screens stops it from triggering in the first place. */
+  input,select,textarea{font-size:16px!important;}
 }
 @media (max-width:480px){
   .stat-grid{grid-template-columns:repeat(2,1fr);}
@@ -1858,13 +1867,13 @@ function pagePlayers(){
   html += '<div style="margin-bottom:8px"><input class="input" style="width:280px;min-height:36px;border-radius:99px" id="pf_q" placeholder="Search name, club, nationality…" value="'+escAttr(f.q)+'"></div>';
   html += '<div class="filterbar">';
   html += renderMSF("players","position","Position",POSITIONS);
-  html += renderMSF("players","birthYear","Birth Year",birthYears);
+  html += renderMSF("players","status",STATUS_FIELD_LABEL,PLAYER_STATUSES);
   html += renderMSF("players","club","Club",clubOptions);
   html += renderMSF("players","nationality","Nationality",nationalities);
   html += renderMSF("players","foot","Foot",FEET);
+  html += renderMSF("players","birthYear","Birth Year",birthYears);
   html += renderMSF("players","performance","Performance",perfValues);
   html += renderMSF("players","potential","Potential",potValues);
-  html += renderMSF("players","status",STATUS_FIELD_LABEL,PLAYER_STATUSES);
   if(f.q||msfActive(f)) html += '<button class="filter-toggle" id="pf_clear">Clear all</button>';
   html += '</div>';
 
@@ -2070,10 +2079,12 @@ function pagePlayerDetail(id){
         '<div class="profile-photo-badge">'+ic("edit")+'</div>'+
         '<input type="file" accept="image/*" data-photo-input="'+p.id+'" class="profile-photo-input-native" title="Click to change photo">'+
       '</div>'+
-      '<div class="profile-pos-row profile-name-under-photo">'+esc(p.name)+'</div>'+
+      '<div class="profile-pos-row profile-name-under-photo inline-edit" data-field="name" data-edit-key="player-name" data-raw="'+escAttr(p.name||"")+'" data-id="'+p.id+'" title="Click to rename">'+esc(p.name)+'</div>'+
     '</div>'+
     '<div class="profile-info">'+
-      '<div class="profile-pos-heading">'+badgePos(p.firstPosition,true)+(p.secondPosition?badgePos(p.secondPosition,true):"")+'</div>'+
+      '<div class="profile-pos-heading" style="position:relative">'+badgePos(p.firstPosition,true)+(p.secondPosition?badgePos(p.secondPosition,true):"")+
+        '<select class="ring-select-overlay" style="border-radius:8px" data-action-select="set-player-position" data-id="'+p.id+'" title="Click to change position"><option value="">–</option>'+POSITIONS.map(function(pos){return '<option value="'+pos+'"'+(pos===p.firstPosition?" selected":"")+'>'+pos+'</option>';}).join("")+'</select>'+
+      '</div>'+
       '<div class="profile-meta">'+
         '<span class="profile-club inline-edit" data-field="birthYear" data-edit-key="player-birthYear" data-raw="'+escAttr(byYear||"")+'" data-id="'+p.id+'"><b>Born</b> '+(byYear?byYear:"—")+'</span>'+
         '<span class="profile-club"><b>Foot</b> '+footSelectHtml+'</span>'+
@@ -2214,6 +2225,12 @@ function sparkBlock(label,evals){
 
 ACTIONS["edit-player"] = function(el){ navigate("#/players/"+encodeURIComponent(el.dataset.id)+"/edit"); };
 
+INLINE_EDIT_HANDLERS["player-name"] = function(el,val){
+  var p = playerById(el.dataset.id); if(!p) return;
+  val = String(val||"").trim();
+  if(!val){ render(); return; } // never allow an empty name — just revert
+  p.name = val; p.updatedAt = nowISO(); persist({});
+};
 INLINE_EDIT_HANDLERS["player-birthYear"] = function(el,val){
   var p = playerById(el.dataset.id); if(!p) return;
   val = String(val||"").trim();
@@ -2251,6 +2268,12 @@ function wirePlayerProfileSelects(){
     sel.addEventListener("change",function(){
       var p = playerById(sel.dataset.id); if(!p) return;
       p.preferredFoot = sel.value||""; p.updatedAt = nowISO(); persist({});
+    });
+  });
+  document.querySelectorAll('[data-action-select="set-player-position"]').forEach(function(sel){
+    sel.addEventListener("change",function(){
+      var p = playerById(sel.dataset.id); if(!p) return;
+      p.firstPosition = sel.value||""; p.updatedAt = nowISO(); persist({});
     });
   });
   document.querySelectorAll('[data-action-select="set-player-status"]').forEach(function(sel){
@@ -2494,8 +2517,8 @@ function pageMatches(){
 
   var html='<div class="stack">';
   html += '<div class="section-head"><div><div class="eyebrow">'+DB.matches.length+' total</div><h1 style="font-size:22px">Matches Database</h1></div><a class="btn btn-primary" href="#/matches/new">'+ic("plus")+' Add Match</a></div>';
+  html += '<div style="margin-bottom:8px"><input class="input" style="width:200px;min-height:36px;border-radius:99px" id="mf_q" placeholder="Search teams, competition…" value="'+escAttr(f.q)+'"></div>';
   html += '<div class="filterbar">';
-  html += '<input class="input" style="width:200px;min-height:36px;border-radius:99px" id="mf_q" placeholder="Search teams, competition…" value="'+escAttr(f.q)+'">';
   html += renderMSF("matches","competition","Competitions",competitions);
   html += renderMSF("matches","club","Club",clubOptions);
   html += renderMSF("matches","players","Players",interestPlayerOptions());
@@ -2603,6 +2626,10 @@ function addFixtureToAgenda(fixtureId,opts){
   };
   DB.matches.push(m);
   fx.matchId = m.id;
+  // SAFF calendar fixtures never carry a country of their own — they're all Saudi Arabian
+  // competitions, so default it here (unless the scout already set something different for
+  // this exact competition name) rather than leaving the abbreviation permanently blank.
+  if(fx.competition && !DB.competitionCountries[fx.competition]) DB.competitionCountries[fx.competition] = "Saudi Arabia";
   return m;
 }
 function openAddToAgendaModal(fixtureId){
