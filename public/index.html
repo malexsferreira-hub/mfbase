@@ -213,11 +213,15 @@ input.eval-param-input{width:44px;min-height:28px;padding:2px 4px;text-align:cen
 .dash-day-col.today .dash-day-head{color:var(--accent-strong);}
 .dash-agenda-item{display:flex;align-items:center;gap:5px;padding:3px 2px;}
 .dash-agenda-empty{padding:4px 2px;color:var(--text-faint);font-size:11px;}
+/* mobile-only day switcher (prev/today.tomorrow/next) — hidden on desktop, shown and the
+   3-day grid collapsed to one visible column in the max-width:860px block further down */
+.dash-day-nav{display:none;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;}
+.dash-day-nav-label{font-size:12.5px;font-weight:700;color:var(--text);}
+.icon-btn:disabled{opacity:.3;cursor:default;}
 
-/* ---------- dashboard: quick notes ---------- */
-.dash-note-row{display:flex;align-items:flex-start;gap:8px;padding:8px 4px;border-radius:var(--radius-sm);}
-.dash-note-row:hover{background:var(--surface-2);}
-.dash-note-date{font-size:10.5px;color:var(--text-faint);margin-top:2px;}
+/* ---------- dashboard: notes scratchpad ---------- */
+.dash-notes-card{display:flex;flex-direction:column;}
+.dash-notes-textarea{min-height:190px;}
 
 /* ---------- badges / pills ---------- */
 .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700;letter-spacing:.02em;white-space:nowrap;line-height:1.6;}
@@ -382,7 +386,6 @@ td.num,th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric
 .cal-chip-match-watched{background:var(--accent-soft);color:var(--accent-strong);}
 .cal-chip-task{background:var(--blue-soft);color:var(--blue);}
 .cal-chip-task.done{background:var(--silver-soft);color:var(--silver);text-decoration:line-through;opacity:.85;}
-.cal-chip-note{background:var(--gold-soft);color:var(--gold);}
 .cal-cell-add{margin-top:auto;align-self:flex-start;background:none;border:1px dashed var(--border);border-radius:6px;padding:1px 5px;cursor:pointer;color:var(--text-faint);display:flex;align-items:center;}
 .cal-cell-add svg{width:11px;height:11px;}
 .star-btn{background:none;border:0;cursor:pointer;font-size:18px;color:var(--border-strong);padding:6px;line-height:1;}
@@ -514,8 +517,13 @@ details.acc summary .count-chip{background:var(--surface-3);color:var(--text-mut
   .lineup-cols{grid-template-columns:1fr;}
   .form-grid{grid-template-columns:1fr;}
   .dash-grid{grid-template-columns:1fr;}
-  .dash-3day{gap:2px;}
-  .dash-day-head{font-size:9.5px;}
+  /* Agenda strip: 3 side-by-side columns don't fit legibly on an iPhone-width screen, so show
+     one day at a time (driven by DASH_AGENDA_DAY_OFFSET) with prev/next arrows instead. */
+  .dash-day-nav{display:flex;}
+  .dash-3day{display:block;}
+  .dash-day-col{display:none;}
+  .dash-day-col.mobile-active{display:block;}
+  .dash-day-col .dash-day-head{display:none;}
   .rating-grid{grid-template-columns:1fr;}
   .kv-grid{grid-template-columns:repeat(2,1fr);}
   .profile-head{flex-direction:column;align-items:center;text-align:center;}
@@ -632,7 +640,7 @@ var LAST_SYNCED_UPDATED_AT = null;
 // to a local cached copy only if the network request itself fails outright (e.g. briefly offline),
 // so the app can still open in a degraded, local-only state rather than showing a blank page.
 async function loadInitialData(){
-  var fallbackSeed = {schemaVersion:1,scouts:[{id:"scout-1",name:"Miguel Ferreira",email:"m.alexsferreira@gmail.com",role:"Scout"}],currentScoutId:"scout-1",clubs:[],players:[],matches:[],matchPlayers:[],evaluations:[],playerNotes:[],fixtures:[],agendaTasks:[],quickNotes:[]};
+  var fallbackSeed = {schemaVersion:1,scouts:[{id:"scout-1",name:"Miguel Ferreira",email:"m.alexsferreira@gmail.com",role:"Scout"}],currentScoutId:"scout-1",clubs:[],players:[],matches:[],matchPlayers:[],evaluations:[],playerNotes:[],fixtures:[],agendaTasks:[],dashboardNote:""};
   var seed = null;
   try{
     var res = await fetch("/api/db",{cache:"no-store",credentials:"same-origin"});
@@ -664,7 +672,12 @@ async function loadInitialData(){
   seed.playerNotes = seed.playerNotes || [];
   seed.fixtures = seed.fixtures || [];
   seed.agendaTasks = seed.agendaTasks || [];
-  seed.quickNotes = seed.quickNotes || [];
+  // dashboardNote replaced the earlier per-item quickNotes list with a single freeform
+  // scratchpad; fold over any quickNotes text so nothing typed there is lost.
+  if(seed.dashboardNote===undefined || seed.dashboardNote===null){
+    seed.dashboardNote = (seed.quickNotes||[]).map(function(n){return n.text;}).filter(Boolean).join("\n");
+  }
+  delete seed.quickNotes;
   seed.competitionCountries = seed.competitionCountries || {};
   return seed;
 }
@@ -1813,8 +1826,9 @@ function dashMatchRow(m){
     '</div></a>';
 }
 function dashPlayerRow(p){
+  var by = birthYearOf(p);
   return '<a class="roster-row" href="#/players/'+encodeURIComponent(p.id)+'" style="text-decoration:none;justify-content:space-between">'+
-    '<div style="display:flex;align-items:center;gap:9px;min-width:0">'+avatarHtml(p,28)+'<div style="min-width:0"><div class="roster-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(p.name)+'</div><div class="roster-chars">'+esc(posLabel(p.firstPosition)||"")+(p.clubId?" · "+esc(clubName(p.clubId)):"")+'</div></div></div>'+
+    '<div style="display:flex;align-items:center;gap:9px;min-width:0">'+avatarHtml(p,28)+'<div style="min-width:0"><div class="roster-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(p.name)+'</div><div class="roster-chars">'+esc(posLabel(p.firstPosition)||"")+(by?" · "+by:"")+(p.clubId?" · "+esc(clubName(p.clubId)):"")+'</div></div></div>'+
     '<div style="display:flex;align-items:center;gap:6px;flex:0 0 auto">'+(p.currentPerformance?ratingRing(p.currentPerformance,30):'')+(p.currentPotential?gradeRing(p.currentPotential,30):'')+'</div></a>';
 }
 function dashEvalRow(e){
@@ -1825,17 +1839,22 @@ function dashEvalRow(e){
     '<div style="text-align:right;min-width:0;max-width:150px"><div class="roster-name" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(clubName(m.homeClubId))+' – '+esc(clubName(m.awayClubId))+'</div><div class="roster-chars" style="text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(m.competition||"")+'</div></div>' :
     badgeRec(e.recommendation);
   return '<a class="roster-row" href="#/players/'+encodeURIComponent(p.id)+'" style="text-decoration:none;justify-content:space-between">'+
-    '<div style="display:flex;align-items:center;gap:9px;min-width:0">'+avatarHtml(p,28)+'<div style="min-width:0"><div class="roster-name">'+esc(p.name)+'</div><div class="roster-chars">'+badgeType(e.evaluationType)+' · '+fmtDateShort(e.date)+'</div></div></div>'+
+    '<div style="display:flex;align-items:center;gap:9px;min-width:0">'+avatarHtml(p,28)+'<div style="min-width:0"><div class="roster-name">'+esc(p.name)+'</div><div class="roster-chars">'+badgeType(e.evaluationType)+' · '+fmtDateShort(e.date)+(p.clubId?' · <span style="color:var(--blue);font-weight:600">'+esc(clubName(p.clubId))+'</span>':'')+'</div></div></div>'+
     right+'</a>';
 }
-/* ---------- 3-day agenda strip (yesterday / today / tomorrow) ---------- */
+/* ---------- 3-day agenda strip (yesterday / today / tomorrow) ----------
+   Desktop shows all 3 columns side by side. Mobile shows one day at a time
+   (DASH_AGENDA_DAY_OFFSET, -1/0/1) with prev/next arrows, since 3 columns
+   don't fit legibly on an iPhone-width screen. */
+var DASH_AGENDA_DAY_OFFSET = 0;
 function dashDayAgendaPanel(){
   var today = todayISO();
   var days = [
-    {key:shiftDateISO(today,-1), label:"Yesterday"},
-    {key:today, label:"Today"},
-    {key:shiftDateISO(today,1), label:"Tomorrow"}
+    {key:shiftDateISO(today,-1), label:"Yesterday", offset:-1},
+    {key:today, label:"Today", offset:0},
+    {key:shiftDateISO(today,1), label:"Tomorrow", offset:1}
   ];
+  var activeDay = days[DASH_AGENDA_DAY_OFFSET+1];
   var cols = days.map(function(d){
     var ms = DB.matches.filter(function(m){return agendaDateOf(m)===d.key;}).sort(function(a,b){return (a.time||"").localeCompare(b.time||"");});
     var ts = DB.agendaTasks.filter(function(t){return t.dueDate===d.key;}).sort(function(a,b){
@@ -1843,7 +1862,6 @@ function dashDayAgendaPanel(){
       if(ad!==bd) return ad-bd;
       return (a.dueTime||"99:99").localeCompare(b.dueTime||"99:99");
     });
-    var ns = DB.quickNotes.filter(function(n){return n.date===d.key;});
     var itemsHtml = "";
     ms.forEach(function(m){
       var chipClass = "cal-chip-mode-"+(m.observationMode||"LIVE");
@@ -1859,57 +1877,29 @@ function dashDayAgendaPanel(){
         '<span style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+(t.done?"text-decoration:line-through;color:var(--text-faint)":"")+'">'+esc(t.text)+'</span>'+
       '</div>';
     });
-    ns.forEach(function(n){
-      itemsHtml += '<div class="dash-agenda-item">'+
-        '<span class="cal-chip cal-chip-note" style="flex:0 0 auto">Note</span>'+
-        '<span style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(n.text)+'</span>'+
-      '</div>';
-    });
     if(!itemsHtml) itemsHtml = '<div class="dash-agenda-empty">Nothing.</div>';
-    return '<div class="dash-day-col'+(d.key===today?" today":"")+'"><div class="dash-day-head">'+d.label+' · '+fmtDateShort(d.key)+'</div>'+itemsHtml+'</div>';
+    var activeClass = (d.offset===DASH_AGENDA_DAY_OFFSET) ? " mobile-active" : "";
+    return '<div class="dash-day-col'+(d.key===today?" today":"")+activeClass+'"><div class="dash-day-head">'+d.label+' · '+fmtDateShort(d.key)+'</div>'+itemsHtml+'</div>';
   }).join("");
-  return '<div class="card card-pad"><div class="section-head"><div class="section-title">Agenda</div><a class="btn btn-sm" href="#/agenda">'+ic("agenda")+' Open Agenda</a></div><div class="dash-3day">'+cols+'</div></div>';
+  var mobileNav = '<div class="dash-day-nav">'+
+    '<button type="button" class="icon-btn" data-action="dash-agenda-day-prev" title="Previous day"'+(DASH_AGENDA_DAY_OFFSET<=-1?" disabled":"")+'><span style="display:inline-block;transform:rotate(180deg)">'+ic("chev")+'</span></button>'+
+    '<div class="dash-day-nav-label">'+activeDay.label+' · '+fmtDateShort(activeDay.key)+'</div>'+
+    '<button type="button" class="icon-btn" data-action="dash-agenda-day-next" title="Next day"'+(DASH_AGENDA_DAY_OFFSET>=1?" disabled":"")+'>'+ic("chev")+'</button>'+
+  '</div>';
+  return '<div class="card card-pad"><div class="section-head"><div class="section-title">Agenda</div><a class="btn btn-sm" href="#/agenda">'+ic("agenda")+' Open Agenda</a></div>'+mobileNav+'<div class="dash-3day">'+cols+'</div></div>';
 }
-/* ---------- dashboard quick notes ---------- */
+ACTIONS["dash-agenda-day-prev"] = function(){ DASH_AGENDA_DAY_OFFSET = Math.max(-1,DASH_AGENDA_DAY_OFFSET-1); render(); };
+ACTIONS["dash-agenda-day-next"] = function(){ DASH_AGENDA_DAY_OFFSET = Math.min(1,DASH_AGENDA_DAY_OFFSET+1); render(); };
+/* ---------- dashboard notes: one freeform scratchpad, autosaves on blur ---------- */
 function dashNotesPanel(){
-  var notes = DB.quickNotes.slice().sort(function(a,b){return (b.createdAt||"").localeCompare(a.createdAt||"");}).slice(0,8);
-  var html = '<div class="card card-pad"><div class="section-head"><div class="section-title">Notes</div></div>';
-  html += '<form class="quickadd" data-form="add-quick-note" style="padding:0 0 10px">'+
-    '<div class="qa-name" style="flex:2;min-width:150px"><input class="input" name="text" placeholder="Jot something down…" autocomplete="off" required></div>'+
-    '<div class="qa-num" style="width:130px"><input class="input" name="date" type="date" title="Optional — links it to that day\'s Agenda"></div>'+
-    '<button class="btn btn-primary btn-sm" type="submit">Add</button>'+
-  '</form>';
-  html += notes.length ?
-    '<div class="stack" style="gap:2px">'+notes.map(dashNoteRow).join("")+'</div>' :
-    emptyRow("No notes yet — jot something down above.");
-  html += '</div>';
-  return html;
-}
-function dashNoteRow(n){
-  return '<div class="dash-note-row">'+
-    '<div style="min-width:0;flex:1"><div class="inline-edit" style="font-size:12.5px" data-field="text" data-edit-key="quick-note-text" data-raw="'+escAttr(n.text)+'" data-id="'+n.id+'">'+esc(n.text)+'</div>'+
-    (n.date?'<div class="dash-note-date">'+fmtDate(n.date)+'</div>':'')+
-    '</div>'+
-    '<button class="icon-btn" data-action="delete-quick-note" data-id="'+n.id+'" title="Delete note">'+ic("trash")+'</button>'+
+  return '<div class="card card-pad dash-notes-card"><div class="section-head"><div class="section-title">Notes</div><span class="autosaved-tick" id="tick-dashnote">'+ic("check")+' Saved</span></div>'+
+    '<textarea class="textarea dash-notes-textarea" data-autosave="dashboard-note" data-initial="'+escAttr(DB.dashboardNote||"")+'" placeholder="Write anything that comes to mind…">'+esc(DB.dashboardNote||"")+'</textarea>'+
   '</div>';
 }
-FORM_HANDLERS["add-quick-note"] = function(form){
-  var fd = new FormData(form);
-  var text = (fd.get("text")||"").trim();
-  if(!text) return;
-  DB.quickNotes.push({id:uid("note"),text:text,date:fd.get("date")||"",createdAt:nowISO()});
-  form.reset();
-  persist({toast:"Note added"});
-};
-ACTIONS["delete-quick-note"] = function(el){
-  DB.quickNotes = DB.quickNotes.filter(function(x){return x.id!==el.dataset.id;});
-  persist({toast:"Note removed"});
-};
-INLINE_EDIT_HANDLERS["quick-note-text"] = function(el,val){
-  var n = byId(DB.quickNotes,el.dataset.id); if(!n) return;
-  val = String(val||"").trim();
-  if(!val) return;
-  n.text = val; persist({});
+AUTOSAVE_HANDLERS["dashboard-note"] = function(el){
+  DB.dashboardNote = el.value;
+  flashTick("tick-dashnote");
+  persist({});
 };
 
 /* ============================================================
