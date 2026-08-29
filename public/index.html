@@ -1817,11 +1817,15 @@ function emptyRow(msg,btnLabel,btnHref){
 }
 function dashMatchRow(m){
   var modeText = m.observationMode==="VIDEO" ? "watch "+fmtDateShort(m.watchDate||m.date) : (m.time?esc(m.time):"");
+  // A "To Watch"/"Scheduled" match whose date has already passed would otherwise just sit
+  // wherever the ascending date sort puts it (usually near the top, but easy to miss) — flag it
+  // so it can't be quietly forgotten.
+  var isOverdue = (m.status==="To Watch"||m.status==="Scheduled") && m.date && m.date<todayISO();
   return '<a class="roster-row" href="#/matches/'+encodeURIComponent(m.id)+'" style="text-decoration:none;justify-content:space-between">'+
     '<div style="display:flex;align-items:center;gap:8px;min-width:0"><div style="display:flex;align-items:center">'+crestHtml(clubById(m.homeClubId),20)+'<span style="margin:0 4px;color:var(--text-faint);font-size:11px">v</span>'+crestHtml(clubById(m.awayClubId),20)+'</div>'+
     '<span class="roster-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(clubName(m.homeClubId))+' – '+esc(clubName(m.awayClubId))+'</span></div>'+
     '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:0 0 auto">'+
-      '<div style="display:flex;align-items:center;gap:6px"><span class="mono" style="font-size:11.5px;color:var(--text-muted)">'+fmtDateShort(m.date)+'</span>'+badgeStatus(m.status)+'</div>'+
+      '<div style="display:flex;align-items:center;gap:6px">'+(isOverdue?'<span class="badge" style="background:var(--danger-soft);color:var(--danger)">Overdue</span>':'')+'<span class="mono" style="font-size:11.5px;color:var(--text-muted)">'+fmtDateShort(m.date)+'</span>'+badgeStatus(m.status)+'</div>'+
       '<div style="display:flex;align-items:center;gap:5px">'+badgeMode(m.observationMode)+(modeText?'<span class="mono" style="font-size:10px;color:var(--text-faint)">'+modeText+'</span>':'')+'</div>'+
     '</div></a>';
 }
@@ -1835,11 +1839,19 @@ function dashEvalRow(e){
   var p = playerById(e.playerId);
   if(!p) return "";
   var m = e.matchId ? matchById(e.matchId) : null;
-  var right = m ?
-    '<div style="text-align:right;min-width:0;max-width:150px"><div class="roster-name" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(clubName(m.homeClubId))+' – '+esc(clubName(m.awayClubId))+'</div><div class="roster-chars" style="text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(m.competition||"")+'</div></div>' :
-    badgeRec(e.recommendation);
+  var right;
+  if(m){
+    // Highlight whichever side of the actual fixture is the evaluated player's own club —
+    // no need to spell the club name out again separately.
+    var homeName = esc(clubName(m.homeClubId)), awayName = esc(clubName(m.awayClubId));
+    if(p.clubId && m.homeClubId===p.clubId) homeName = '<span style="color:var(--blue);font-weight:700">'+homeName+'</span>';
+    else if(p.clubId && m.awayClubId===p.clubId) awayName = '<span style="color:var(--blue);font-weight:700">'+awayName+'</span>';
+    right = '<div style="text-align:right;min-width:0;max-width:150px"><div class="roster-name" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+homeName+' – '+awayName+'</div><div class="roster-chars" style="text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(m.competition||"")+'</div></div>';
+  } else {
+    right = badgeRec(e.recommendation);
+  }
   return '<a class="roster-row" href="#/players/'+encodeURIComponent(p.id)+'" style="text-decoration:none;justify-content:space-between">'+
-    '<div style="display:flex;align-items:center;gap:9px;min-width:0">'+avatarHtml(p,28)+'<div style="min-width:0"><div class="roster-name">'+esc(p.name)+'</div><div class="roster-chars">'+badgeType(e.evaluationType)+' · '+fmtDateShort(e.date)+(p.clubId?' · <span style="color:var(--blue);font-weight:600">'+esc(clubName(p.clubId))+'</span>':'')+'</div></div></div>'+
+    '<div style="display:flex;align-items:center;gap:9px;min-width:0">'+avatarHtml(p,28)+'<div style="min-width:0"><div class="roster-name">'+esc(p.name)+'</div><div class="roster-chars">'+badgeType(e.evaluationType)+' · '+fmtDateShort(e.date)+'</div></div></div>'+
     right+'</a>';
 }
 /* ---------- 3-day agenda strip (yesterday / today / tomorrow) ----------
