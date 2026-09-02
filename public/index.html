@@ -384,7 +384,7 @@ td.num,th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric
 .cal-chip-mode-VIDEO{background:var(--green-soft);color:var(--green);}
 .cal-chip-mode-TV{background:var(--blue-soft);color:var(--blue);}
 .cal-chip-match-watched{background:var(--accent-soft);color:var(--accent-strong);}
-.cal-chip-task{background:var(--blue-soft);color:var(--blue);}
+.cal-chip-task{background:var(--interest-soft);color:var(--interest);}
 .cal-chip-task.done{background:var(--silver-soft);color:var(--silver);text-decoration:line-through;opacity:.85;}
 .cal-cell-add{margin-top:auto;align-self:flex-start;background:none;border:1px dashed var(--border);border-radius:6px;padding:1px 5px;cursor:pointer;color:var(--text-faint);display:flex;align-items:center;}
 .cal-cell-add svg{width:11px;height:11px;}
@@ -2076,6 +2076,7 @@ function pagePlayerForm(existingId){
   html += '<div class="section-head"><div><div class="eyebrow">'+(isEdit?"Edit Player":"New Profile")+'</div><h1 style="font-size:22px">'+(isEdit?"Edit "+esc(p.name):"Add Player")+'</h1></div></div>';
   html += '<form class="card card-pad stack" data-form="save-player" data-id="'+(isEdit?p.id:"")+'">';
   html += '<div class="field"><label class="field-label">Name</label><input class="input" name="name" required value="'+escAttr(p.name)+'" placeholder="Full name"></div>';
+  html += '<div class="field"><label class="field-label">Characteristics</label><textarea class="textarea" name="characteristics" placeholder="General playing style, strengths, weaknesses…">'+esc(p.characteristics)+'</textarea></div>';
   html += '<div class="form-grid">'+
     '<div class="field"><label class="field-label">First Position</label><select class="select" name="firstPosition">'+positionOptions(p.firstPosition)+'</select></div>'+
     '<div class="field"><label class="field-label">Second Position <span class="opt">optional</span></label><select class="select" name="secondPosition">'+positionOptions(p.secondPosition)+'</select></div>'+
@@ -2093,7 +2094,6 @@ function pagePlayerForm(existingId){
     '<div class="field"><label class="field-label">Preferred Foot</label><select class="select" name="preferredFoot"><option value="">—</option>'+FEET.map(function(ft){return '<option value="'+ft+'"'+(ft===p.preferredFoot?" selected":"")+'>'+ft+'</option>';}).join("")+'</select></div>'+
     '<div class="field"><label class="field-label">Height (cm) <span class="opt">optional — estimate ok, e.g. "175+-"</span></label><input class="input" name="height" value="'+escAttr(p.height)+'" placeholder="e.g. 178 or 175+-"></div>'+
   '</div>';
-  html += '<div class="field"><label class="field-label">Characteristics</label><textarea class="textarea" name="characteristics" placeholder="General playing style, strengths, weaknesses…">'+esc(p.characteristics)+'</textarea></div>';
   html += '<div class="form-grid">'+
     '<div class="field"><label class="field-label">Performance <span class="opt">1–5, optional</span></label><select class="select" name="currentPerformance"><option value="">—</option>'+[1,2,3,4,5].map(function(n){return '<option value="'+n+'"'+(String(n)===String(p.currentPerformance)?" selected":"")+'>'+n+'</option>';}).join("")+'</select></div>'+
     '<div class="field"><label class="field-label">Potential <span class="opt">A–E, optional</span></label><select class="select" name="currentPotential"><option value="">—</option>'+GRADE_LETTERS.map(function(g){return '<option value="'+g+'"'+(g===normalizeGrade(p.currentPotential)?" selected":"")+'>'+g+'</option>';}).join("")+'</select></div>'+
@@ -3393,32 +3393,32 @@ var ROLE_SIDE = {LB:0,LWB:0,LM:0,LW:0,RB:2,RWB:2,RM:2,RW:2};
 // Selectable tactical formations: always exactly 11 slots per formation, always shown, tap-to-edit
 var FORMATIONS = {
   "4-3-3": [
-    {pos:"GK", x:50, y:85},
+    {pos:"GK", x:50, y:91},
     {pos:"LB", x:14, y:70}, {pos:"CB", x:38, y:73}, {pos:"CB", x:62, y:73}, {pos:"RB", x:86, y:70},
-    {pos:"LM", x:16, y:44}, {pos:"CM", x:50, y:46}, {pos:"RM", x:84, y:44},
+    {pos:"CM", x:16, y:44}, {pos:"DM", x:50, y:46}, {pos:"CM", x:84, y:44},
     {pos:"LW", x:16, y:19}, {pos:"CF", x:50, y:16}, {pos:"RW", x:84, y:19}
   ],
   "3-5-2": [
-    {pos:"GK", x:50, y:85},
+    {pos:"GK", x:50, y:91},
     {pos:"CB", x:30, y:74}, {pos:"CB", x:50, y:77}, {pos:"CB", x:70, y:74},
-    {pos:"LWB", x:10, y:52}, {pos:"LM", x:30, y:48}, {pos:"CM", x:50, y:50}, {pos:"RM", x:70, y:48}, {pos:"RWB", x:90, y:52},
+    {pos:"LWB", x:10, y:52}, {pos:"LM", x:30, y:48}, {pos:"DM", x:50, y:50}, {pos:"RM", x:70, y:48}, {pos:"RWB", x:90, y:52},
     {pos:"ST", x:38, y:19}, {pos:"ST", x:62, y:19}
   ],
   "4-4-2": [
-    {pos:"GK", x:50, y:85},
+    {pos:"GK", x:50, y:91},
     {pos:"LB", x:14, y:70}, {pos:"CB", x:38, y:73}, {pos:"CB", x:62, y:73}, {pos:"RB", x:86, y:70},
     {pos:"LM", x:14, y:42}, {pos:"CM", x:38, y:46}, {pos:"CM", x:62, y:46}, {pos:"RM", x:86, y:42},
     {pos:"ST", x:38, y:18}, {pos:"ST", x:62, y:18}
   ],
   "4-2-3-1": [
-    {pos:"GK", x:50, y:85},
+    {pos:"GK", x:50, y:91},
     {pos:"LB", x:14, y:72}, {pos:"CB", x:38, y:74}, {pos:"CB", x:62, y:74}, {pos:"RB", x:86, y:72},
-    {pos:"DM", x:35, y:58}, {pos:"DM", x:65, y:58},
+    {pos:"DM", x:35, y:58}, {pos:"CM", x:65, y:58},
     {pos:"LW", x:16, y:35}, {pos:"AM", x:50, y:33}, {pos:"RW", x:84, y:35},
     {pos:"CF", x:50, y:17}
   ],
   "3-4-3": [
-    {pos:"GK", x:50, y:85},
+    {pos:"GK", x:50, y:91},
     {pos:"CB", x:30, y:74}, {pos:"CB", x:50, y:77}, {pos:"CB", x:70, y:74},
     {pos:"LM", x:14, y:48}, {pos:"CM", x:38, y:50}, {pos:"CM", x:62, y:50}, {pos:"RM", x:86, y:48},
     {pos:"LW", x:16, y:19}, {pos:"CF", x:50, y:16}, {pos:"RW", x:84, y:19}
