@@ -46,6 +46,8 @@
   --green-soft:#DFF0E5;
   --danger:#B3261E;
   --danger-soft:#F8DEDB;
+  --brown:#6B4423;
+  --brown-soft:#EDE1D3;
   /* Performance (1-5) / Potential (E-A) rating scale: red -> orange -> yellow -> light green -> vivid green. */
   --rate-1:#C13B2E;
   --rate-2:#D9822B;
@@ -88,6 +90,8 @@
   --green-soft:#12261A;
   --danger:#F0857D;
   --danger-soft:#301813;
+  --brown:#C9A06B;
+  --brown-soft:#2C2419;
   --rate-1:#F0665A;
   --rate-2:#F0A45C;
   --rate-3:#E8D25C;
@@ -384,7 +388,7 @@ td.num,th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric
 .cal-chip-mode-VIDEO{background:var(--green-soft);color:var(--green);}
 .cal-chip-mode-TV{background:var(--blue-soft);color:var(--blue);}
 .cal-chip-match-watched{background:var(--accent-soft);color:var(--accent-strong);}
-.cal-chip-task{background:var(--interest-soft);color:var(--interest);}
+.cal-chip-task{background:var(--brown-soft);color:var(--brown);}
 .cal-chip-task.done{background:var(--silver-soft);color:var(--silver);text-decoration:line-through;opacity:.85;}
 .cal-cell-add{margin-top:auto;align-self:flex-start;background:none;border:1px dashed var(--border);border-radius:6px;padding:1px 5px;cursor:pointer;color:var(--text-faint);display:flex;align-items:center;}
 .cal-cell-add svg{width:11px;height:11px;}
@@ -963,6 +967,20 @@ function matchStatusSelectHtml(m){
 function matchModeSelectHtml(m){
   return '<select class="badge-select badge-mode-'+m.observationMode+'" data-action-select="set-match-mode" data-id="'+m.id+'" title="Change mode">'+
     OBS_MODES.map(function(mo){return '<option value="'+mo+'"'+(mo===m.observationMode?" selected":"")+'>'+mo+'</option>';}).join("")+'</select>';
+}
+// Wherever the mode quick-select above lets someone switch a match to VIDEO (the Matches
+// Database table, the Agenda's Match Preview modal, the match detail header), this modal lets
+// them set/confirm the watch date right there, without needing to open the full match page.
+function openWatchDateModal(matchId){
+  var m = matchById(matchId);
+  if(!m) return;
+  var html = '<div class="modal-pad"><div class="modal-head"><div class="modal-title">Day I\'ll Watch It</div><button class="icon-btn" data-close-modal>'+ic("close")+'</button></div>';
+  html += '<p class="field-hint" style="margin:0 0 12px">The match keeps its real date ('+esc(fmtDate(m.date))+'), but this is when it will show on your Agenda.</p>';
+  html += '<form data-form="set-watch-date" data-id="'+m.id+'" class="stack">';
+  html += '<div class="field"><label class="field-label">Watch Date</label><input class="input" type="date" name="watchDate" value="'+escAttr(m.watchDate||m.date)+'" autofocus></div>';
+  html += '<div style="display:flex;gap:8px"><button class="btn btn-primary btn-block" type="submit">Save</button><button type="button" class="btn" data-close-modal>Skip — use match date</button></div>';
+  html += '</form></div>';
+  openModal(html);
 }
 function badgePos(pos,big){ var grp=positionGroup(pos); return pos ? '<span class="badge badge-pos'+(grp?" badge-posgrp-"+grp:"")+(big?" badge-pos-lg":"")+'">'+esc(pos)+'</span>' : ""; }
 
@@ -1557,7 +1575,13 @@ function bindGlobalEvents(){
     var mmSel = e.target.closest('[data-action-select="set-match-mode"]');
     if(mmSel){
       var mForMode = matchById(mmSel.dataset.id);
-      if(mForMode){ mForMode.observationMode = mmSel.value; persist({}); }
+      if(mForMode){
+        var wasVideo = mForMode.observationMode==="VIDEO";
+        mForMode.observationMode = mmSel.value;
+        if(mmSel.value!=="VIDEO") mForMode.watchDate = "";
+        persist({});
+        if(mmSel.value==="VIDEO" && !wasVideo) openWatchDateModal(mForMode.id);
+      }
     }
   });
   document.addEventListener("submit",function(e){
@@ -3250,6 +3274,14 @@ function pageMatchForm(existingId){
   });
   return html;
 }
+FORM_HANDLERS["set-watch-date"] = function(form){
+  var m = matchById(form.dataset.id);
+  if(!m) return;
+  var fd = new FormData(form);
+  m.watchDate = fd.get("watchDate")||"";
+  closeModal();
+  persist({toast:"Watch date set"});
+};
 FORM_HANDLERS["save-match"] = function(form){
   var fd = new FormData(form);
   var id = form.dataset.id;
@@ -3401,7 +3433,7 @@ var FORMATIONS = {
   "3-5-2": [
     {pos:"GK", x:50, y:91},
     {pos:"CB", x:30, y:74}, {pos:"CB", x:50, y:77}, {pos:"CB", x:70, y:74},
-    {pos:"LWB", x:10, y:52}, {pos:"LM", x:30, y:48}, {pos:"DM", x:50, y:50}, {pos:"RM", x:70, y:48}, {pos:"RWB", x:90, y:52},
+    {pos:"LWB", x:10, y:52}, {pos:"CM", x:30, y:48}, {pos:"DM", x:50, y:50}, {pos:"CM", x:70, y:48}, {pos:"RWB", x:90, y:52},
     {pos:"ST", x:38, y:19}, {pos:"ST", x:62, y:19}
   ],
   "4-4-2": [
@@ -3603,6 +3635,7 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus){
       '<div class="combo-list" id="pitchSlotName_list" hidden></div>'+
     '</div></div>';
   }
+  html += '<div class="field"><label class="field-label">Characteristics <span class="opt">optional — what stood out in this match</span></label><textarea class="textarea" name="characteristics" placeholder="What stands out about their profile…">'+esc(ev?ev.characteristics||(mp?mp.matchCharacteristics||"":""):"")+'</textarea></div>';
   html += '<div class="field"><label class="field-label">Birth Year <span class="opt">optional</span></label><input class="input" name="birthYear" type="number" min="1970" max="'+(new Date().getFullYear())+'" placeholder="e.g. 2005" value="'+escAttr(p?p.birthYear||"":"")+'"></div>';
   html += '<div class="form-grid">'+
     '<div class="field"><label class="field-label">Preferred Foot <span class="opt">optional</span></label><div class="pillgroup" data-name="foot"><input type="hidden" name="preferredFoot" value="'+escAttr(p?p.preferredFoot||"":"")+'">'+FEET.map(function(ft){return '<button type="button" class="pill-opt'+(p&&ft===p.preferredFoot?" on":"")+'" data-value="'+ft+'">'+ft+'</button>';}).join("")+'</div></div>'+
@@ -3612,7 +3645,6 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus){
     '<div class="field"><label class="field-label">Performance <span class="opt">1–5, optional</span></label><div class="pillgroup" data-name="performance"><input type="hidden" name="performance" value="'+escAttr(ev?ev.performance||"":"")+'">'+[1,2,3,4,5].map(function(n){return '<button type="button" class="pill-opt'+(ev&&String(n)===String(ev.performance)?" on":"")+'" data-value="'+n+'">'+n+'</button>';}).join("")+'</div></div>'+
     '<div class="field"><label class="field-label">Potential <span class="opt">A–E, optional</span></label><div class="pillgroup" data-name="potential"><input type="hidden" name="potential" value="'+escAttr(ev?ev.potential||"":"")+'">'+GRADE_LETTERS.map(function(g){return '<button type="button" class="pill-opt'+(ev&&g===normalizeGrade(ev.potential)?" on":"")+'" data-value="'+g+'">'+g+'</button>';}).join("")+'</div></div>'+
   '</div>';
-  html += '<div class="field"><label class="field-label">Characteristics <span class="opt">optional — what stood out in this match</span></label><textarea class="textarea" name="characteristics" placeholder="What stands out about their profile…">'+esc(ev?ev.characteristics||(mp?mp.matchCharacteristics||"":""):"")+'</textarea></div>';
   html += '<div class="field"><label class="field-label">Notes <span class="opt">optional</span></label><textarea class="textarea" name="notes" placeholder="Any notes about this player…">'+esc(mp?mp.interestNote||"":"")+'</textarea></div>';
   html += '<label class="field-checkbox"><input type="checkbox" name="playerOfInterest" value="1"'+(mp&&mp.playerOfInterest?" checked":"")+'>'+ic("star")+' <span>Player of Interest</span></label>';
   html += '<button class="btn btn-primary btn-block" type="submit">Save</button>';
