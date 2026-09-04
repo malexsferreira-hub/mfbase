@@ -2075,6 +2075,20 @@ function dashPanel(title,rowsHtml){
 function emptyRow(msg,btnLabel,btnHref){
   return '<div style="padding:14px 2px;color:var(--text-faint);font-size:12.5px">'+esc(msg)+(btnLabel?' <a href="'+btnHref+'" style="color:var(--accent);font-weight:700">'+btnLabel+' →</a>':'')+'</div>';
 }
+// Most competitions already carry the age group in their own name (e.g. "Saudi U-15 Premier
+// League", from the SAFF calendar sync) — so a match without its own Age Group field filled in
+// still gets a sensible mobile badge instead of forcing that field to be set on every match.
+function deriveAgeGroupFromCompetition(competition){
+  if(!competition) return "";
+  var mU = competition.match(/U-?\s*(\d{1,2})\b/i);
+  if(mU) return "U"+mU[1];
+  var mSub = competition.match(/sub-?\s*(\d{1,2})\b/i);
+  if(mSub) return "Sub-"+mSub[1];
+  return "";
+}
+function matchAgeGroup(m){
+  return (m.ageGroup||"").trim() || deriveAgeGroupFromCompetition(m.competition);
+}
 function dashMatchRow(m){
   var modeText = m.observationMode==="VIDEO" ? "watch "+fmtDateShort(m.watchDate||m.date) : (m.time?esc(m.time):"");
   // A "To Watch"/"Scheduled" match whose date has already passed would otherwise just sit
@@ -2084,7 +2098,8 @@ function dashMatchRow(m){
   // Desktop: club crests, with the competition in small gray text below the team names.
   // Mobile: no crests — the match's age group ("escalão") instead, no competition.
   var crestsHtml = '<div class="dash-match-crests" style="display:flex;align-items:center">'+crestHtml(clubById(m.homeClubId),20)+'<span style="margin:0 4px;color:var(--text-faint);font-size:11px">v</span>'+crestHtml(clubById(m.awayClubId),20)+'</div>';
-  var ageGroupHtml = m.ageGroup ? '<span class="dash-match-agegroup badge">'+esc(m.ageGroup)+'</span>' : '';
+  var ageGroupVal = matchAgeGroup(m);
+  var ageGroupHtml = ageGroupVal ? '<span class="dash-match-agegroup badge">'+esc(ageGroupVal)+'</span>' : '';
   var competitionHtml = m.competition ? '<div class="dash-match-competition" style="font-size:10.5px;color:var(--text-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(m.competition)+'</div>' : '';
   return '<a class="roster-row" href="#/matches/'+encodeURIComponent(m.id)+'" style="text-decoration:none;justify-content:space-between">'+
     '<div style="display:flex;align-items:center;gap:8px;min-width:0">'+crestsHtml+ageGroupHtml+
@@ -3547,7 +3562,7 @@ function pageMatchForm(existingId){
     '<div class="field"><label class="field-label">Competition</label><input class="input" name="competition" list="competitionList" value="'+escAttr(m.competition)+'" placeholder="e.g. Saudi Pro League"></div>'+
     '<div class="field"><label class="field-label">Matchday <span class="opt">optional</span></label><input class="input" name="matchday" value="'+escAttr(m.matchday)+'" placeholder="e.g. Matchday 12"></div>'+
   '</div>';
-  html += '<div class="field"><label class="field-label">Age Group / Escalão <span class="opt">optional — shown in place of crests in the mobile Dashboard</span></label><input class="input" name="ageGroup" value="'+escAttr(m.ageGroup||"")+'" placeholder="e.g. U19, Sub-23, Sénior"></div>';
+  html += '<div class="field"><label class="field-label">Age Group / Escalão <span class="opt">optional — shown in place of crests in the mobile Dashboard. Left blank, it\'s guessed from the Competition name (e.g. "U-15" in "Saudi U-15 Premier League")</span></label><input class="input" name="ageGroup" value="'+escAttr(m.ageGroup||"")+'" placeholder="e.g. U19, Sub-23, Sénior"></div>';
   html += '<div class="field"><label class="field-label">Competition Country <span class="opt">optional — shown as an abbreviation in Matches Database</span></label><input class="input" name="competitionCountry" list="countryList" value="'+escAttr(m.competition?(DB.competitionCountries[m.competition]||""):"")+'" placeholder="e.g. Saudi Arabia"></div>'+countryDatalist();
   html += '<datalist id="competitionList">'+competitions.map(function(c){return '<option value="'+esc(c)+'">';}).join("")+'</datalist>';
   html += '<div class="field"><label class="field-label">Observation Mode</label><div class="pillgroup" data-name="observationMode" id="mf_obsmode_group"><input type="hidden" name="observationMode" value="'+escAttr(m.observationMode)+'">'+OBS_MODES.map(function(o){return '<button type="button" class="pill-opt'+(o===m.observationMode?" on":"")+'" data-value="'+o+'">'+o+'</button>';}).join("")+'</div></div>';
@@ -3750,9 +3765,9 @@ var FORMATIONS = {
   "4-2-3-1": [
     {pos:"GK", x:50, y:91},
     {pos:"LB", x:14, y:72}, {pos:"CB", x:38, y:74}, {pos:"CB", x:62, y:74}, {pos:"RB", x:86, y:72},
-    {pos:"DM", x:35, y:58}, {pos:"CM", x:65, y:58},
+    {pos:"DM", x:35, y:54}, {pos:"CM", x:65, y:54},
     {pos:"LW", x:16, y:35}, {pos:"AM", x:50, y:33}, {pos:"RW", x:84, y:35},
-    {pos:"CF", x:50, y:17, sideSubs:true}
+    {pos:"CF", x:50, y:13, sideSubs:true}
   ],
   "3-4-3": [
     {pos:"GK", x:50, y:91},
