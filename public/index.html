@@ -215,6 +215,7 @@ input.eval-param-input{width:44px;min-height:28px;padding:2px 4px;text-align:cen
    the Dashboard's own mini-agenda only; the full Agenda page (#/agenda) is unrelated and unchanged. */
 .dash-agenda-item{display:flex;align-items:center;gap:5px;padding:3px 2px;}
 .dash-agenda-empty{padding:4px 2px;color:var(--text-faint);font-size:11px;}
+.dash-agenda-agegroup{display:none!important;}
 .dash-day-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;}
 .dash-day-nav-label{font-size:12.5px;font-weight:700;color:var(--text);}
 .icon-btn:disabled{opacity:.3;cursor:default;}
@@ -531,6 +532,8 @@ details.acc summary .count-chip{background:var(--surface-3);color:var(--text-mut
   .dash-match-crests{display:none!important;}
   .dash-match-agegroup{display:inline-flex!important;}
   .dash-match-competition{display:none!important;}
+  .dash-agenda-agegroup{display:inline-flex!important;}
+  .dash-agenda-competition{display:none!important;}
   .rating-grid{grid-template-columns:1fr;}
   .kv-grid{grid-template-columns:repeat(2,1fr);}
   .profile-head{flex-direction:column;align-items:center;text-align:center;}
@@ -717,6 +720,13 @@ function fmtDateShort(iso){
   if(isNaN(d.getTime())) return iso;
   var months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   return d.getDate()+" "+months[d.getMonth()];
+}
+function dowShort(iso){
+  if(!iso) return "";
+  var d = new Date(iso+"T00:00:00");
+  if(isNaN(d.getTime())) return "";
+  var days=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  return days[d.getDay()];
 }
 function todayISO(){
   var d = new Date();
@@ -2157,9 +2167,13 @@ function dashDayAgendaPanel(){
     var chipClass = "cal-chip-mode-"+(m.observationMode||"LIVE");
     var showTime = m.time && m.observationMode!=="VIDEO";
     var ag = matchAgeGroup(m);
+    // Mobile shows the age group (escalão); desktop shows the competition instead — same toggle
+    // mechanism as the .dash-match-agegroup/.dash-match-competition pair used elsewhere.
+    var ageBadge = ag ? '<span class="badge dash-agenda-agegroup" style="flex:0 0 auto;background:var(--surface-3);color:var(--text-muted);font-size:10px;padding:2px 6px">'+esc(ag)+'</span>' : '';
+    var compBadge = m.competition ? '<span class="badge dash-agenda-competition" style="flex:0 0 auto;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--surface-3);color:var(--text-muted);font-size:10px;padding:2px 6px" title="'+escAttr(m.competition)+'">'+esc(m.competition)+'</span>' : '';
     itemsHtml += '<div class="dash-agenda-item" data-action="open-match-preview" data-id="'+m.id+'" style="cursor:pointer">'+
       '<span class="cal-chip '+chipClass+'" style="flex:0 0 auto">'+(showTime?esc(m.time)+' ':'')+esc(m.observationMode||"LIVE")+'</span>'+
-      (ag?'<span class="badge" style="flex:0 0 auto;background:var(--surface-3);color:var(--text-muted);font-size:10px;padding:2px 6px">'+esc(ag)+'</span>':'')+
+      ageBadge+compBadge+
       '<span style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(clubName(m.homeClubId))+' v '+esc(clubName(m.awayClubId))+'</span>'+
     '</div>';
   });
@@ -2172,7 +2186,7 @@ function dashDayAgendaPanel(){
   if(!itemsHtml) itemsHtml = '<div class="dash-agenda-empty">Nothing.</div>';
   var nav = '<div class="dash-day-nav">'+
     '<button type="button" class="icon-btn" data-action="dash-agenda-day-prev" title="Previous day"'+(DASH_AGENDA_DAY_OFFSET<=-1?" disabled":"")+'><span style="display:inline-block;transform:rotate(180deg)">'+ic("chev")+'</span></button>'+
-    '<div class="dash-day-nav-label">'+activeDay.label+' · '+fmtDateShort(activeDay.key)+'</div>'+
+    '<div class="dash-day-nav-label">'+activeDay.label+' - '+fmtDateShort(activeDay.key)+' - '+dowShort(activeDay.key)+'</div>'+
     '<button type="button" class="icon-btn" data-action="dash-agenda-day-next" title="Next day"'+(DASH_AGENDA_DAY_OFFSET>=2?" disabled":"")+'>'+ic("chev")+'</button>'+
   '</div>';
   return '<div class="card card-pad"><div class="section-head"><div class="section-title">Agenda</div><a class="btn btn-sm" href="#/agenda">'+ic("agenda")+' Open Agenda</a></div>'+nav+'<div class="stack" style="gap:2px">'+itemsHtml+'</div></div>';
@@ -2202,6 +2216,7 @@ AUTOSAVE_HANDLERS["dashboard-note"] = function(el){
    that's already coming up.
    ============================================================ */
 var TEAMS_WATCH_AGE_GROUPS = ["U15","U16","U17","U18","U21"];
+var TEAMS_WATCH_EXPANDED = {}; // "<normName>|<ageGroup>" -> true when its upcoming-fixtures panel is open
 function ageGroupSortKey(ag){
   var m = (ag||"").match(/(\d+)/);
   if(m) return parseInt(m[1],10);
@@ -2212,7 +2227,7 @@ function teamsToWatch(){
   var allowed = {}; TEAMS_WATCH_AGE_GROUPS.forEach(function(a){ allowed[a]=true; });
   // Universe: every (team, age group) the SAFF sync has ever recorded a fixture for, in the
   // domestic U15-U21 club leagues (national-team friendlies carry no club escalão to track).
-  var universe = {}; // "<normName>|<ageGroup>" -> {name, ageGroup}
+  var universe = {}; // "<normName>|<ageGroup>" -> {name, ageGroup, competitions:{comp:true}}
   (DB.fixtures||[]).forEach(function(fx){
     if(/national|\bnt\b/i.test(fx.competition||"")) return; // national-team friendlies, not domestic club teams
     var ag = deriveAgeGroupFromCompetition(fx.competition);
@@ -2220,7 +2235,8 @@ function teamsToWatch(){
     [fx.team1,fx.team2].forEach(function(name){
       if(!name) return;
       var key = normName(name)+"|"+ag;
-      if(!universe[key]) universe[key] = {name:name, ageGroup:ag};
+      if(!universe[key]) universe[key] = {name:name, ageGroup:ag, competitions:{}};
+      if(fx.competition) universe[key].competitions[fx.competition] = true;
     });
   });
   // Cross-reference this scout's own tracked matches (watched / on the agenda) by the same
@@ -2235,7 +2251,8 @@ function teamsToWatch(){
       var name = clubName(clubId);
       if(!name) return;
       var key = normName(name)+"|"+ag;
-      if(!universe[key]) universe[key] = {name:name, ageGroup:ag};
+      if(!universe[key]) universe[key] = {name:name, ageGroup:ag, competitions:{}};
+      if(m.competition) universe[key].competitions[m.competition] = true;
       var s = status[key];
       if(!s){ s = {lastWatched:null, hasUpcoming:false}; status[key]=s; }
       if(m.status==="To Watch"||m.status==="Scheduled") s.hasUpcoming = true;
@@ -2244,7 +2261,8 @@ function teamsToWatch(){
   });
   var list = Object.keys(universe).map(function(key){
     var u = universe[key], s = status[key]||{lastWatched:null,hasUpcoming:false};
-    return {name:u.name, ageGroup:u.ageGroup, lastWatched:s.lastWatched, hasUpcoming:s.hasUpcoming};
+    var competition = Object.keys(u.competitions).sort().join(", ");
+    return {name:u.name, ageGroup:u.ageGroup, competition:competition, lastWatched:s.lastWatched, hasUpcoming:s.hasUpcoming};
   }).filter(function(g){
     if(g.hasUpcoming) return false;
     if(!g.lastWatched) return true; // never watched at all
@@ -2257,6 +2275,18 @@ function teamsToWatch(){
     return a.name.localeCompare(b.name);
   });
   return list;
+}
+// Every fixture still ahead (today or later) in the SAFF calendar involving this team, in this
+// same age group — regardless of whether it's already been turned into a tracked match, so the
+// "Add to Agenda" button (reused from the Calendar page) always reflects the real state.
+function upcomingFixturesForTeam(name,ageGroup){
+  var nn = normName(name);
+  var today = todayISO();
+  return (DB.fixtures||[]).filter(function(fx){
+    if(fx.date<today) return false;
+    if(deriveAgeGroupFromCompetition(fx.competition)!==ageGroup) return false;
+    return normName(fx.team1)===nn || normName(fx.team2)===nn;
+  }).sort(function(a,b){ return (a.date+(a.time||"")).localeCompare(b.date+(b.time||"")); });
 }
 function pageTeamsWatch(){
   var list = teamsToWatch();
@@ -2276,15 +2306,35 @@ function pageTeamsWatch(){
   });
   order.forEach(function(key){
     var rows = byGroup[key].map(function(g){
+      var rowKey = normName(g.name)+"|"+g.ageGroup;
       var sub = g.lastWatched ? "Last watched "+fmtDateShort(g.lastWatched) : "Never watched";
-      return '<div class="roster-row" style="justify-content:flex-start">'+crestHtml({name:g.name},26)+
-        '<div style="min-width:0"><div class="roster-name">'+esc(g.name)+'</div><div class="roster-chars">'+esc(sub)+'</div></div></div>';
+      var subLine = sub+(g.competition?' · '+g.competition:'');
+      var expanded = !!TEAMS_WATCH_EXPANDED[rowKey];
+      var fixtures = expanded ? upcomingFixturesForTeam(g.name,g.ageGroup) : [];
+      var toggleLabel = expanded ? "Hide fixtures" : "Upcoming fixtures";
+      var rowHtml = '<div class="roster-row" style="justify-content:flex-start">'+crestHtml({name:g.name},26)+
+        '<div style="min-width:0;flex:1"><div class="roster-name">'+esc(g.name)+'</div><div class="roster-chars">'+esc(subLine)+'</div></div>'+
+        '<button type="button" class="btn btn-sm" style="flex:0 0 auto" data-action="teams-watch-toggle-fixtures" data-key="'+escAttr(rowKey)+'">'+toggleLabel+'</button>'+
+      '</div>';
+      var fixturesHtml = "";
+      if(expanded){
+        fixturesHtml = '<div class="stack" style="padding:2px 0 8px 36px;gap:4px">'+
+          (fixtures.length ? fixtures.map(function(fx){ return fixtureRow(fx); }).join("") :
+            '<div style="font-size:11.5px;color:var(--text-faint);padding:4px 0">No upcoming fixtures found in the SAFF calendar for this team.</div>')+
+        '</div>';
+      }
+      return rowHtml+fixturesHtml;
     }).join("");
     html += dashPanel(key,rows);
   });
   html += '</div>';
   return html;
 }
+ACTIONS["teams-watch-toggle-fixtures"] = function(el){
+  var key = el.dataset.key;
+  TEAMS_WATCH_EXPANDED[key] = !TEAMS_WATCH_EXPANDED[key];
+  render();
+};
 
 /* ============================================================
    PAGE: PLAYERS DATABASE
