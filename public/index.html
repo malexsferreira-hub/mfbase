@@ -357,8 +357,10 @@ td.num,th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric
 .pitch-box-bottom{bottom:0;border-bottom:none;}
 .pitch-slot-stack{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;z-index:2;}
 .pitch-jersey{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;background:none;border:none;padding:0;-webkit-tap-highlight-color:transparent;}
-.pitch-jersey-num{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px 8px 2px 2px;background:var(--gold);color:#1a1300;font-family:var(--font-display);font-weight:800;font-size:13.5px;box-shadow:0 1px 4px rgba(0,0,0,.45);}
+.pitch-jersey-num{position:relative;display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px 8px 2px 2px;background:var(--gold);color:#1a1300;font-family:var(--font-display);font-weight:800;font-size:13.5px;box-shadow:0 1px 4px rgba(0,0,0,.45);}
 .pitch-jersey-num svg{width:16px;height:16px;}
+.pitch-jersey-info-mark{position:absolute;top:-4px;right:-4px;width:13px;height:13px;border-radius:50%;background:#fff;color:#1a1300;font-size:11px;font-weight:800;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.5);}
+.pitch-jersey-off-mark{position:absolute;bottom:-4px;right:-4px;width:13px;height:13px;border-radius:50%;background:var(--danger);color:#fff;font-size:9px;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.5);}
 .pitch-jersey-name{font-size:9.5px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.7);max-width:68px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .pitch-empty .pitch-jersey-num{background:rgba(255,255,255,.14);color:#fff;border:1.5px dashed rgba(255,255,255,.5);box-shadow:none;}
 .pitch-empty .pitch-jersey-name{color:rgba(255,255,255,.7);}
@@ -751,6 +753,14 @@ function birthYearOf(p){
   if(p.birthYear) return parseInt(p.birthYear,10);
   return null;
 }
+// Show only first + last name (drop any middle names) — used in the Matches Database "Players"
+// column and on the pitch/lineup jerseys, where the full name takes up too much space.
+function shortPlayerName(name){
+  if(!name) return "";
+  var parts = String(name).trim().split(/\s+/);
+  if(parts.length<=2) return parts.join(" ");
+  return parts[0]+" "+parts[parts.length-1];
+}
 function initials(name){
   if(!name) return "?";
   var parts=String(name).trim().split(/\s+/);
@@ -874,6 +884,37 @@ function avatarFallback(name,size){
   return '<div class="avatar-fallback" style="width:'+size+'px;height:'+size+'px;background:'+hashColor(name)+';font-size:'+(size*0.38)+'px;">'+esc(initials(name))+'</div>';
 }
 window.__tlAvatarFallback = function(name,size){ return avatarFallback(name,size).replace(/"/g,"&quot;"); };
+// Players Database list: when a player has no photo, color their initials avatar by position —
+// grouped by sector (GK gold, DEF blue, MID green, FWD red) with a lighter/darker shade per
+// position within each sector, instead of a random hash color.
+var POSITION_AVATAR_COLORS = {
+  GK:"#A9791C",
+  // Defenders (blue family): centre-backs lighter, full-backs/wing-backs darker.
+  CB:"#4A7FB5", RCB:"#4A7FB5", LCB:"#4A7FB5",
+  LB:"#1B3F5E", RB:"#1B3F5E", LWB:"#1B3F5E", RWB:"#1B3F5E",
+  // Midfielders (green family): DM lightest, CM/wide midfield the base green, AM darkest.
+  DM:"#4FA374",
+  CM:"#2E7D4F", RM:"#2E7D4F", LM:"#2E7D4F",
+  AM:"#1D5A38",
+  // Forwards (red family): wide forwards the base red, central strikers darker.
+  LW:"#B3261E", RW:"#B3261E",
+  CF:"#7A1913", ST:"#7A1913", SS:"#7A1913"
+};
+function positionAvatarColor(pos){
+  return POSITION_AVATAR_COLORS[pos] || "";
+}
+function avatarFallbackByPosition(name,size,pos){
+  var bg = positionAvatarColor(pos) || hashColor(name);
+  return '<div class="avatar-fallback" style="width:'+size+'px;height:'+size+'px;background:'+bg+';font-size:'+(size*0.38)+'px;">'+esc(initials(name))+'</div>';
+}
+function avatarHtmlByPosition(p,size){
+  size=size||40;
+  if(p.photo){
+    return '<img class="avatar" src="'+escAttr(p.photo)+'" style="width:'+size+'px;height:'+size+'px" onerror="this.outerHTML=window.__tlAvatarFallbackByPos('+"'"+esc(p.name)+"'"+','+size+','+"'"+esc(p.firstPosition||"")+"'"+')">';
+  }
+  return avatarFallbackByPosition(p.name,size,p.firstPosition);
+}
+window.__tlAvatarFallbackByPos = function(name,size,pos){ return avatarFallbackByPosition(name,size,pos).replace(/"/g,"&quot;"); };
 // Match-context avatar: shows the player's shirt number instead of initials when they have no photo.
 function avatarOrNumberHtml(p,shirtNumber,size){
   size=size||40;
@@ -914,21 +955,67 @@ function crestFallback(name,size){
   return '<div class="crest-fallback" style="width:'+size+'px;height:'+size+'px;background:'+hashColor(name)+';font-size:'+(size*0.34)+'px;">'+esc(initials(name))+'</div>';
 }
 window.__tlCrestFallback = function(name,size){ return crestFallback(name,size).replace(/"/g,"&quot;"); };
-var NATIONALITY_FLAGS = {
-  "Portugal":"🇵🇹","Spain":"🇪🇸","England":"🇬🇧","France":"🇫🇷","Germany":"🇩🇪","Italy":"🇮🇹",
-  "Netherlands":"🇳🇱","Belgium":"🇧🇪","Brazil":"🇧🇷","Argentina":"🇦🇷","Saudi Arabia":"🇸🇦",
-  "United Arab Emirates":"🇦🇪","Qatar":"🇶🇦","Morocco":"🇲🇦","Egypt":"🇪🇬","Nigeria":"🇳🇬",
-  "Senegal":"🇸🇳","Ghana":"🇬🇭","Ivory Coast":"🇨🇮","Algeria":"🇩🇿","Tunisia":"🇹🇳","USA":"🇺🇸",
-  "Mexico":"🇲🇽","Colombia":"🇨🇴","Uruguay":"🇺🇾","Chile":"🇨🇱","Japan":"🇯🇵","South Korea":"🇰🇷",
-  "Turkey":"🇹🇷","Croatia":"🇭🇷","Serbia":"🇷🇸","Poland":"🇵🇱","Denmark":"🇩🇰","Sweden":"🇸🇪",
-  "Norway":"🇳🇴","Switzerland":"🇨🇭","Austria":"🇦🇹","Scotland":"🇬🇧","Wales":"🇬🇧","Ireland":"🇮🇪",
-  "Greece":"🇬🇷","Ukraine":"🇺🇦"
-};
+// Worldwide country list (name + ISO 3166-1 alpha-2 code) used for the Nationality picker and to
+// derive flag emoji programmatically — no need to hand-maintain ~190 flag glyphs. The four UK
+// football nations aren't real ISO codes on their own, so they share the UK's flag, same as before.
+var COUNTRIES = [
+  ["Afghanistan","AF"],["Albania","AL"],["Algeria","DZ"],["Andorra","AD"],["Angola","AO"],
+  ["Antigua and Barbuda","AG"],["Argentina","AR"],["Armenia","AM"],["Australia","AU"],["Austria","AT"],
+  ["Azerbaijan","AZ"],["Bahamas","BS"],["Bahrain","BH"],["Bangladesh","BD"],["Barbados","BB"],
+  ["Belarus","BY"],["Belgium","BE"],["Belize","BZ"],["Benin","BJ"],["Bhutan","BT"],
+  ["Bolivia","BO"],["Bosnia and Herzegovina","BA"],["Botswana","BW"],["Brazil","BR"],["Brunei","BN"],
+  ["Bulgaria","BG"],["Burkina Faso","BF"],["Burundi","BI"],["Cambodia","KH"],["Cameroon","CM"],
+  ["Canada","CA"],["Cape Verde","CV"],["Central African Republic","CF"],["Chad","TD"],["Chile","CL"],
+  ["China","CN"],["Colombia","CO"],["Comoros","KM"],["Congo","CG"],["Costa Rica","CR"],
+  ["Croatia","HR"],["Cuba","CU"],["Cyprus","CY"],["Czech Republic","CZ"],["DR Congo","CD"],
+  ["Denmark","DK"],["Djibouti","DJ"],["Dominica","DM"],["Dominican Republic","DO"],["Ecuador","EC"],
+  ["Egypt","EG"],["El Salvador","SV"],["England","GB"],["Equatorial Guinea","GQ"],["Eritrea","ER"],
+  ["Estonia","EE"],["Eswatini","SZ"],["Ethiopia","ET"],["Fiji","FJ"],["Finland","FI"],
+  ["France","FR"],["Gabon","GA"],["Gambia","GM"],["Georgia","GE"],["Germany","DE"],
+  ["Ghana","GH"],["Greece","GR"],["Grenada","GD"],["Guatemala","GT"],["Guinea","GN"],
+  ["Guinea-Bissau","GW"],["Guyana","GY"],["Haiti","HT"],["Honduras","HN"],["Hong Kong","HK"],
+  ["Hungary","HU"],["Iceland","IS"],["India","IN"],["Indonesia","ID"],["Iran","IR"],
+  ["Iraq","IQ"],["Ireland","IE"],["Israel","IL"],["Italy","IT"],["Ivory Coast","CI"],
+  ["Jamaica","JM"],["Japan","JP"],["Jordan","JO"],["Kazakhstan","KZ"],["Kenya","KE"],
+  ["Kiribati","KI"],["Kosovo","XK"],["Kuwait","KW"],["Kyrgyzstan","KG"],["Laos","LA"],
+  ["Latvia","LV"],["Lebanon","LB"],["Lesotho","LS"],["Liberia","LR"],["Libya","LY"],
+  ["Liechtenstein","LI"],["Lithuania","LT"],["Luxembourg","LU"],["Madagascar","MG"],["Malawi","MW"],
+  ["Malaysia","MY"],["Maldives","MV"],["Mali","ML"],["Malta","MT"],["Marshall Islands","MH"],
+  ["Mauritania","MR"],["Mauritius","MU"],["Mexico","MX"],["Micronesia","FM"],["Moldova","MD"],
+  ["Monaco","MC"],["Mongolia","MN"],["Montenegro","ME"],["Morocco","MA"],["Mozambique","MZ"],
+  ["Myanmar","MM"],["Namibia","NA"],["Nauru","NR"],["Nepal","NP"],["Netherlands","NL"],
+  ["New Zealand","NZ"],["Nicaragua","NI"],["Niger","NE"],["Nigeria","NG"],["North Korea","KP"],
+  ["North Macedonia","MK"],["Northern Ireland","GB"],["Norway","NO"],["Oman","OM"],["Pakistan","PK"],
+  ["Palau","PW"],["Palestine","PS"],["Panama","PA"],["Papua New Guinea","PG"],["Paraguay","PY"],
+  ["Peru","PE"],["Philippines","PH"],["Poland","PL"],["Portugal","PT"],["Qatar","QA"],
+  ["Romania","RO"],["Russia","RU"],["Rwanda","RW"],["Saint Kitts and Nevis","KN"],["Saint Lucia","LC"],
+  ["Saint Vincent and the Grenadines","VC"],["Samoa","WS"],["San Marino","SM"],["Sao Tome and Principe","ST"],["Saudi Arabia","SA"],
+  ["Scotland","GB"],["Senegal","SN"],["Serbia","RS"],["Seychelles","SC"],["Sierra Leone","SL"],
+  ["Singapore","SG"],["Slovakia","SK"],["Slovenia","SI"],["Solomon Islands","SB"],["Somalia","SO"],
+  ["South Africa","ZA"],["South Korea","KR"],["South Sudan","SS"],["Spain","ES"],["Sri Lanka","LK"],
+  ["Sudan","SD"],["Suriname","SR"],["Sweden","SE"],["Switzerland","CH"],["Syria","SY"],
+  ["Taiwan","TW"],["Tajikistan","TJ"],["Tanzania","TZ"],["Thailand","TH"],["Timor-Leste","TL"],
+  ["Togo","TG"],["Tonga","TO"],["Trinidad and Tobago","TT"],["Tunisia","TN"],["Turkey","TR"],
+  ["Turkmenistan","TM"],["Tuvalu","TV"],["USA","US"],["Uganda","UG"],["Ukraine","UA"],
+  ["United Arab Emirates","AE"],["United Kingdom","GB"],["Uruguay","UY"],["Uzbekistan","UZ"],["Vanuatu","VU"],
+  ["Vatican City","VA"],["Venezuela","VE"],["Vietnam","VN"],["Wales","GB"],["Yemen","YE"],
+  ["Zambia","ZM"],["Zimbabwe","ZW"]
+];
+var COUNTRY_LIST = COUNTRIES.map(function(c){return c[0];});
+var COUNTRY_CODE_BY_NAME = {};
+COUNTRIES.forEach(function(c){ COUNTRY_CODE_BY_NAME[c[0]] = c[1]; });
+function flagFromIsoCode(code){
+  if(!code || code.length!==2) return "";
+  return String.fromCodePoint(127397+code.toUpperCase().charCodeAt(0),127397+code.toUpperCase().charCodeAt(1));
+}
 function flagForNationality(nat){
   if(!nat) return "";
-  if(NATIONALITY_FLAGS[nat]) return NATIONALITY_FLAGS[nat];
-  var key = Object.keys(NATIONALITY_FLAGS).find(function(k){ return k.toLowerCase()===String(nat).trim().toLowerCase(); });
-  return key ? NATIONALITY_FLAGS[key] : "";
+  var code = COUNTRY_CODE_BY_NAME[nat];
+  if(!code){
+    var key = Object.keys(COUNTRY_CODE_BY_NAME).find(function(k){ return k.toLowerCase()===String(nat).trim().toLowerCase(); });
+    code = key ? COUNTRY_CODE_BY_NAME[key] : null;
+  }
+  return code ? flagFromIsoCode(code) : "";
 }
 // Football-style (FIFA trigram) country codes, e.g. Saudi Arabia -> KSA — used for the small
 // "which country is this club/competition from" abbreviations, distinct from strict ISO codes.
@@ -1010,7 +1097,15 @@ function matchLineup(matchId,clubId){
   });
 }
 function matchPlayersOfInterest(matchId){
-  return DB.matchPlayers.filter(function(mp){return mp.matchId===matchId && mp.playerOfInterest;});
+  var list = DB.matchPlayers.filter(function(mp){return mp.matchId===matchId && mp.playerOfInterest;});
+  // Manual preference order within this match — lower interestRank first ("liked most" at the
+  // top). Entries without a rank yet (legacy data) fall back to when they were flagged.
+  list.sort(function(a,b){
+    var ar = a.interestRank||0, br = b.interestRank||0;
+    if(ar!==br) return ar-br;
+    return (a.interestDate||"").localeCompare(b.interestDate||"");
+  });
+  return list;
 }
 function matchEvaluations(matchId){
   return DB.evaluations.filter(function(e){return e.matchId===matchId;});
@@ -1025,6 +1120,19 @@ function updatePlayerCurrentRatings(playerId){
   }
   p.updatedAt=nowISO();
 }
+// Height and Position track the most recently *dated* observation, not just the most recently
+// entered one — so going back to fill in an older match afterwards never overwrites what a newer
+// match already established (a young player's height/best position can shift month to month).
+// `dateField` remembers the source date of whatever's currently stored, so later comparisons are
+// always against the true latest, regardless of the order things were entered in.
+function applyLatestPlayerField(p,field,dateField,value,sourceDate){
+  if(value===undefined || value===null || String(value).trim()==="") return;
+  if(!sourceDate) return;
+  if(sourceDate >= (p[dateField]||"")){
+    p[field] = value;
+    p[dateField] = sourceDate;
+  }
+}
 function maybeSeedGeneralCharacteristics(playerId,text){
   if(!text || !text.trim()) return;
   var p = playerById(playerId);
@@ -1033,6 +1141,19 @@ function maybeSeedGeneralCharacteristics(playerId,text){
     p.characteristics = text;
     p.updatedAt = nowISO();
   }
+}
+// The player's earliest-dated "Match" evaluation (ties broken by creation order) — this is what
+// "the first match they were evaluated in" means, not whichever match happened to be entered
+// first chronologically by the scout.
+function firstMatchEvaluation(playerId){
+  var matchEvals = DB.evaluations.filter(function(e){return e.playerId===playerId && e.evaluationType==="Match" && e.matchId;});
+  if(!matchEvals.length) return null;
+  matchEvals.sort(function(a,b){
+    var d = (a.date||"").localeCompare(b.date||"");
+    if(d) return d;
+    return (a.createdAt||"").localeCompare(b.createdAt||"");
+  });
+  return matchEvals[0];
 }
 function upsertMatchEvaluation(playerId,matchId,patch){
   if(!playerId || !matchId) return null;
@@ -1049,7 +1170,18 @@ function upsertMatchEvaluation(playerId,matchId,patch){
     },patch);
     DB.evaluations.push(ev);
   }
-  if(patch.characteristics!==undefined) maybeSeedGeneralCharacteristics(playerId,patch.characteristics);
+  if(patch.characteristics!==undefined){
+    var first = firstMatchEvaluation(playerId);
+    if(first && first.id===ev.id){
+      // Editing the characteristics of the player's FIRST evaluated match keeps the profile's
+      // General Characteristics in sync with it — not just seeded once, but kept matching on
+      // every later edit to that same first-match entry.
+      var p = playerById(playerId);
+      if(p){ p.characteristics = ev.characteristics||""; p.updatedAt = nowISO(); }
+    } else {
+      maybeSeedGeneralCharacteristics(playerId,patch.characteristics);
+    }
+  }
   updatePlayerCurrentRatings(playerId);
   return ev;
 }
@@ -1642,6 +1774,42 @@ var INLINE_EDIT_HANDLERS = {};
 /* ============================================================
    CLUB COMBOBOX (search / select / quick-create)
    ============================================================ */
+// A searchable country picker (used for Nationality fields) — same combo look as the club/player
+// pickers, but backed by the fixed COUNTRY_LIST so everyone's entries land on the same spelling
+// (no more "Saudi Arabia" vs "Arábia Saudita" splitting what should be one nationality). Typing
+// without picking a suggestion still submits whatever was typed, in case a country is missing.
+function renderCountryCombo(id,name,selectedName,placeholder){
+  return '<div class="combo" data-combo-root="'+id+'">'+
+    '<input class="input" name="'+name+'" id="'+id+'_text" autocomplete="off" placeholder="'+esc(placeholder||"Search country…")+'" value="'+escAttr(selectedName||"")+'">'+
+    '<div class="combo-list" id="'+id+'_list" hidden></div>'+
+  '</div>';
+}
+function wireCountryCombo(id){
+  var text = document.getElementById(id+"_text");
+  var list = document.getElementById(id+"_list");
+  if(!text||!list) return;
+  function renderList(q){
+    var nn = normName(q);
+    var matches = !nn ? COUNTRY_LIST.slice(0,8) : COUNTRY_LIST.filter(function(c){return normName(c).indexOf(nn)>=0;}).slice(0,8);
+    var html = matches.map(function(c){
+      var flag = flagForNationality(c);
+      return '<div class="combo-item" data-country="'+escAttr(c)+'">'+(flag?'<span class="flag-emoji" style="font-size:18px">'+flag+'</span>':'')+'<div>'+esc(c)+'</div></div>';
+    }).join("");
+    if(!html) html = '<div class="combo-item" style="color:var(--text-faint);cursor:default">No match — your typed text will still be saved</div>';
+    list.innerHTML = html;
+    list.hidden = false;
+  }
+  text.addEventListener("focus",function(){ renderList(text.value); });
+  text.addEventListener("input",function(){ renderList(text.value); });
+  list.addEventListener("mousedown",function(e){
+    e.preventDefault();
+    var item = e.target.closest("[data-country]");
+    if(item){ text.value = item.dataset.country; list.hidden = true; }
+  });
+  document.addEventListener("click",function(e){
+    if(!e.target.closest('[data-combo-root="'+id+'"]')) list.hidden = true;
+  });
+}
 function renderClubCombo(id,name,selectedId,placeholder){
   var selected = selectedId ? clubById(selectedId) : null;
   return '<div class="combo" data-combo-root="'+id+'">'+
@@ -1776,7 +1944,6 @@ function openDuplicateModal(candidates,onResolve){
     if(e.target.closest("[data-create-new-anyway]")){ closeModal(); onResolve({type:"new"}); return; }
   });
 }
-var COUNTRY_LIST = ["Portugal","Spain","England","France","Germany","Italy","Netherlands","Belgium","Brazil","Argentina","Saudi Arabia","United Arab Emirates","Qatar","Morocco","Egypt","Nigeria","Senegal","Ghana","Ivory Coast","Algeria","Tunisia","USA","Mexico","Colombia","Uruguay","Chile","Japan","South Korea","Turkey","Croatia","Serbia","Poland","Denmark","Sweden","Norway","Switzerland","Austria","Scotland","Wales","Ireland","Greece","Ukraine"];
 function countryDatalist(){
   return '<datalist id="countryList">'+COUNTRY_LIST.map(function(c){return '<option value="'+esc(c)+'">';}).join("")+'</datalist>';
 }
@@ -1992,6 +2159,12 @@ function pagePlayers(){
     }
     var av=val(a), bv=val(b);
     if(av<bv) return -1*dir; if(av>bv) return 1*dir;
+    // The default database order (sorted by position): break ties by age, oldest (earliest birth
+    // year) first — unknown birth years sort last, regardless of the position column's direction.
+    if(f.sortBy==="position"){
+      var aBorn = a.born===null?Infinity:a.born, bBorn = b.born===null?Infinity:b.born;
+      if(aBorn!==bBorn) return aBorn<bBorn?-1:1;
+    }
     return normName(a.p.name) < normName(b.p.name) ? -1 : (normName(a.p.name) > normName(b.p.name) ? 1 : 0);
   });
 
@@ -2037,7 +2210,7 @@ function pagePlayers(){
     rows.forEach(function(r){
       var p=r.p;
       html += '<tr class="clickable" data-nav-row="#/players/'+encodeURIComponent(p.id)+'">'+
-        '<td><div style="display:flex;align-items:center;justify-content:center">'+avatarHtml(p,22)+'</div></td>'+
+        '<td><div style="display:flex;align-items:center;justify-content:center">'+avatarHtmlByPosition(p,22)+'</div></td>'+
         '<td><div style="font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px">'+playerDisplayName(p)+'</div></td>'+
         '<td>'+badgePos(p.firstPosition)+' '+(p.secondPosition?badgePos(p.secondPosition):'')+'</td>'+
         '<td class="num mono">'+(r.born===null?"—":r.born)+'</td>'+
@@ -2111,7 +2284,7 @@ function pagePlayerForm(existingId){
   '</div>';
   html += '<div class="form-grid">'+
     '<div class="field"><label class="field-label">Club</label>'+renderClubCombo("pf_club_combo","clubId",p.clubId,"Search or create club…")+'</div>'+
-    '<div class="field"><label class="field-label">Nationality</label><input class="input" name="nationality" list="countryList" value="'+escAttr(p.nationality)+'" placeholder="e.g. Portugal"></div>'+
+    '<div class="field"><label class="field-label">Nationality</label>'+renderCountryCombo("pf_nat_combo","nationality",p.nationality,"Search nationality…")+'</div>'+
   '</div>';
   html += '<p class="field-hint">A second nationality can be added later from the player\'s own page in the Players Database.</p>';
   html += '<div class="form-grid">'+
@@ -2133,8 +2306,8 @@ function pagePlayerForm(existingId){
     html += '<div class="field"><label class="field-label">Evaluation Type <span class="opt">for the initial evaluation above</span></label><select class="select" name="evaluationType"><option value="Manual" selected>Manual</option>'+EVAL_TYPES.filter(function(t){return t!=="Manual";}).map(function(t){return '<option value="'+t+'">'+t+'</option>';}).join("")+'</select></div>';
   }
   html += '<div style="display:flex;gap:8px"><button class="btn btn-primary btn-block" type="submit">'+(isEdit?"Save Changes":"Save Player")+'</button>'+(isEdit?'<button type="button" class="btn" data-action="go-back">Cancel</button>':'')+'</div>';
-  html += '</form></div>'+countryDatalist();
-  onAfterRender(function(){ wireClubCombo("pf_club_combo"); });
+  html += '</form></div>';
+  onAfterRender(function(){ wireClubCombo("pf_club_combo"); wireCountryCombo("pf_nat_combo"); });
   return html;
 }
 FORM_HANDLERS["save-player"] = function(form){
@@ -2162,25 +2335,64 @@ FORM_HANDLERS["save-player"] = function(form){
     status:fd.get("status")||""
   };
   if(!vals.name) return;
-  var p;
+  var evaluationType = fd.get("evaluationType")||"Manual";
   if(isEdit){
-    p = playerById(id);
+    var p = playerById(id);
     Object.assign(p,vals);
+    if(vals.height) p.heightUpdatedAt = todayISO();
+    if(vals.firstPosition) p.positionUpdatedAt = todayISO();
     p.updatedAt = nowISO();
     persist({toast:"Player updated", redirectHash:"#/players/"+encodeURIComponent(p.id)});
-  } else {
-    p = Object.assign({id:uid("player")},vals,{createdAt:nowISO(),updatedAt:nowISO()});
-    DB.players.push(p);
+    return;
+  }
+  function createNewPlayer(){
+    var np = Object.assign({id:uid("player")},vals,{createdAt:nowISO(),updatedAt:nowISO()});
+    if(vals.height) np.heightUpdatedAt = todayISO();
+    if(vals.firstPosition) np.positionUpdatedAt = todayISO();
+    DB.players.push(np);
     if(vals.currentPerformance || vals.currentPotential){
-      var initialEvalType = fd.get("evaluationType")||"Manual";
       DB.evaluations.push({
-        id:uid("eval"),playerId:p.id,matchId:null,evaluationType:initialEvalType,date:todayISO(),
+        id:uid("eval"),playerId:np.id,matchId:null,evaluationType:evaluationType,date:todayISO(),
         performance:vals.currentPerformance,potential:vals.currentPotential,
         characteristics:vals.characteristics,observations:"Initial baseline evaluation at profile creation.",
         recommendation:"",scoutId:DB.currentScoutId,createdAt:nowISO()
       });
     }
-    persist({toast:"Player successfully added to Players Database", redirectHash:"#/players/"+encodeURIComponent(p.id)});
+    persist({toast:"Player successfully added to Players Database", redirectHash:"#/players/"+encodeURIComponent(np.id)});
+  }
+  // Same name already in the Players Database (or seen in another match's lineup, since every
+  // player observed anywhere ends up in DB.players) — could be this exact player, could be a
+  // namesake. Offer to link to the existing record instead of quietly creating a duplicate.
+  var candidates = findPlayerCandidates(vals.name,vals.clubId,vals.nationality,vals.birthYear);
+  if(candidates.length){
+    openDuplicateModal(candidates,function(res){
+      if(res.type==="existing"){
+        var existing = playerById(res.playerId);
+        if(!existing) return;
+        // Link to the existing player: fill in whatever they were missing, never overwrite what's
+        // already on file — same fill-if-missing rule used everywhere else in the app.
+        ["firstPosition","secondPosition","birthYear","dob","clubId","nationality","preferredFoot","agent","photo","characteristics","extraObservations","status"].forEach(function(k){
+          if(vals[k] && !existing[k]) existing[k] = vals[k];
+        });
+        applyLatestPlayerField(existing,"height","heightUpdatedAt",vals.height,todayISO());
+        applyLatestPlayerField(existing,"firstPosition","positionUpdatedAt",vals.firstPosition,todayISO());
+        existing.updatedAt = nowISO();
+        if(vals.currentPerformance || vals.currentPotential){
+          DB.evaluations.push({
+            id:uid("eval"),playerId:existing.id,matchId:null,evaluationType:evaluationType,date:todayISO(),
+            performance:vals.currentPerformance,potential:vals.currentPotential,
+            characteristics:vals.characteristics,observations:"",recommendation:"",
+            scoutId:DB.currentScoutId,createdAt:nowISO()
+          });
+          updatePlayerCurrentRatings(existing.id);
+        }
+        persist({toast:"Linked to existing player", redirectHash:"#/players/"+encodeURIComponent(existing.id)});
+      } else {
+        createNewPlayer();
+      }
+    });
+  } else {
+    createNewPlayer();
   }
 };
 
@@ -2379,7 +2591,9 @@ INLINE_EDIT_HANDLERS["player-birthYear"] = function(el,val){
 };
 INLINE_EDIT_HANDLERS["player-height"] = function(el,val){
   var p = playerById(el.dataset.id); if(!p) return;
-  p.height = String(val||"").trim(); p.updatedAt = nowISO(); persist({});
+  p.height = String(val||"").trim();
+  if(p.height) p.heightUpdatedAt = todayISO();
+  p.updatedAt = nowISO(); persist({});
 };
 INLINE_EDIT_HANDLERS["player-agent"] = function(el,val){
   var p = playerById(el.dataset.id); if(!p) return;
@@ -2413,7 +2627,9 @@ function wirePlayerProfileSelects(){
   document.querySelectorAll('[data-action-select="set-player-position"]').forEach(function(sel){
     sel.addEventListener("change",function(){
       var p = playerById(sel.dataset.id); if(!p) return;
-      p.firstPosition = sel.value||""; p.updatedAt = nowISO(); persist({});
+      p.firstPosition = sel.value||"";
+      if(p.firstPosition) p.positionUpdatedAt = todayISO();
+      p.updatedAt = nowISO(); persist({});
     });
   });
   document.querySelectorAll('[data-action-select="set-player-status"]').forEach(function(sel){
@@ -2697,7 +2913,7 @@ function pageMatches(){
       if(r.poiCount){
         var names = DB.matchPlayers.filter(function(mp){return mp.matchId===m.id && mp.playerOfInterest;}).map(function(mp){
           var pl=playerById(mp.playerId); if(!pl) return "";
-          return (pl.name==="???" && mp.shirtNumber) ? "#"+mp.shirtNumber : pl.name;
+          return (pl.name==="???" && mp.shirtNumber) ? "#"+mp.shirtNumber : shortPlayerName(pl.name);
         }).filter(Boolean);
         playersCell = '<span style="color:var(--gold)">'+ic("star")+'</span> <span style="font-size:12px">'+esc(names.slice(0,2).join(", "))+(names.length>2?' +'+(names.length-2):'')+'</span>';
       } else if(r.lineupCount){
@@ -3079,6 +3295,15 @@ function pageAgenda(){
   html += '</div></details>';
 
   html += '</div>';
+  onAfterRender(function(){
+    // On a narrow screen the month grid scrolls horizontally; open it centered on today's
+    // column instead of at the leftmost (Monday) edge.
+    var wrap = document.querySelector(".cal-grid-wrap");
+    var todayCell = wrap ? wrap.querySelector(".cal-cell.today") : null;
+    if(wrap && todayCell){
+      wrap.scrollLeft = Math.max(0, todayCell.offsetLeft - (wrap.clientWidth/2) + (todayCell.offsetWidth/2));
+    }
+  });
   return html;
 }
 FORM_HANDLERS["add-agenda-task"] = function(form){
@@ -3351,10 +3576,14 @@ function pageMatchDetail(id){
   html += '<details class="acc" open><summary>'+ic("star")+' <span style="margin-left:6px">Players of Interest</span><span class="count-chip">'+poi.length+'</span><span class="chev">'+ic("chev")+'</span></summary><div class="acc-body">';
   if(!poi.length){ html += emptyRow("Tap the star next to a player in the lineup to flag them here."); }
   else {
-    poi.forEach(function(mp){
+    poi.forEach(function(mp,idx){
       var p = playerById(mp.playerId);
       if(!p) return;
       html += '<div class="roster-row" style="align-items:flex-start">'+
+        '<div style="display:flex;flex-direction:column;gap:2px;flex:0 0 auto">'+
+          '<button type="button" class="icon-btn" style="width:22px;height:22px" data-action="move-poi-up" data-id="'+mp.id+'" title="Move up (liked more)"'+(idx===0?" disabled":"")+'><span style="display:inline-block;transform:rotate(-90deg)">'+ic("chev")+'</span></button>'+
+          '<button type="button" class="icon-btn" style="width:22px;height:22px" data-action="move-poi-down" data-id="'+mp.id+'" title="Move down (liked less)"'+(idx===poi.length-1?" disabled":"")+'><span style="display:inline-block;transform:rotate(90deg)">'+ic("chev")+'</span></button>'+
+        '</div>'+
         '<a href="#/players/'+p.id+'" style="flex:0 0 auto">'+avatarOrNumberHtml(p,mp.shirtNumber,36)+'</a>'+
         '<div class="roster-name-wrap">'+
           '<div class="roster-name"><a href="#/players/'+p.id+'">'+esc(p.name)+'</a> <span style="color:var(--text-faint);font-weight:400">'+esc(clubName(mp.clubId))+'</span></div>'+
@@ -3447,7 +3676,7 @@ var FORMATIONS = {
     {pos:"LB", x:14, y:72}, {pos:"CB", x:38, y:74}, {pos:"CB", x:62, y:74}, {pos:"RB", x:86, y:72},
     {pos:"DM", x:35, y:58}, {pos:"CM", x:65, y:58},
     {pos:"LW", x:16, y:35}, {pos:"AM", x:50, y:33}, {pos:"RW", x:84, y:35},
-    {pos:"CF", x:50, y:17}
+    {pos:"CF", x:64, y:15}
   ],
   "3-4-3": [
     {pos:"GK", x:50, y:91},
@@ -3462,11 +3691,24 @@ function formationKeyFor(m,clubId){
   return (key && FORMATIONS[key]) ? key : "4-3-3";
 }
 function formationFor(m,clubId){ return FORMATIONS[formationKeyFor(m,clubId)]; }
+// Does this lineup entry carry any information beyond number/position/name — characteristics,
+// a note, or a graded match evaluation? Shown as a small asterisk on the jersey (any player,
+// not just Players of Interest) so it's obvious at a glance who already has notes worth reading.
+function mpHasExtraInfo(mp){
+  if(mp.matchCharacteristics && String(mp.matchCharacteristics).trim()) return true;
+  if(mp.interestNote && String(mp.interestNote).trim()) return true;
+  var ev = DB.evaluations.find(function(e){return e.playerId===mp.playerId && e.matchId===mp.matchId && e.evaluationType==="Match";});
+  if(ev && (ev.performance || ev.potential)) return true;
+  return false;
+}
 function pitchJerseyHtml(mp,matchId,clubId,slotIndex,isSub){
   var p = playerById(mp.playerId);
+  var infoMark = mpHasExtraInfo(mp) ? '<span class="pitch-jersey-info-mark" title="Has notes/evaluation">*</span>' : '';
+  var wasSubbedOff = DB.matchPlayers.some(function(x){return x.matchId===matchId && x.replacedPlayerId===mp.id;});
+  var offMark = wasSubbedOff ? '<span class="pitch-jersey-off-mark" title="Substituted off">→</span>' : '';
   return '<div class="pitch-jersey'+(isSub?" pitch-jersey-sub":"")+'" data-action="open-pitch-slot" data-match-id="'+matchId+'" data-club-id="'+clubId+'" data-slot="'+slotIndex+'" data-mp-id="'+mp.id+'">'+
-    '<span class="pitch-jersey-num">'+esc(mp.shirtNumber||"–")+'</span>'+
-    '<span class="pitch-jersey-name">'+esc(p?p.name:"")+'</span>'+
+    '<span class="pitch-jersey-num">'+esc(mp.shirtNumber||"–")+infoMark+offMark+'</span>'+
+    '<span class="pitch-jersey-name">'+esc(shortPlayerName(p?p.name:""))+'</span>'+
   '</div>';
 }
 function pitchFormation(m,clubId){
@@ -3560,6 +3802,9 @@ function applyInterestFlag(mp,want){
     mp.interestDate = todayISO(); mp.interestScoutId = DB.currentScoutId;
     var promoted = playerById(mp.playerId);
     if(promoted && promoted.pendingInterest) promoted.pendingInterest = false;
+    // New Players of Interest join the end of this match's preference order.
+    var siblingRanks = matchPlayersOfInterest(mp.matchId).map(function(x){return x.interestRank||0;});
+    mp.interestRank = siblingRanks.length ? Math.max.apply(null,siblingRanks)+1 : 1;
   }
   mp.playerOfInterest = want;
 }
@@ -3570,6 +3815,23 @@ ACTIONS["toggle-interest"] = function(el){
   if(el.hasAttribute("data-close-modal")) closeModal();
   persist({toast: mp.playerOfInterest ? "Marked as Player of Interest" : "Removed from Players of Interest"});
 };
+// Reorders this match's Players of Interest by preference (dir -1 = move up/liked more, +1 = move
+// down/liked less), swapping ranks with the adjacent entry.
+function movePlayerOfInterest(mpId,dir){
+  var mp = byId(DB.matchPlayers,mpId);
+  if(!mp) return;
+  var list = matchPlayersOfInterest(mp.matchId);
+  var idx = list.findIndex(function(x){return x.id===mpId;});
+  var swapIdx = idx+dir;
+  if(idx===-1 || swapIdx<0 || swapIdx>=list.length) return;
+  var other = list[swapIdx];
+  if(mp.interestRank===undefined || mp.interestRank===null) mp.interestRank = idx+1;
+  if(other.interestRank===undefined || other.interestRank===null) other.interestRank = swapIdx+1;
+  var tmp = mp.interestRank; mp.interestRank = other.interestRank; other.interestRank = tmp;
+  persist({});
+}
+ACTIONS["move-poi-up"] = function(el){ movePlayerOfInterest(el.dataset.id,-1); };
+ACTIONS["move-poi-down"] = function(el){ movePlayerOfInterest(el.dataset.id,1); };
 function playerHasOtherRecords(playerId,excludeMpId){
   if(DB.matchPlayers.some(function(x){return x.playerId===playerId && x.id!==excludeMpId;})) return true;
   if(DB.evaluations.some(function(x){return x.playerId===playerId;})) return true;
@@ -3616,6 +3878,14 @@ function createPlayerMinimal(name,clubId,characteristics,firstPosition){
 /* ============================================================
    PITCH SLOT MINI-MODAL — tap a jersey to add/edit that player
    ============================================================ */
+// Currently-active lineup entries for a club — a starter not yet subbed off, or a substitute
+// already on the pitch who hasn't themselves been subbed off — used to populate "Substituted For".
+function onPitchPlayers(matchId,clubId,excludeMpId){
+  var all = matchLineup(matchId,clubId);
+  var replacedIds = {};
+  all.forEach(function(x){ if(x.replacedPlayerId) replacedIds[x.replacedPlayerId]=true; });
+  return all.filter(function(x){ return x.id!==excludeMpId && !replacedIds[x.id]; });
+}
 function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus){
   forceStatus = forceStatus || "Starting XI";
   var mForSlot = matchById(matchId);
@@ -3626,38 +3896,55 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus){
   var isEdit = !!mp;
   var ev = mp ? DB.evaluations.find(function(e){return e.playerId===mp.playerId && e.matchId===matchId && e.evaluationType==="Match";}) : null;
   var title = isEdit ? "Edit Player" : (forceStatus==="Substitute" ? "Add Substitute" : "Add "+slot.pos);
+  var showSubFields = forceStatus==="Substitute" || (isEdit && mp.lineupStatus==="Substitute");
   var html = '<div class="modal-pad"><div class="modal-head"><div class="modal-title">'+title+'</div><button class="icon-btn" data-close-modal>'+ic("close")+'</button></div>';
   html += '<form data-form="save-pitch-slot" class="stack" data-match-id="'+matchId+'" data-club-id="'+clubId+'" data-slot="'+slotIndex+'" data-mp-id="'+(mpId||"")+'" data-force-status="'+forceStatus+'">';
-  html += '<div class="form-grid"><div class="field"><label class="field-label">Number</label><input class="input" type="number" min="1" max="99" name="shirtNumber" value="'+escAttr(mp?mp.shirtNumber||"":"")+'" placeholder="#" autofocus></div>'+
-    '<div class="field"><label class="field-label">Position</label><select class="select" name="position">'+positionOptions(mp?mp.position:slot.pos)+'</select></div></div>';
+  html += '<button class="btn btn-primary btn-block" type="submit">Save</button>';
+  html += '<div class="form-grid"><div class="field"><label class="field-label">Number</label><input class="input" type="number" min="1" max="99" name="shirtNumber" value="'+escAttr(mp?mp.shirtNumber||"":"")+'" placeholder="#" autofocus></div>';
   if(isEdit){
     html += '<div class="field"><label class="field-label">Name</label><input class="input" name="name" value="'+escAttr(p?p.name:"")+'"></div>';
   } else {
-    html += '<div class="field"><label class="field-label">Name <span class="opt">optional — leave blank if unsure, saved as "???"</span></label><div class="combo" data-combo-root="pitchSlotName">'+
+    html += '<div class="field"><label class="field-label">Name <span class="opt">optional, "???" if unsure</span></label><div class="combo" data-combo-root="pitchSlotName">'+
       '<input type="hidden" name="playerId" id="pitchSlotName_hidden">'+
-      '<input class="input" name="name" id="pitchSlotName_text" placeholder="Player name (optional)" autocomplete="off">'+
+      '<input class="input" name="name" id="pitchSlotName_text" placeholder="Player name" autocomplete="off">'+
       '<div class="combo-list" id="pitchSlotName_list" hidden></div>'+
     '</div></div>';
   }
-  html += '<div class="field"><label class="field-label">Characteristics <span class="opt">optional — what stood out in this match</span></label><textarea class="textarea" name="characteristics" placeholder="What stands out about their profile…">'+esc(ev?ev.characteristics||(mp?mp.matchCharacteristics||"":""):"")+'</textarea></div>';
-  html += '<div class="field"><label class="field-label">Birth Year <span class="opt">optional</span></label><input class="input" name="birthYear" type="number" min="1970" max="'+(new Date().getFullYear())+'" placeholder="e.g. 2005" value="'+escAttr(p?p.birthYear||"":"")+'"></div>';
+  html += '</div>';
+  html += '<div class="field"><label class="field-label">Position</label><select class="select" name="position">'+positionOptions(mp?mp.position:slot.pos)+'</select></div>';
+  if(showSubFields){
+    var onPitch = onPitchPlayers(matchId,clubId,mp?mp.id:null);
+    html += '<div class="form-grid">'+
+      '<div class="field"><label class="field-label">Substituted For <span class="opt">optional — might not be the same slot</span></label><select class="select" name="replacedMpId"><option value="">—</option>'+
+        onPitch.map(function(x){
+          var xp = playerById(x.playerId);
+          var label = (x.shirtNumber?"#"+x.shirtNumber+" ":"")+shortPlayerName(xp?xp.name:"")+(x.position?" ("+x.position+")":"");
+          return '<option value="'+x.id+'"'+(mp&&mp.replacedPlayerId===x.id?" selected":"")+'>'+esc(label)+'</option>';
+        }).join("")+
+      '</select></div>'+
+      '<div class="field"><label class="field-label">Sub Minute <span class="opt">optional</span></label><input class="input" type="number" min="0" max="130" name="subMinute" value="'+escAttr(mp?mp.subMinute||"":"")+'" placeholder="e.g. 63"></div>'+
+    '</div>';
+  }
   html += '<div class="form-grid">'+
     '<div class="field"><label class="field-label">Preferred Foot <span class="opt">optional</span></label><div class="pillgroup" data-name="foot"><input type="hidden" name="preferredFoot" value="'+escAttr(p?p.preferredFoot||"":"")+'">'+FEET.map(function(ft){return '<button type="button" class="pill-opt'+(p&&ft===p.preferredFoot?" on":"")+'" data-value="'+ft+'">'+ft+'</button>';}).join("")+'</div></div>'+
     '<div class="field"><label class="field-label">Height <span class="opt">optional — estimate ok, e.g. "175+-"</span></label><input class="input" name="height" value="'+escAttr(p?p.height||"":"")+'" placeholder="e.g. 178 or 175+-"></div>'+
   '</div>';
+  html += '<div class="field"><label class="field-label">Characteristics <span class="opt">optional — what stood out in this match</span></label><textarea class="textarea" name="characteristics" placeholder="What stands out about their profile…">'+esc(ev?ev.characteristics||(mp?mp.matchCharacteristics||"":""):"")+'</textarea></div>';
+  html += '<div class="field"><label class="field-label">Birth Year <span class="opt">optional</span></label><input class="input" name="birthYear" type="number" min="1970" max="'+(new Date().getFullYear())+'" placeholder="e.g. 2005" value="'+escAttr(p?p.birthYear||"":"")+'"></div>';
+  html += '<div class="field"><label class="field-label">Nationality <span class="opt">optional</span></label>'+renderCountryCombo("pitchSlotNat","nationality",p?p.nationality||"":"","Search nationality…")+'</div>';
   html += '<div class="form-grid">'+
     '<div class="field"><label class="field-label">Performance <span class="opt">1–5, optional</span></label><div class="pillgroup" data-name="performance"><input type="hidden" name="performance" value="'+escAttr(ev?ev.performance||"":"")+'">'+[1,2,3,4,5].map(function(n){return '<button type="button" class="pill-opt'+(ev&&String(n)===String(ev.performance)?" on":"")+'" data-value="'+n+'">'+n+'</button>';}).join("")+'</div></div>'+
     '<div class="field"><label class="field-label">Potential <span class="opt">A–E, optional</span></label><div class="pillgroup" data-name="potential"><input type="hidden" name="potential" value="'+escAttr(ev?ev.potential||"":"")+'">'+GRADE_LETTERS.map(function(g){return '<button type="button" class="pill-opt'+(ev&&g===normalizeGrade(ev.potential)?" on":"")+'" data-value="'+g+'">'+g+'</button>';}).join("")+'</div></div>'+
   '</div>';
   html += '<div class="field"><label class="field-label">Notes <span class="opt">optional</span></label><textarea class="textarea" name="notes" placeholder="Any notes about this player…">'+esc(mp?mp.interestNote||"":"")+'</textarea></div>';
   html += '<label class="field-checkbox"><input type="checkbox" name="playerOfInterest" value="1"'+(mp&&mp.playerOfInterest?" checked":"")+'>'+ic("star")+' <span>Player of Interest</span></label>';
-  html += '<button class="btn btn-primary btn-block" type="submit">Save</button>';
   if(isEdit){
     html += '<button type="button" class="btn btn-danger btn-block" data-action="remove-lineup-entry" data-id="'+mp.id+'" data-close-modal style="margin-top:8px">'+ic("trash")+' Remove from Lineup</button>';
   }
   html += '</form></div>';
   openModal(html);
   if(!isEdit){ wirePlayerCombo("pitchSlotName"); }
+  wireCountryCombo("pitchSlotNat");
 }
 ACTIONS["open-pitch-slot"] = function(el){
   openPitchSlotModal(el.dataset.matchId,el.dataset.clubId,parseInt(el.dataset.slot,10),el.dataset.mpId||null);
@@ -3683,15 +3970,23 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
   var potential = fd.get("potential")||"";
   var characteristics = fd.get("characteristics")||"";
   var notes = fd.get("notes")||"";
+  var nationality = (fd.get("nationality")||"").trim();
+  var replacedMpId = fd.get("replacedMpId")||"";
+  var subMinute = fd.get("subMinute")||"";
   var wantInterest = fd.get("playerOfInterest")==="1";
   function applyBrief(playerId){
     var pl = playerById(playerId);
     if(pl){
-      // fill-if-missing: don't clobber info the player profile already has —
-      // only fill in fields that were empty, using what was entered while evaluating this match.
+      // fill-if-missing for birth year/foot/nationality: don't clobber info the player profile
+      // already has. Height and Position are different — a young player's height and best-fit
+      // role can change match to match, so they always track whichever dated entry is most
+      // recent, never letting an older match's info overwrite a newer one (see applyLatestPlayerField).
       if(birthYear && !pl.birthYear) pl.birthYear = birthYear;
       if(preferredFoot && !pl.preferredFoot) pl.preferredFoot = preferredFoot;
-      if(height && !pl.height) pl.height = height;
+      if(nationality && !pl.nationality) pl.nationality = nationality;
+      var srcDate = (mForSlot && mForSlot.date) || todayISO();
+      applyLatestPlayerField(pl,"height","heightUpdatedAt",height,srcDate);
+      applyLatestPlayerField(pl,"firstPosition","positionUpdatedAt",position,srcDate);
       pl.updatedAt = nowISO();
     }
     if(performance || potential || characteristics.trim()){ upsertMatchEvaluation(playerId,matchId,{performance:performance,potential:potential,characteristics:characteristics}); }
@@ -3705,6 +4000,8 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
     mp.position = position;
     mp.matchCharacteristics = characteristics;
     mp.interestNote = notes;
+    mp.replacedPlayerId = replacedMpId;
+    mp.subMinute = subMinute;
     applyInterestFlag(mp,wantInterest);
     applyBrief(mp.playerId);
     closeModal();
@@ -3717,7 +4014,8 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
       id:uid("mp"), matchId:matchId, playerId:pid, clubId:clubId,
       shirtNumber:shirtNumber, position:position, slotIndex:slotIndex,
       lineupStatus:forceStatus, matchCharacteristics:characteristics,
-      playerOfInterest:false, interestNote:notes, interestPriority:"", createdAt:nowISO()
+      playerOfInterest:false, interestNote:notes, interestPriority:"",
+      replacedPlayerId:replacedMpId, subMinute:subMinute, createdAt:nowISO()
     };
     DB.matchPlayers.push(mpNew);
     applyInterestFlag(mpNew,wantInterest);
