@@ -308,6 +308,10 @@ td.num,th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric
 .input:focus,.select:focus,.textarea:focus{border-color:var(--accent);}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .form-grid .span2{grid-column:1/-1;}
+/* Number+Name on the pitch-slot modal: the opposite of .form-grid's responsive behavior —
+   stacked (one per line) on desktop where there's no room pressure, side by side only on a
+   narrow/iPhone-width screen to save vertical space. See the max-width:860px override below. */
+.namenum-row{display:grid;grid-template-columns:1fr;gap:14px;}
 .field-checkbox{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--text);cursor:pointer;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);}
 .field-checkbox input[type="checkbox"]{width:17px;height:17px;accent-color:var(--gold);cursor:pointer;flex:0 0 auto;}
 .field-checkbox svg{width:15px;height:15px;color:var(--gold);flex:0 0 auto;}
@@ -360,6 +364,8 @@ td.num,th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric
 .pitch-jersey-num{position:relative;display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px 8px 2px 2px;background:var(--gold);color:#1a1300;font-family:var(--font-display);font-weight:800;font-size:13.5px;box-shadow:0 1px 4px rgba(0,0,0,.45);}
 .pitch-jersey-num svg{width:16px;height:16px;}
 .pitch-jersey-info-mark{position:absolute;top:-4px;right:-4px;width:13px;height:13px;border-radius:50%;background:#fff;color:#1a1300;font-size:11px;font-weight:800;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.5);}
+.pitch-jersey-star-mark{background:var(--gold);}
+.pitch-jersey-star-mark svg{width:9px;height:9px;display:block;color:#fff;}
 .pitch-jersey-off-mark{position:absolute;bottom:-4px;right:-4px;width:13px;height:13px;border-radius:50%;background:var(--danger);color:#fff;font-size:9px;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.5);}
 .pitch-jersey-name{font-size:9.5px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.7);max-width:68px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .pitch-empty .pitch-jersey-num{background:rgba(255,255,255,.14);color:#fff;border:1.5px dashed rgba(255,255,255,.5);box-shadow:none;}
@@ -522,6 +528,7 @@ details.acc summary .count-chip{background:var(--surface-3);color:var(--text-mut
   .page-title-mobile{display:block;}
   .lineup-cols{grid-template-columns:1fr;}
   .form-grid{grid-template-columns:1fr;}
+  .namenum-row{grid-template-columns:1fr 1fr;}
   .dash-grid{grid-template-columns:1fr;}
   /* Agenda strip: 3 side-by-side columns don't fit legibly on an iPhone-width screen, so show
      one day at a time (driven by DASH_AGENDA_DAY_OFFSET) with prev/next arrows instead. */
@@ -1069,7 +1076,20 @@ function openWatchDateModal(matchId){
   html += '</form></div>';
   openModal(html);
 }
-function badgePos(pos,big){ var grp=positionGroup(pos); return pos ? '<span class="badge badge-pos'+(grp?" badge-posgrp-"+grp:"")+(big?" badge-pos-lg":"")+'">'+esc(pos)+'</span>' : ""; }
+function hexToRgba(hex,alpha){
+  var h = String(hex||"").replace("#","");
+  if(h.length!==6) return "rgba(0,0,0,"+alpha+")";
+  var r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
+  return "rgba("+r+","+g+","+b+","+alpha+")";
+}
+// Position badges use the exact same per-position color as the no-photo avatars (see
+// POSITION_AVATAR_COLORS) so a position always reads as the same color everywhere in the app.
+function badgePos(pos,big){
+  if(!pos) return "";
+  var color = positionAvatarColor(pos);
+  var style = color ? "background:"+hexToRgba(color,0.16)+";color:"+color+";" : "";
+  return '<span class="badge badge-pos'+(big?" badge-pos-lg":"")+'" style="'+style+'">'+esc(pos)+'</span>';
+}
 
 /* ============================================================
    DERIVED / QUERY HELPERS
@@ -1744,6 +1764,10 @@ var AUTOSAVE_HANDLERS = {};
 function startInlineEdit(el){
   var field = el.dataset.field;
   var current = el.dataset.raw !== undefined ? el.dataset.raw : el.textContent.trim();
+  // Nationality fields get the same searchable country picker used on the Add/Edit Player and
+  // pitch-slot forms, right on the profile — so a scout can double-check the spelling matches the
+  // rest of the app instead of retyping into a plain text box.
+  if(field==="nationality" || field==="nationality2"){ startInlineCountryEdit(el,current); return; }
   var input = document.createElement("input");
   input.className = "input";
   input.style.minHeight="30px"; input.style.padding="4px 7px"; input.style.fontSize="inherit"; input.style.fontWeight="inherit"; input.style.width = Math.max(60, el.offsetWidth+30)+"px";
@@ -1767,6 +1791,37 @@ function startInlineEdit(el){
   input.addEventListener("keydown",function(e){
     if(e.key==="Enter"){ e.preventDefault(); input.blur(); }
     if(e.key==="Escape"){ input.removeEventListener("blur",commit); input.remove(); el.style.display=""; el.classList.remove("editing"); }
+  });
+}
+function startInlineCountryEdit(el,current){
+  var editKey = el.dataset.editKey;
+  var field = el.dataset.field;
+  var comboId = "inlineNatCombo_"+field+"_"+el.dataset.id;
+  el.classList.add("editing");
+  el.style.display="none";
+  var wrap = document.createElement("div");
+  wrap.style.display="inline-block";
+  wrap.style.minWidth = Math.max(150, el.offsetWidth+40)+"px";
+  wrap.style.verticalAlign="middle";
+  wrap.innerHTML = renderCountryCombo(comboId,"",current==="—"?"":current,"Search country…");
+  el.parentNode.insertBefore(wrap, el);
+  var input = document.getElementById(comboId+"_text");
+  input.style.minHeight="30px"; input.style.padding="4px 7px"; input.style.fontSize="inherit"; input.style.fontWeight="inherit";
+  wireCountryCombo(comboId);
+  input.focus(); input.select();
+  function commit(){
+    var val = input.value;
+    wrap.remove();
+    el.style.display="";
+    el.classList.remove("editing");
+    if(val !== (current==="—"?"":current)){
+      INLINE_EDIT_HANDLERS[editKey] && INLINE_EDIT_HANDLERS[editKey](el,val);
+    }
+  }
+  input.addEventListener("blur",commit);
+  input.addEventListener("keydown",function(e){
+    if(e.key==="Enter"){ e.preventDefault(); input.blur(); }
+    if(e.key==="Escape"){ input.removeEventListener("blur",commit); wrap.remove(); el.style.display=""; el.classList.remove("editing"); }
   });
 }
 var INLINE_EDIT_HANDLERS = {};
@@ -3676,7 +3731,7 @@ var FORMATIONS = {
     {pos:"LB", x:14, y:72}, {pos:"CB", x:38, y:74}, {pos:"CB", x:62, y:74}, {pos:"RB", x:86, y:72},
     {pos:"DM", x:35, y:58}, {pos:"CM", x:65, y:58},
     {pos:"LW", x:16, y:35}, {pos:"AM", x:50, y:33}, {pos:"RW", x:84, y:35},
-    {pos:"CF", x:64, y:15}
+    {pos:"CF", x:50, y:17, sideSubs:true}
   ],
   "3-4-3": [
     {pos:"GK", x:50, y:91},
@@ -3703,7 +3758,12 @@ function mpHasExtraInfo(mp){
 }
 function pitchJerseyHtml(mp,matchId,clubId,slotIndex,isSub){
   var p = playerById(mp.playerId);
-  var infoMark = mpHasExtraInfo(mp) ? '<span class="pitch-jersey-info-mark" title="Has notes/evaluation">*</span>' : '';
+  // Players of Interest get a star (matching the star used everywhere else in the app for POI);
+  // everyone else with notes/characteristics/a graded evaluation gets a plain asterisk — so the
+  // two are visually distinct at a glance.
+  var infoMark = mp.playerOfInterest
+    ? '<span class="pitch-jersey-info-mark pitch-jersey-star-mark" title="Player of Interest">'+ic("star")+'</span>'
+    : (mpHasExtraInfo(mp) ? '<span class="pitch-jersey-info-mark" title="Has notes/evaluation">*</span>' : '');
   var wasSubbedOff = DB.matchPlayers.some(function(x){return x.matchId===matchId && x.replacedPlayerId===mp.id;});
   var offMark = wasSubbedOff ? '<span class="pitch-jersey-off-mark" title="Substituted off">→</span>' : '';
   return '<div class="pitch-jersey'+(isSub?" pitch-jersey-sub":"")+'" data-action="open-pitch-slot" data-match-id="'+matchId+'" data-club-id="'+clubId+'" data-slot="'+slotIndex+'" data-mp-id="'+mp.id+'">'+
@@ -3760,9 +3820,21 @@ function pitchFormation(m,clubId){
   slots.forEach(function(slot,i){
     var cell = bySlot[i] || {starter:null,subs:[]};
     var stackHtml = "";
+    // Slots flagged sideSubs (e.g. the lone CF in 4-2-3-1, sitting right under the AM slot) keep
+    // the starter exactly on its marked spot and place any substitutes beside it instead of
+    // stacking them underneath, where they'd overlap the slot above.
+    var sideHtml = "";
+    function addSub(sub,idx){
+      if(slot.sideSubs){
+        var offsetX = Math.min(96, slot.x + 14*(idx+1));
+        sideHtml += '<div class="pitch-slot-stack" style="left:'+offsetX+'%;top:'+slot.y+'%">'+pitchJerseyHtml(sub,m.id,clubId,i,true)+'</div>';
+      } else {
+        stackHtml += pitchJerseyHtml(sub,m.id,clubId,i,true);
+      }
+    }
     if(cell.starter){
       stackHtml += pitchJerseyHtml(cell.starter,m.id,clubId,i,false);
-      cell.subs.forEach(function(sub){ stackHtml += pitchJerseyHtml(sub,m.id,clubId,i,true); });
+      cell.subs.forEach(addSub);
       stackHtml += '<button type="button" class="pitch-add-sub" data-action="open-pitch-slot-sub" data-match-id="'+m.id+'" data-club-id="'+clubId+'" data-slot="'+i+'" title="Add substitute">'+ic("plus")+'</button>';
     } else {
       // No starter in this slot (e.g. the starter was removed while a substitute was still here) —
@@ -3772,9 +3844,9 @@ function pitchFormation(m,clubId){
         '<span class="pitch-jersey-num">'+ic("plus")+'</span>'+
         '<span class="pitch-jersey-name">'+slot.pos+'</span>'+
       '</div>';
-      cell.subs.forEach(function(sub){ stackHtml += pitchJerseyHtml(sub,m.id,clubId,i,true); });
+      cell.subs.forEach(addSub);
     }
-    jerseys += '<div class="pitch-slot-stack" style="left:'+slot.x+'%;top:'+slot.y+'%">'+stackHtml+'</div>';
+    jerseys += '<div class="pitch-slot-stack" style="left:'+slot.x+'%;top:'+slot.y+'%">'+stackHtml+'</div>'+sideHtml;
   });
   var overflowNote = legacyOther.length ? '<div class="field-hint" style="margin-top:6px">+'+legacyOther.length+' player'+(legacyOther.length===1?"":"s")+' from before the pitch redesign — open them from the Players Database.</div>' : '';
   return '<div class="pitch-wrap"><div class="pitch">'+
@@ -3821,12 +3893,15 @@ function movePlayerOfInterest(mpId,dir){
   var mp = byId(DB.matchPlayers,mpId);
   if(!mp) return;
   var list = matchPlayersOfInterest(mp.matchId);
+  // Backfill sequential ranks for the WHOLE list first (in its current, already-correct display
+  // order) before swapping. Entries added before this feature existed (or otherwise missing a
+  // rank) all default to the same value, so giving a concrete rank to only the two being swapped
+  // used to make them jump past every other still-unranked entry instead of moving one spot.
+  list.forEach(function(x,i){ x.interestRank = i+1; });
   var idx = list.findIndex(function(x){return x.id===mpId;});
   var swapIdx = idx+dir;
-  if(idx===-1 || swapIdx<0 || swapIdx>=list.length) return;
+  if(idx===-1 || swapIdx<0 || swapIdx>=list.length){ persist({}); return; }
   var other = list[swapIdx];
-  if(mp.interestRank===undefined || mp.interestRank===null) mp.interestRank = idx+1;
-  if(other.interestRank===undefined || other.interestRank===null) other.interestRank = swapIdx+1;
   var tmp = mp.interestRank; mp.interestRank = other.interestRank; other.interestRank = tmp;
   persist({});
 }
@@ -3886,7 +3961,11 @@ function onPitchPlayers(matchId,clubId,excludeMpId){
   all.forEach(function(x){ if(x.replacedPlayerId) replacedIds[x.replacedPlayerId]=true; });
   return all.filter(function(x){ return x.id!==excludeMpId && !replacedIds[x.id]; });
 }
-function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus){
+// presetSub: {replacedMpId, subMinute} already collected by the "Add Substitute" mini-modal
+// (openAddSubstituteIntroModal) — carried through as hidden fields so this modal doesn't need to
+// show those fields again for a fresh substitute add. Editing an existing substitute later still
+// shows them inline (there's no earlier mini-modal step to have collected them).
+function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub){
   forceStatus = forceStatus || "Starting XI";
   var mForSlot = matchById(matchId);
   var slots = mForSlot ? formationFor(mForSlot,clubId) : FORMATIONS["4-3-3"];
@@ -3896,11 +3975,17 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus){
   var isEdit = !!mp;
   var ev = mp ? DB.evaluations.find(function(e){return e.playerId===mp.playerId && e.matchId===matchId && e.evaluationType==="Match";}) : null;
   var title = isEdit ? "Edit Player" : (forceStatus==="Substitute" ? "Add Substitute" : "Add "+slot.pos);
-  var showSubFields = forceStatus==="Substitute" || (isEdit && mp.lineupStatus==="Substitute");
-  var html = '<div class="modal-pad"><div class="modal-head"><div class="modal-title">'+title+'</div><button class="icon-btn" data-close-modal>'+ic("close")+'</button></div>';
-  html += '<form data-form="save-pitch-slot" class="stack" data-match-id="'+matchId+'" data-club-id="'+clubId+'" data-slot="'+slotIndex+'" data-mp-id="'+(mpId||"")+'" data-force-status="'+forceStatus+'">';
-  html += '<button class="btn btn-primary btn-block" type="submit">Save</button>';
-  html += '<div class="form-grid"><div class="field"><label class="field-label">Number</label><input class="input" type="number" min="1" max="99" name="shirtNumber" value="'+escAttr(mp?mp.shirtNumber||"":"")+'" placeholder="#" autofocus></div>';
+  var showSubFields = isEdit && mp.lineupStatus==="Substitute";
+  var html = '<div class="modal-pad"><div class="modal-head"><div class="modal-title">'+title+'</div>'+
+    '<div style="display:flex;align-items:center;gap:6px"><button type="submit" form="pitchSlotForm" class="btn btn-primary btn-sm">Save</button><button class="icon-btn" data-close-modal>'+ic("close")+'</button></div>'+
+  '</div>';
+  html += '<form id="pitchSlotForm" data-form="save-pitch-slot" class="stack" data-match-id="'+matchId+'" data-club-id="'+clubId+'" data-slot="'+slotIndex+'" data-mp-id="'+(mpId||"")+'" data-force-status="'+forceStatus+'">';
+  if(!showSubFields && forceStatus==="Substitute" && presetSub){
+    html += '<input type="hidden" name="replacedMpId" value="'+escAttr(presetSub.replacedMpId||"")+'">';
+    html += '<input type="hidden" name="subMinute" value="'+escAttr(presetSub.subMinute||"")+'">';
+  }
+  // Number+Name: stacked on desktop (.namenum-row), side by side only on a narrow/iPhone screen.
+  html += '<div class="namenum-row"><div class="field"><label class="field-label">Number</label><input class="input" type="number" min="1" max="99" name="shirtNumber" value="'+escAttr(mp?mp.shirtNumber||"":"")+'" placeholder="#" autofocus></div>';
   if(isEdit){
     html += '<div class="field"><label class="field-label">Name</label><input class="input" name="name" value="'+escAttr(p?p.name:"")+'"></div>';
   } else {
@@ -3949,8 +4034,33 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus){
 ACTIONS["open-pitch-slot"] = function(el){
   openPitchSlotModal(el.dataset.matchId,el.dataset.clubId,parseInt(el.dataset.slot,10),el.dataset.mpId||null);
 };
+// Tapping a bench "+" first opens a small mini-modal to (optionally) record who came off and the
+// minute, THEN proceeds straight to the regular player modal — which no longer shows those two
+// fields itself for a fresh add, since they were just collected here.
+function openAddSubstituteIntroModal(matchId,clubId,slotIndex){
+  var onPitch = onPitchPlayers(matchId,clubId,null);
+  var html = '<div class="modal-pad"><div class="modal-head"><div class="modal-title">Add Substitute</div><button class="icon-btn" data-close-modal>'+ic("close")+'</button></div>';
+  html += '<form data-form="add-substitute-intro" class="stack" data-match-id="'+matchId+'" data-club-id="'+clubId+'" data-slot="'+slotIndex+'">';
+  html += '<div class="field"><label class="field-label">Substituted For <span class="opt">optional — might not be the same slot</span></label><select class="select" name="replacedMpId"><option value="">—</option>'+
+    onPitch.map(function(x){
+      var xp = playerById(x.playerId);
+      var label = (x.shirtNumber?"#"+x.shirtNumber+" ":"")+shortPlayerName(xp?xp.name:"")+(x.position?" ("+x.position+")":"");
+      return '<option value="'+x.id+'">'+esc(label)+'</option>';
+    }).join("")+
+  '</select></div>';
+  html += '<div class="field"><label class="field-label">Sub Minute <span class="opt">optional</span></label><input class="input" type="number" min="0" max="130" name="subMinute" placeholder="e.g. 63" autofocus></div>';
+  html += '<button class="btn btn-primary btn-block" type="submit">Continue</button>';
+  html += '</form></div>';
+  openModal(html);
+}
+FORM_HANDLERS["add-substitute-intro"] = function(form){
+  var fd = new FormData(form);
+  var presetSub = { replacedMpId: fd.get("replacedMpId")||"", subMinute: fd.get("subMinute")||"" };
+  var matchId = form.dataset.matchId, clubId = form.dataset.clubId, slotIndex = parseInt(form.dataset.slot,10);
+  openPitchSlotModal(matchId,clubId,slotIndex,null,"Substitute",presetSub);
+};
 ACTIONS["open-pitch-slot-sub"] = function(el){
-  openPitchSlotModal(el.dataset.matchId,el.dataset.clubId,parseInt(el.dataset.slot,10),null,"Substitute");
+  openAddSubstituteIntroModal(el.dataset.matchId,el.dataset.clubId,parseInt(el.dataset.slot,10));
 };
 FORM_HANDLERS["save-pitch-slot"] = function(form){
   var fd = new FormData(form);
