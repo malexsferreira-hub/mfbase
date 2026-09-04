@@ -210,17 +210,12 @@ input.eval-param-input{width:44px;min-height:28px;padding:2px 4px;text-align:cen
 .stat-value{font-family:var(--font-display);font-weight:800;font-size:30px;line-height:1;font-variant-numeric:tabular-nums;}
 .stat-label{font-size:11.5px;color:var(--text-muted);margin-top:5px;font-weight:600;}
 
-/* ---------- dashboard: 3-day agenda strip ---------- */
-.dash-3day{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;}
-.dash-day-col{min-width:0;border-radius:var(--radius-sm);padding:6px;}
-.dash-day-col.today{background:var(--accent-soft);}
-.dash-day-head{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);padding:2px 2px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.dash-day-col.today .dash-day-head{color:var(--accent-strong);}
+/* ---------- dashboard: single-day agenda strip (yesterday/today/tomorrow/day-after-tomorrow) ----------
+   Same one-day-at-a-time view with prev/next arrows on both desktop and mobile — this widget is
+   the Dashboard's own mini-agenda only; the full Agenda page (#/agenda) is unrelated and unchanged. */
 .dash-agenda-item{display:flex;align-items:center;gap:5px;padding:3px 2px;}
 .dash-agenda-empty{padding:4px 2px;color:var(--text-faint);font-size:11px;}
-/* mobile-only day switcher (prev/today.tomorrow/next) — hidden on desktop, shown and the
-   3-day grid collapsed to one visible column in the max-width:860px block further down */
-.dash-day-nav{display:none;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;}
+.dash-day-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;}
 .dash-day-nav-label{font-size:12.5px;font-weight:700;color:var(--text);}
 .icon-btn:disabled{opacity:.3;cursor:default;}
 
@@ -536,13 +531,6 @@ details.acc summary .count-chip{background:var(--surface-3);color:var(--text-mut
   .dash-match-crests{display:none!important;}
   .dash-match-agegroup{display:inline-flex!important;}
   .dash-match-competition{display:none!important;}
-  /* Agenda strip: 3 side-by-side columns don't fit legibly on an iPhone-width screen, so show
-     one day at a time (driven by DASH_AGENDA_DAY_OFFSET) with prev/next arrows instead. */
-  .dash-day-nav{display:flex;}
-  .dash-3day{display:block;}
-  .dash-day-col{display:none;}
-  .dash-day-col.mobile-active{display:block;}
-  .dash-day-col .dash-day-head{display:none;}
   .rating-grid{grid-template-columns:1fr;}
   .kv-grid{grid-template-columns:repeat(2,1fr);}
   .profile-head{flex-direction:column;align-items:center;text-align:center;}
@@ -737,6 +725,11 @@ function todayISO(){
 function shiftDateISO(iso,deltaDays){
   var d = new Date(iso+"T00:00:00");
   d.setDate(d.getDate()+deltaDays);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function shiftMonthsISO(iso,deltaMonths){
+  var d = new Date(iso+"T00:00:00");
+  d.setMonth(d.getMonth()+deltaMonths);
   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 }
 function nowISO(){ return new Date().toISOString(); }
@@ -1374,7 +1367,8 @@ var ICONS = {
   agenda:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l2 2 4-4"/><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18"/></svg>',
   task:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 12l2.5 2.5L16 9"/></svg>',
   backup:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4.2-4.2M12 15l4.2-4.2"/><path d="M4.5 16.5v2A2.5 2.5 0 007 21h10a2.5 2.5 0 002.5-2.5v-2"/></svg>',
-  note:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M8 12h8M8 16h5"/></svg>'
+  note:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M8 12h8M8 16h5"/></svg>',
+  clock:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>'
 };
 function ic(name){ return ICONS[name]||""; }
 
@@ -1399,6 +1393,7 @@ function parseHash(){
   }
   if(parts[0]==="calendar") return {name:"calendar",params:{}};
   if(parts[0]==="agenda") return {name:"agenda",params:{}};
+  if(parts[0]==="teams-watch") return {name:"teams-watch",params:{}};
   return {name:"dashboard",params:{}};
 }
 function navigate(hash){ location.hash = hash; }
@@ -1412,7 +1407,8 @@ var NAV_ITEMS = [
   {key:"calendar",label:"Calendar",hash:"#/calendar",icon:"calendar"},
   {key:"agenda",label:"Agenda",hash:"#/agenda",icon:"agenda"},
   {key:"players",label:"Players Database",hash:"#/players",icon:"players"},
-  {key:"matches",label:"Matches Database",hash:"#/matches",icon:"matches"}
+  {key:"matches",label:"Matches Database",hash:"#/matches",icon:"matches"},
+  {key:"teams-watch",label:"Teams - Watch",hash:"#/teams-watch",icon:"clock"}
 ];
 var TAB_ITEMS = [
   {key:"dashboard",label:"Home",hash:"#/",icon:"dashboard"},
@@ -1430,6 +1426,7 @@ function pageActiveKey(){
   if(ROUTE.name==="players"||ROUTE.name==="player-detail"||ROUTE.name==="player-edit") return "players";
   if(ROUTE.name==="calendar") return "calendar";
   if(ROUTE.name==="agenda") return "agenda";
+  if(ROUTE.name==="teams-watch") return "teams-watch";
   return "dashboard";
 }
 function pageTitleFor(){
@@ -1497,6 +1494,7 @@ function render(){
       case "player-detail": pageHtml = pagePlayerDetail(ROUTE.params.id); break;
       case "calendar": pageHtml = pageCalendar(); break;
       case "agenda": pageHtml = pageAgenda(); break;
+      case "teams-watch": pageHtml = pageTeamsWatch(); break;
       default: pageHtml = pageDashboard();
     }
   }catch(e){
@@ -2134,54 +2132,53 @@ function dashEvalRow(e){
     '<div style="display:flex;align-items:center;gap:9px;min-width:0">'+avatarHtml(p,28)+'<div style="min-width:0"><div class="roster-name">'+esc(p.name)+'</div><div class="roster-chars">'+badgeType(e.evaluationType)+' · '+fmtDateShort(e.date)+'</div></div></div>'+
     right+'</a>';
 }
-/* ---------- 3-day agenda strip (yesterday / today / tomorrow) ----------
-   Desktop shows all 3 columns side by side. Mobile shows one day at a time
-   (DASH_AGENDA_DAY_OFFSET, -1/0/1) with prev/next arrows, since 3 columns
-   don't fit legibly on an iPhone-width screen. */
+/* ---------- single-day agenda strip (yesterday / today / tomorrow / day after tomorrow) ----------
+   Same one-day-at-a-time view with prev/next arrows on both desktop and mobile now
+   (DASH_AGENDA_DAY_OFFSET, -1/0/1/2). This is the Dashboard's own mini-agenda widget only — the
+   full Agenda page (#/agenda) is a separate, unrelated page and is not affected by this. */
 var DASH_AGENDA_DAY_OFFSET = 0;
 function dashDayAgendaPanel(){
   var today = todayISO();
   var days = [
     {key:shiftDateISO(today,-1), label:"Yesterday", offset:-1},
     {key:today, label:"Today", offset:0},
-    {key:shiftDateISO(today,1), label:"Tomorrow", offset:1}
+    {key:shiftDateISO(today,1), label:"Tomorrow", offset:1},
+    {key:shiftDateISO(today,2), label:"Day After Tomorrow", offset:2}
   ];
   var activeDay = days[DASH_AGENDA_DAY_OFFSET+1];
-  var cols = days.map(function(d){
-    var ms = DB.matches.filter(function(m){return agendaDateOf(m)===d.key;}).sort(function(a,b){return (a.time||"").localeCompare(b.time||"");});
-    var ts = DB.agendaTasks.filter(function(t){return t.dueDate===d.key;}).sort(function(a,b){
-      var ad=a.done?1:0, bd=b.done?1:0;
-      if(ad!==bd) return ad-bd;
-      return (a.dueTime||"99:99").localeCompare(b.dueTime||"99:99");
-    });
-    var itemsHtml = "";
-    ms.forEach(function(m){
-      var chipClass = "cal-chip-mode-"+(m.observationMode||"LIVE");
-      var showTime = m.time && m.observationMode!=="VIDEO";
-      itemsHtml += '<div class="dash-agenda-item" data-action="open-match-preview" data-id="'+m.id+'" style="cursor:pointer">'+
-        '<span class="cal-chip '+chipClass+'" style="flex:0 0 auto">'+(showTime?esc(m.time)+' ':'')+esc(m.observationMode||"LIVE")+'</span>'+
-        '<span style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(clubName(m.homeClubId))+' v '+esc(clubName(m.awayClubId))+'</span>'+
-      '</div>';
-    });
-    ts.forEach(function(t){
-      itemsHtml += '<div class="dash-agenda-item" data-action="open-task-preview" data-id="'+t.id+'" style="cursor:pointer">'+
-        '<span class="cal-chip cal-chip-task'+(t.done?" done":"")+'" style="flex:0 0 auto">'+(t.dueTime?esc(t.dueTime):"Task")+'</span>'+
-        '<span style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+(t.done?"text-decoration:line-through;color:var(--text-faint)":"")+'">'+esc(t.text)+'</span>'+
-      '</div>';
-    });
-    if(!itemsHtml) itemsHtml = '<div class="dash-agenda-empty">Nothing.</div>';
-    var activeClass = (d.offset===DASH_AGENDA_DAY_OFFSET) ? " mobile-active" : "";
-    return '<div class="dash-day-col'+(d.key===today?" today":"")+activeClass+'"><div class="dash-day-head">'+d.label+' · '+fmtDateShort(d.key)+'</div>'+itemsHtml+'</div>';
-  }).join("");
-  var mobileNav = '<div class="dash-day-nav">'+
+  var ms = DB.matches.filter(function(m){return agendaDateOf(m)===activeDay.key;}).sort(function(a,b){return (a.time||"").localeCompare(b.time||"");});
+  var ts = DB.agendaTasks.filter(function(t){return t.dueDate===activeDay.key;}).sort(function(a,b){
+    var ad=a.done?1:0, bd=b.done?1:0;
+    if(ad!==bd) return ad-bd;
+    return (a.dueTime||"99:99").localeCompare(b.dueTime||"99:99");
+  });
+  var itemsHtml = "";
+  ms.forEach(function(m){
+    var chipClass = "cal-chip-mode-"+(m.observationMode||"LIVE");
+    var showTime = m.time && m.observationMode!=="VIDEO";
+    var ag = matchAgeGroup(m);
+    itemsHtml += '<div class="dash-agenda-item" data-action="open-match-preview" data-id="'+m.id+'" style="cursor:pointer">'+
+      '<span class="cal-chip '+chipClass+'" style="flex:0 0 auto">'+(showTime?esc(m.time)+' ':'')+esc(m.observationMode||"LIVE")+'</span>'+
+      (ag?'<span class="badge" style="flex:0 0 auto;background:var(--surface-3);color:var(--text-muted);font-size:10px;padding:2px 6px">'+esc(ag)+'</span>':'')+
+      '<span style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(clubName(m.homeClubId))+' v '+esc(clubName(m.awayClubId))+'</span>'+
+    '</div>';
+  });
+  ts.forEach(function(t){
+    itemsHtml += '<div class="dash-agenda-item" data-action="open-task-preview" data-id="'+t.id+'" style="cursor:pointer">'+
+      '<span class="cal-chip cal-chip-task'+(t.done?" done":"")+'" style="flex:0 0 auto">'+(t.dueTime?esc(t.dueTime):"Task")+'</span>'+
+      '<span style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+(t.done?"text-decoration:line-through;color:var(--text-faint)":"")+'">'+esc(t.text)+'</span>'+
+    '</div>';
+  });
+  if(!itemsHtml) itemsHtml = '<div class="dash-agenda-empty">Nothing.</div>';
+  var nav = '<div class="dash-day-nav">'+
     '<button type="button" class="icon-btn" data-action="dash-agenda-day-prev" title="Previous day"'+(DASH_AGENDA_DAY_OFFSET<=-1?" disabled":"")+'><span style="display:inline-block;transform:rotate(180deg)">'+ic("chev")+'</span></button>'+
     '<div class="dash-day-nav-label">'+activeDay.label+' · '+fmtDateShort(activeDay.key)+'</div>'+
-    '<button type="button" class="icon-btn" data-action="dash-agenda-day-next" title="Next day"'+(DASH_AGENDA_DAY_OFFSET>=1?" disabled":"")+'>'+ic("chev")+'</button>'+
+    '<button type="button" class="icon-btn" data-action="dash-agenda-day-next" title="Next day"'+(DASH_AGENDA_DAY_OFFSET>=2?" disabled":"")+'>'+ic("chev")+'</button>'+
   '</div>';
-  return '<div class="card card-pad"><div class="section-head"><div class="section-title">Agenda</div><a class="btn btn-sm" href="#/agenda">'+ic("agenda")+' Open Agenda</a></div>'+mobileNav+'<div class="dash-3day">'+cols+'</div></div>';
+  return '<div class="card card-pad"><div class="section-head"><div class="section-title">Agenda</div><a class="btn btn-sm" href="#/agenda">'+ic("agenda")+' Open Agenda</a></div>'+nav+'<div class="stack" style="gap:2px">'+itemsHtml+'</div></div>';
 }
 ACTIONS["dash-agenda-day-prev"] = function(){ DASH_AGENDA_DAY_OFFSET = Math.max(-1,DASH_AGENDA_DAY_OFFSET-1); render(); };
-ACTIONS["dash-agenda-day-next"] = function(){ DASH_AGENDA_DAY_OFFSET = Math.min(1,DASH_AGENDA_DAY_OFFSET+1); render(); };
+ACTIONS["dash-agenda-day-next"] = function(){ DASH_AGENDA_DAY_OFFSET = Math.min(2,DASH_AGENDA_DAY_OFFSET+1); render(); };
 /* ---------- dashboard notes: one freeform scratchpad, autosaves on blur ---------- */
 function dashNotesPanel(){
   return '<div class="card card-pad dash-notes-card"><div class="section-head"><div class="section-title">Notes</div><span class="autosaved-tick" id="tick-dashnote">'+ic("check")+' Saved</span></div>'+
@@ -2193,6 +2190,101 @@ AUTOSAVE_HANDLERS["dashboard-note"] = function(el){
   flashTick("tick-dashnote");
   persist({});
 };
+
+/* ============================================================
+   PAGE: TEAMS - WATCH
+   The full universe of teams comes from the SAFF fixture calendar synced into DB.fixtures (every
+   team the "SAFF calendar" scheduled sync has ever seen play in the U15/U16/U17/U18/U21 domestic
+   leagues) — not just the clubs already referenced by matches this scout has personally logged.
+   A team (by age group) is listed if it has never been watched, or its last "Watched"/"Partially
+   Watched" match is more than 2 months old — excluding any team that already has an upcoming
+   ("To Watch"/"Scheduled") match for that same age group, since there's no need to flag a team
+   that's already coming up.
+   ============================================================ */
+var TEAMS_WATCH_AGE_GROUPS = ["U15","U16","U17","U18","U21"];
+function ageGroupSortKey(ag){
+  var m = (ag||"").match(/(\d+)/);
+  if(m) return parseInt(m[1],10);
+  return 9999; // no discernible number (or no age group at all) -> sort last
+}
+function teamsToWatch(){
+  var cutoff = shiftMonthsISO(todayISO(),-2);
+  var allowed = {}; TEAMS_WATCH_AGE_GROUPS.forEach(function(a){ allowed[a]=true; });
+  // Universe: every (team, age group) the SAFF sync has ever recorded a fixture for, in the
+  // domestic U15-U21 club leagues (national-team friendlies carry no club escalão to track).
+  var universe = {}; // "<normName>|<ageGroup>" -> {name, ageGroup}
+  (DB.fixtures||[]).forEach(function(fx){
+    if(/national|\bnt\b/i.test(fx.competition||"")) return; // national-team friendlies, not domestic club teams
+    var ag = deriveAgeGroupFromCompetition(fx.competition);
+    if(!allowed[ag]) return;
+    [fx.team1,fx.team2].forEach(function(name){
+      if(!name) return;
+      var key = normName(name)+"|"+ag;
+      if(!universe[key]) universe[key] = {name:name, ageGroup:ag};
+    });
+  });
+  // Cross-reference this scout's own tracked matches (watched / on the agenda) by the same
+  // normalized-name + age-group key, so status lines up with the fixture universe above. Also
+  // seeds the universe for a tracked team+age-group the SAFF sync hasn't (yet) surfaced a fixture
+  // for, so nothing already being tracked ever silently drops off the list.
+  var status = {}; // same key -> {lastWatched, hasUpcoming}
+  DB.matches.forEach(function(m){
+    var ag = matchAgeGroup(m);
+    if(!allowed[ag]) return;
+    [m.homeClubId,m.awayClubId].forEach(function(clubId){
+      var name = clubName(clubId);
+      if(!name) return;
+      var key = normName(name)+"|"+ag;
+      if(!universe[key]) universe[key] = {name:name, ageGroup:ag};
+      var s = status[key];
+      if(!s){ s = {lastWatched:null, hasUpcoming:false}; status[key]=s; }
+      if(m.status==="To Watch"||m.status==="Scheduled") s.hasUpcoming = true;
+      if((m.status==="Watched"||m.status==="Partially Watched") && m.date && (!s.lastWatched||m.date>s.lastWatched)) s.lastWatched = m.date;
+    });
+  });
+  var list = Object.keys(universe).map(function(key){
+    var u = universe[key], s = status[key]||{lastWatched:null,hasUpcoming:false};
+    return {name:u.name, ageGroup:u.ageGroup, lastWatched:s.lastWatched, hasUpcoming:s.hasUpcoming};
+  }).filter(function(g){
+    if(g.hasUpcoming) return false;
+    if(!g.lastWatched) return true; // never watched at all
+    return g.lastWatched<cutoff; // watched, but more than 2 months ago
+  });
+  list.sort(function(a,b){
+    var ka=ageGroupSortKey(a.ageGroup), kb=ageGroupSortKey(b.ageGroup);
+    if(ka!==kb) return ka-kb;
+    if(a.ageGroup!==b.ageGroup) return (a.ageGroup||"").localeCompare(b.ageGroup||"");
+    return a.name.localeCompare(b.name);
+  });
+  return list;
+}
+function pageTeamsWatch(){
+  var list = teamsToWatch();
+  var html = '<div class="stack">';
+  html += '<div class="section-head"><div><div class="eyebrow">Scouting</div><h1 style="font-size:24px">Teams - Watch</h1></div></div>';
+  html += '<div style="font-size:12.5px;color:var(--text-muted);margin-top:-6px">Every U15-U21 SAFF team not watched in the last 2 months (or never watched) — teams already on your Agenda are left out.</div>';
+  if(!list.length){
+    html += '<div class="card card-pad">'+emptyRow("Nothing here — every team on the SAFF calendar is either recently watched or already on your Agenda.")+'</div>';
+    html += '</div>';
+    return html;
+  }
+  var order = [], byGroup = {};
+  list.forEach(function(g){
+    var key = g.ageGroup||"Other";
+    if(!byGroup[key]){ byGroup[key]=[]; order.push(key); }
+    byGroup[key].push(g);
+  });
+  order.forEach(function(key){
+    var rows = byGroup[key].map(function(g){
+      var sub = g.lastWatched ? "Last watched "+fmtDateShort(g.lastWatched) : "Never watched";
+      return '<div class="roster-row" style="justify-content:flex-start">'+crestHtml({name:g.name},26)+
+        '<div style="min-width:0"><div class="roster-name">'+esc(g.name)+'</div><div class="roster-chars">'+esc(sub)+'</div></div></div>';
+    }).join("");
+    html += dashPanel(key,rows);
+  });
+  html += '</div>';
+  return html;
+}
 
 /* ============================================================
    PAGE: PLAYERS DATABASE
