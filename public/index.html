@@ -3466,7 +3466,7 @@ function pitchJerseyHtml(mp,matchId,clubId,slotIndex,isSub){
   var p = playerById(mp.playerId);
   return '<div class="pitch-jersey'+(isSub?" pitch-jersey-sub":"")+'" data-action="open-pitch-slot" data-match-id="'+matchId+'" data-club-id="'+clubId+'" data-slot="'+slotIndex+'" data-mp-id="'+mp.id+'">'+
     '<span class="pitch-jersey-num">'+esc(mp.shirtNumber||"–")+'</span>'+
-    '<span class="pitch-jersey-name">'+esc((p?p.name:"").split(" ").pop())+'</span>'+
+    '<span class="pitch-jersey-name">'+esc(p?p.name:"")+'</span>'+
   '</div>';
 }
 function pitchFormation(m,clubId){
@@ -3523,10 +3523,14 @@ function pitchFormation(m,clubId){
       cell.subs.forEach(function(sub){ stackHtml += pitchJerseyHtml(sub,m.id,clubId,i,true); });
       stackHtml += '<button type="button" class="pitch-add-sub" data-action="open-pitch-slot-sub" data-match-id="'+m.id+'" data-club-id="'+clubId+'" data-slot="'+i+'" title="Add substitute">'+ic("plus")+'</button>';
     } else {
+      // No starter in this slot (e.g. the starter was removed while a substitute was still here) —
+      // keep any substitute visible and reachable instead of hiding it behind the empty "add" slot,
+      // so removing one player never makes another one disappear from the pitch.
       stackHtml += '<div class="pitch-jersey pitch-empty" data-action="open-pitch-slot" data-match-id="'+m.id+'" data-club-id="'+clubId+'" data-slot="'+i+'">'+
         '<span class="pitch-jersey-num">'+ic("plus")+'</span>'+
         '<span class="pitch-jersey-name">'+slot.pos+'</span>'+
       '</div>';
+      cell.subs.forEach(function(sub){ stackHtml += pitchJerseyHtml(sub,m.id,clubId,i,true); });
     }
     jerseys += '<div class="pitch-slot-stack" style="left:'+slot.x+'%;top:'+slot.y+'%">'+stackHtml+'</div>';
   });
