@@ -203,8 +203,9 @@ input.eval-param-input{width:44px;min-height:28px;padding:2px 4px;text-align:cen
 
 /* ---------- stat tiles ---------- */
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px;}
-.dash-grid{grid-template-columns:1.3fr 1fr;}
+.dash-grid{grid-template-columns:1.3fr 1fr;grid-auto-flow:column;grid-template-rows:repeat(2,auto);align-items:start;}
 .dash-header-actions{display:flex;gap:8px;flex:0 0 auto;}
+.dash-match-agegroup{display:none!important;}
 .stat-tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 15px;}
 .stat-value{font-family:var(--font-display);font-weight:800;font-size:30px;line-height:1;font-variant-numeric:tabular-nums;}
 .stat-label{font-size:11.5px;color:var(--text-muted);margin-top:5px;font-weight:600;}
@@ -308,9 +309,8 @@ td.num,th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric
 .input:focus,.select:focus,.textarea:focus{border-color:var(--accent);}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .form-grid .span2{grid-column:1/-1;}
-/* Number+Name on the pitch-slot modal: the opposite of .form-grid's responsive behavior —
-   stacked (one per line) on desktop where there's no room pressure, side by side only on a
-   narrow/iPhone-width screen to save vertical space. See the max-width:860px override below. */
+/* Number+Name on the pitch-slot modal: always stacked, one per line (Number first, then Name),
+   on both desktop and mobile/iPhone. */
 .namenum-row{display:grid;grid-template-columns:1fr;gap:14px;}
 .field-checkbox{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--text);cursor:pointer;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);}
 .field-checkbox input[type="checkbox"]{width:17px;height:17px;accent-color:var(--gold);cursor:pointer;flex:0 0 auto;}
@@ -528,8 +528,14 @@ details.acc summary .count-chip{background:var(--surface-3);color:var(--text-mut
   .page-title-mobile{display:block;}
   .lineup-cols{grid-template-columns:1fr;}
   .form-grid{grid-template-columns:1fr;}
-  .namenum-row{grid-template-columns:1fr 1fr;}
-  .dash-grid{grid-template-columns:1fr;}
+  .dash-grid{grid-template-columns:1fr;grid-auto-flow:row;grid-template-rows:none;}
+  .dash-col-agenda{order:1;}
+  .dash-col-notes{order:2;}
+  .dash-col-matches{order:3;}
+  .dash-col-poi{order:4;}
+  .dash-match-crests{display:none!important;}
+  .dash-match-agegroup{display:inline-flex!important;}
+  .dash-match-competition{display:none!important;}
   /* Agenda strip: 3 side-by-side columns don't fit legibly on an iPhone-width screen, so show
      one day at a time (driven by DASH_AGENDA_DAY_OFFSET) with prev/next arrows instead. */
   .dash-day-nav{display:flex;}
@@ -2020,8 +2026,16 @@ function pageDashboard(){
 
   var upcoming = DB.matches.filter(function(m){return m.status==="To Watch"||m.status==="Scheduled";}).sort(function(a,b){return (a.date||"").localeCompare(b.date||"");}).slice(0,5);
   var recentMatches = DB.matches.filter(function(m){return m.status==="Watched"||m.status==="Partially Watched";}).sort(function(a,b){return (b.date||"").localeCompare(a.date||"");}).slice(0,5);
-  var recentEvals = DB.evaluations.slice().sort(function(a,b){return (b.createdAt||"").localeCompare(a.createdAt||"");}).slice(0,6);
-  var interestPlayers = DB.players.filter(function(p){return DB.matchPlayers.some(function(mp){return mp.playerId===p.id && mp.playerOfInterest;});}).slice(0,6);
+  // No "Recent Evaluations" panel anymore — that space now lets Players of Interest show more
+  // rows, sorted with the most recently-evaluated player first.
+  var interestPlayers = DB.players.filter(function(p){return DB.matchPlayers.some(function(mp){return mp.playerId===p.id && mp.playerOfInterest;});});
+  interestPlayers.sort(function(a,b){
+    var evA = playerEvaluations(a.id), evB = playerEvaluations(b.id);
+    var dA = evA.length ? (evA[0].date||"") : "";
+    var dB = evB.length ? (evB[0].date||"") : "";
+    return dB.localeCompare(dA);
+  });
+  interestPlayers = interestPlayers.slice(0,12);
 
   var html = '<div class="stack">';
   html += '<div class="section-head"><div><div class="eyebrow">Overview</div><h1 style="font-size:24px">Dashboard</h1></div>'+
@@ -2037,18 +2051,18 @@ function pageDashboard(){
     statTile(totalEvaluations,"Total Evaluations")+
   '</div>';
 
+  // Four independent groups (not two), so a mobile-only CSS `order` override can slot Notes in
+  // right after the Agenda while desktop keeps its usual two-column layout — see .dash-grid and
+  // the .dash-col-* rules (desktop: column-major fill agenda→matches, notes→poi; mobile: single
+  // column reordered to agenda, notes, matches, poi).
   html += '<div class="grid dash-grid">';
-  html += '<div class="stack">';
-  html += dashDayAgendaPanel();
-  html += dashPanel("Upcoming Matches", upcoming.length ? upcoming.map(dashMatchRow).join("") : emptyRow("No matches scheduled yet.","Add Match","#/matches/new"));
-  html += dashPanel("Recently Observed Matches", recentMatches.length ? recentMatches.map(dashMatchRow).join("") : emptyRow("No matches watched yet."));
-  html += '</div>';
-  html += '<div class="stack">';
-  html += dashNotesPanel();
-  html += dashPanel("Players of Interest", interestPlayers.length ? interestPlayers.map(dashPlayerRow).join("") : emptyRow("Star players in a match lineup to track them here."));
-  html += dashPanel("Recent Evaluations", recentEvals.length ? recentEvals.map(dashEvalRow).join("") : emptyRow("No evaluations recorded yet."));
-  html += '</div>';
-  html += '</div>';
+  html += '<div class="dash-col-agenda">'+dashDayAgendaPanel()+'</div>';
+  html += '<div class="stack dash-col-matches">'+
+    dashPanel("TO WATCH", upcoming.length ? upcoming.map(dashMatchRow).join("") : emptyRow("No matches scheduled yet.","Add Match","#/matches/new"))+
+    dashPanel("Recently Observed Matches", recentMatches.length ? recentMatches.map(dashMatchRow).join("") : emptyRow("No matches watched yet."))+
+  '</div>';
+  html += '<div class="dash-col-notes">'+dashNotesPanel()+'</div>';
+  html += '<div class="dash-col-poi">'+dashPanel("Players of Interest", interestPlayers.length ? interestPlayers.map(dashPlayerRow).join("") : emptyRow("Star players in a match lineup to track them here."))+'</div>';
   html += '</div>';
   return html;
 }
@@ -2067,9 +2081,14 @@ function dashMatchRow(m){
   // wherever the ascending date sort puts it (usually near the top, but easy to miss) — flag it
   // so it can't be quietly forgotten.
   var isOverdue = (m.status==="To Watch"||m.status==="Scheduled") && m.date && m.date<todayISO();
+  // Desktop: club crests, with the competition in small gray text below the team names.
+  // Mobile: no crests — the match's age group ("escalão") instead, no competition.
+  var crestsHtml = '<div class="dash-match-crests" style="display:flex;align-items:center">'+crestHtml(clubById(m.homeClubId),20)+'<span style="margin:0 4px;color:var(--text-faint);font-size:11px">v</span>'+crestHtml(clubById(m.awayClubId),20)+'</div>';
+  var ageGroupHtml = m.ageGroup ? '<span class="dash-match-agegroup badge">'+esc(m.ageGroup)+'</span>' : '';
+  var competitionHtml = m.competition ? '<div class="dash-match-competition" style="font-size:10.5px;color:var(--text-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(m.competition)+'</div>' : '';
   return '<a class="roster-row" href="#/matches/'+encodeURIComponent(m.id)+'" style="text-decoration:none;justify-content:space-between">'+
-    '<div style="display:flex;align-items:center;gap:8px;min-width:0"><div style="display:flex;align-items:center">'+crestHtml(clubById(m.homeClubId),20)+'<span style="margin:0 4px;color:var(--text-faint);font-size:11px">v</span>'+crestHtml(clubById(m.awayClubId),20)+'</div>'+
-    '<span class="roster-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(clubName(m.homeClubId))+' – '+esc(clubName(m.awayClubId))+'</span></div>'+
+    '<div style="display:flex;align-items:center;gap:8px;min-width:0">'+crestsHtml+ageGroupHtml+
+    '<div style="min-width:0"><div class="roster-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(clubName(m.homeClubId))+' – '+esc(clubName(m.awayClubId))+'</div>'+competitionHtml+'</div></div>'+
     '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:0 0 auto">'+
       '<div style="display:flex;align-items:center;gap:6px">'+(isOverdue?'<span class="badge" style="background:var(--danger-soft);color:var(--danger)">Overdue</span>':'')+'<span class="mono" style="font-size:11.5px;color:var(--text-muted)">'+fmtDateShort(m.date)+'</span>'+badgeStatus(m.status)+'</div>'+
       '<div style="display:flex;align-items:center;gap:5px">'+badgeMode(m.observationMode)+(modeText?'<span class="mono" style="font-size:10px;color:var(--text-faint)">'+modeText+'</span>':'')+'</div>'+
@@ -3511,7 +3530,7 @@ FORM_HANDLERS["edit-agenda-task"] = function(form){
 function pageMatchForm(existingId){
   var m = existingId ? matchById(existingId) : null;
   var isEdit = !!m;
-  m = m || {homeClubId:"",awayClubId:"",date:todayISO(),time:"",competition:"",matchday:"",observationMode:"LIVE",status:"To Watch",watchDate:""};
+  m = m || {homeClubId:"",awayClubId:"",date:todayISO(),time:"",competition:"",matchday:"",ageGroup:"",observationMode:"LIVE",status:"To Watch",watchDate:""};
   var competitions = Array.from(new Set(DB.matches.map(function(x){return x.competition;}).filter(Boolean)));
   var html = '<div class="stack" style="max-width:640px">';
   html += '<div class="section-head"><div><div class="eyebrow">'+(isEdit?"Edit Match":"New Fixture")+'</div><h1 style="font-size:22px">'+(isEdit?"Edit Match":"Add Match")+'</h1></div></div>';
@@ -3528,6 +3547,7 @@ function pageMatchForm(existingId){
     '<div class="field"><label class="field-label">Competition</label><input class="input" name="competition" list="competitionList" value="'+escAttr(m.competition)+'" placeholder="e.g. Saudi Pro League"></div>'+
     '<div class="field"><label class="field-label">Matchday <span class="opt">optional</span></label><input class="input" name="matchday" value="'+escAttr(m.matchday)+'" placeholder="e.g. Matchday 12"></div>'+
   '</div>';
+  html += '<div class="field"><label class="field-label">Age Group / Escalão <span class="opt">optional — shown in place of crests in the mobile Dashboard</span></label><input class="input" name="ageGroup" value="'+escAttr(m.ageGroup||"")+'" placeholder="e.g. U19, Sub-23, Sénior"></div>';
   html += '<div class="field"><label class="field-label">Competition Country <span class="opt">optional — shown as an abbreviation in Matches Database</span></label><input class="input" name="competitionCountry" list="countryList" value="'+escAttr(m.competition?(DB.competitionCountries[m.competition]||""):"")+'" placeholder="e.g. Saudi Arabia"></div>'+countryDatalist();
   html += '<datalist id="competitionList">'+competitions.map(function(c){return '<option value="'+esc(c)+'">';}).join("")+'</datalist>';
   html += '<div class="field"><label class="field-label">Observation Mode</label><div class="pillgroup" data-name="observationMode" id="mf_obsmode_group"><input type="hidden" name="observationMode" value="'+escAttr(m.observationMode)+'">'+OBS_MODES.map(function(o){return '<button type="button" class="pill-opt'+(o===m.observationMode?" on":"")+'" data-value="'+o+'">'+o+'</button>';}).join("")+'</div></div>';
@@ -3573,6 +3593,7 @@ FORM_HANDLERS["save-match"] = function(form){
     time: fd.get("time")||"",
     competition: (fd.get("competition")||"").trim(),
     matchday: (fd.get("matchday")||"").trim(),
+    ageGroup: (fd.get("ageGroup")||"").trim(),
     observationMode: fd.get("observationMode")||"LIVE",
     status: fd.get("status")||"To Watch",
     watchDate: fd.get("watchDate")||""
@@ -3977,7 +3998,7 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
   var title = isEdit ? "Edit Player" : (forceStatus==="Substitute" ? "Add Substitute" : "Add "+slot.pos);
   var showSubFields = isEdit && mp.lineupStatus==="Substitute";
   var html = '<div class="modal-pad"><div class="modal-head"><div class="modal-title">'+title+'</div>'+
-    '<div style="display:flex;align-items:center;gap:6px"><button type="submit" form="pitchSlotForm" class="btn btn-primary btn-sm">Save</button><button class="icon-btn" data-close-modal>'+ic("close")+'</button></div>'+
+    '<div style="display:flex;align-items:center;gap:14px"><button type="submit" form="pitchSlotForm" class="btn btn-primary btn-sm">Save</button><button class="icon-btn" data-close-modal>'+ic("close")+'</button></div>'+
   '</div>';
   html += '<form id="pitchSlotForm" data-form="save-pitch-slot" class="stack" data-match-id="'+matchId+'" data-club-id="'+clubId+'" data-slot="'+slotIndex+'" data-mp-id="'+(mpId||"")+'" data-force-status="'+forceStatus+'">';
   if(!showSubFields && forceStatus==="Substitute" && presetSub){
