@@ -2101,8 +2101,10 @@ function dashMatchRow(m){
   var modeText = m.observationMode==="VIDEO" ? "watch "+fmtDateShort(m.watchDate||m.date) : (m.time?esc(m.time):"");
   // A "To Watch"/"Scheduled" match whose date has already passed would otherwise just sit
   // wherever the ascending date sort puts it (usually near the top, but easy to miss) — flag it
-  // so it can't be quietly forgotten.
-  var isOverdue = (m.status==="To Watch"||m.status==="Scheduled") && m.date && m.date<todayISO();
+  // so it can't be quietly forgotten. For a VIDEO match, "overdue" is judged against the day the
+  // scout chose to watch it (agendaDateOf), not the real match date; LIVE/TV matches are judged
+  // against their real date either way, since agendaDateOf falls back to m.date for those.
+  var isOverdue = (m.status==="To Watch"||m.status==="Scheduled") && agendaDateOf(m) && agendaDateOf(m)<todayISO();
   // Desktop: club crests, with the competition in small gray text below the team names.
   // Mobile: no crests — the match's age group ("escalão") instead, no competition.
   var crestsHtml = '<div class="dash-match-crests" style="display:flex;align-items:center">'+crestHtml(clubById(m.homeClubId),20)+'<span style="margin:0 4px;color:var(--text-faint);font-size:11px">v</span>'+crestHtml(clubById(m.awayClubId),20)+'</div>';
@@ -2222,6 +2224,13 @@ function ageGroupSortKey(ag){
   if(m) return parseInt(m[1],10);
   return 9999; // no discernible number (or no age group at all) -> sort last
 }
+// Ranks a competition's tier within its age group so Premier League teams sort above League
+// Div.1 teams (and Div.2 below Div.1, etc.) — a competition without an explicit division number
+// (Premier League itself, or a one-tier league like the U-21 Jawwy Elite League) ranks top (0).
+function competitionTierRank(competition){
+  var mDiv = (competition||"").match(/div(?:ision)?\.?\s*(\d+)/i);
+  return mDiv ? parseInt(mDiv[1],10) : 0;
+}
 function teamsToWatch(){
   var cutoff = shiftMonthsISO(todayISO(),-2);
   var allowed = {}; TEAMS_WATCH_AGE_GROUPS.forEach(function(a){ allowed[a]=true; });
@@ -2261,8 +2270,10 @@ function teamsToWatch(){
   });
   var list = Object.keys(universe).map(function(key){
     var u = universe[key], s = status[key]||{lastWatched:null,hasUpcoming:false};
-    var competition = Object.keys(u.competitions).sort().join(", ");
-    return {name:u.name, ageGroup:u.ageGroup, competition:competition, lastWatched:s.lastWatched, hasUpcoming:s.hasUpcoming};
+    var compNames = Object.keys(u.competitions).sort();
+    var competition = compNames.join(", ");
+    var tierRank = compNames.length ? Math.min.apply(null,compNames.map(competitionTierRank)) : 0;
+    return {name:u.name, ageGroup:u.ageGroup, competition:competition, tierRank:tierRank, lastWatched:s.lastWatched, hasUpcoming:s.hasUpcoming};
   }).filter(function(g){
     if(g.hasUpcoming) return false;
     if(!g.lastWatched) return true; // never watched at all
@@ -2272,7 +2283,8 @@ function teamsToWatch(){
     var ka=ageGroupSortKey(a.ageGroup), kb=ageGroupSortKey(b.ageGroup);
     if(ka!==kb) return ka-kb;
     if(a.ageGroup!==b.ageGroup) return (a.ageGroup||"").localeCompare(b.ageGroup||"");
-    return a.name.localeCompare(b.name);
+    if(a.tierRank!==b.tierRank) return a.tierRank-b.tierRank; // Premier League above League Div.1
+    return a.name.localeCompare(b.name); // alphabetical within the same tier
   });
   return list;
 }
@@ -2308,18 +2320,18 @@ function pageTeamsWatch(){
     var rows = byGroup[key].map(function(g){
       var rowKey = normName(g.name)+"|"+g.ageGroup;
       var sub = g.lastWatched ? "Last watched "+fmtDateShort(g.lastWatched) : "Never watched";
-      var subLine = sub+(g.competition?' · '+g.competition:'');
+      var nameLine = esc(g.name)+(g.competition?' <span style="color:var(--text-faint);font-weight:400">· '+esc(g.competition)+'</span>':'');
       var expanded = !!TEAMS_WATCH_EXPANDED[rowKey];
       var fixtures = expanded ? upcomingFixturesForTeam(g.name,g.ageGroup) : [];
       var toggleLabel = expanded ? "Hide fixtures" : "Upcoming fixtures";
       var rowHtml = '<div class="roster-row" style="justify-content:flex-start">'+crestHtml({name:g.name},26)+
-        '<div style="min-width:0;flex:1"><div class="roster-name">'+esc(g.name)+'</div><div class="roster-chars">'+esc(subLine)+'</div></div>'+
+        '<div style="min-width:0;flex:1"><div class="roster-name">'+nameLine+'</div><div class="roster-chars">'+esc(sub)+'</div></div>'+
         '<button type="button" class="btn btn-sm" style="flex:0 0 auto" data-action="teams-watch-toggle-fixtures" data-key="'+escAttr(rowKey)+'">'+toggleLabel+'</button>'+
       '</div>';
       var fixturesHtml = "";
       if(expanded){
         fixturesHtml = '<div class="stack" style="padding:2px 0 8px 36px;gap:4px">'+
-          (fixtures.length ? fixtures.map(function(fx){ return fixtureRow(fx); }).join("") :
+          (fixtures.length ? fixtures.map(function(fx){ return fixtureRow(fx,{showDate:true}); }).join("") :
             '<div style="font-size:11.5px;color:var(--text-faint);padding:4px 0">No upcoming fixtures found in the SAFF calendar for this team.</div>')+
         '</div>';
       }
@@ -3356,10 +3368,16 @@ function pageCalendar(){
   });
   return html;
 }
-function fixtureRow(fx){
+function fixtureRow(fx,opts){
   var added = !!fx.matchId;
+  opts = opts || {};
+  // The Calendar page already groups fixtures under a per-date accordion header, so the date is
+  // redundant there; Teams - Watch shows a flat list across many different dates, so it opts in.
+  var timeCell = opts.showDate ?
+    '<div class="mono" style="width:80px;flex:0 0 auto;font-size:11.5px;color:var(--text-muted);padding-top:2px;line-height:1.5">'+esc(fmtDateShort(fx.date))+'<br>'+esc(fx.time||"—")+'</div>' :
+    '<div class="mono" style="width:46px;flex:0 0 auto;font-size:12.5px;color:var(--text-muted);padding-top:2px">'+esc(fx.time||"—")+'</div>';
   return '<div class="roster-row" style="align-items:flex-start">'+
-    '<div class="mono" style="width:46px;flex:0 0 auto;font-size:12.5px;color:var(--text-muted);padding-top:2px">'+esc(fx.time||"—")+'</div>'+
+    timeCell+
     '<div class="roster-name-wrap">'+
       '<div class="roster-name">'+esc(fx.team1)+' <span style="color:var(--text-faint);font-weight:400">v</span> '+esc(fx.team2)+'</div>'+
       (fx.venue?'<div class="roster-chars">'+esc(fx.venue)+'</div>':'')+
