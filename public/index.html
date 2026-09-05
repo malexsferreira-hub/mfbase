@@ -489,7 +489,7 @@ details.acc summary .count-chip{background:var(--surface-3);color:var(--text-mut
 .profile-pos-row{display:flex;gap:6px;align-items:center;justify-content:center;margin-top:8px;}
 .profile-photo-col{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;flex:0 0 auto;}
 .profile-side-col{display:flex;flex-direction:column;align-items:center;gap:12px;flex:0 0 auto;}
-.profile-side-actions{display:flex;gap:8px;align-items:center;justify-content:center;}
+.profile-side-actions{display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center;}
 .profile-side-stack{display:flex;gap:20px;flex:0 0 auto;align-items:center;justify-content:center;}
 .profile-side-stack.profile-clubnat-stack{align-items:flex-start;}
 .profile-side-item{display:flex;flex-direction:column;align-items:center;text-align:center;gap:5px;min-width:56px;}
@@ -618,6 +618,100 @@ function playerDisplayName(p){
   return mp ? esc("#"+mp.shirtNumber) : esc(p.name);
 }
 function posLabel(code){ return code ? (POSITION_LABELS[code]||code) : ""; }
+
+/* ============================================================
+   PHYSICAL/MATURATION ATTRIBUTES — Height category, Position Profile,
+   Estrutura, Maturation, and the 3 speed-related "Níveis" scales.
+   ============================================================ */
+var HEIGHT_LEVELS = ["Low","Medium/Low","Medium","High","Very High"];
+var ESTRUTURA_LEVELS = ["Ectomorfo","Ectomesomorfo","Mesomorfo","Mesoendomorfo","Endomorfo"];
+var MATURATION_LEVELS = ["Atrasado","Normal","Adiantado"];
+var SPEED_LEVELS = ["baixos","médio/baixos","médios","médio/altos","altos"];
+// Every concrete position code maps to one of the 9 Position Profile groups below. RM/LM (wide
+// midfield) default to the W (winger) group and SS (second striker) defaults to the FW group,
+// alongside CF — neither was called out explicitly, so treat them as the closest match; easy to
+// remap here if that's wrong.
+var POSITION_TO_PROFILE_GROUP = {
+  GK:"GK",
+  RB:"FB", LB:"FB", RWB:"FB", LWB:"FB",
+  RCB:"CB", CB:"CB", LCB:"CB",
+  DM:"CDM",
+  CM:"CM",
+  AM:"CAM",
+  RM:"W", LM:"W", RW:"W", LW:"W",
+  SS:"FW", CF:"FW",
+  ST:"ST"
+};
+var POSITION_PROFILE_GROUPS = {
+  GK: ["GK - Fast & Agile","GK - Heavy & Aerial","GK - Modern & Good feetwork"],
+  FB: ["FB - Defensive & Strong","FB - Combinative & Skillful","FB - Deep & Attacking"],
+  CB: ["CB - Positional & Strong","CB - Aggressive & Fast","CB - Modern & Skillful"],
+  CDM: ["CDM - Positional & Skillful","CDM - Defensive & Intense"],
+  CM: ["CM - Dynamic & Combinative","CM - Box to Box & Physical"],
+  CAM: ["CAM - Space Attacker & Finisher","CAM - Creative & Decisive"],
+  W: ["W - 1v1 & Skillful","W - CAM Profile & Combinative","W - Space Attacker & Fast"],
+  FW: ["FW - 1v1 & Ball Keeper","FW - Space Attacker & Fast","FW - Combinative & Dynamic"],
+  ST: ["ST - Target & Physical","ST - Space Attacker & Fast","ST - Combinative & Dynamic"]
+};
+function positionProfileGroupFor(position){ return POSITION_TO_PROFILE_GROUP[position]||""; }
+function positionProfileOptionsFor(position,sel){
+  var group = positionProfileGroupFor(position);
+  var opts = group ? (POSITION_PROFILE_GROUPS[group]||[]) : [];
+  return '<option value="">—</option>'+opts.map(function(o){return '<option value="'+esc(o)+'"'+(o===sel?" selected":"")+'>'+esc(o)+'</option>';}).join("");
+}
+// What's shown on the profile for Height: an exact cm figure (set manually on the profile once
+// it's known) always wins over the category picked in Edit Player; otherwise show the category.
+function heightDisplay(p){
+  if(p.heightExact) return p.heightExact+" cm";
+  return p.height||"";
+}
+var FOOT_PT = {Right:"Pé direito",Left:"Pé esquerdo",Both:"Ambidestro"};
+var HEIGHT_PT = {"Low":"baixa","Medium/Low":"média-baixa","Medium":"média","High":"alta","Very High":"muito alta"};
+var MATURATION_PT = {"Atrasado":"parece estar atrasado maturacionalmente","Normal":"parece estar na idade maturacionalmente","Adiantado":"parece estar adiantado maturacionalmente"};
+// "Níveis de agilidade/aceleração/velocidade" — equal-adjacent scales get merged into one clause
+// (agility+acceleration, or acceleration+speed, or all three), exactly as specified:
+//  - all three equal -> "níveis de agilidade, aceleração e velocidade X"
+//  - agility==acceleration != speed -> "níveis de agilidade e aceleração X, níveis de velocidade Y"
+//  - agility != acceleration==speed -> "níveis de agilidade X, níveis de aceleração e velocidade Y"
+//  - all different (incl. agility==speed but acceleration differs) -> all three listed separately
+function levelsPhrasePT(ag,acc,vel){
+  if(!ag && !acc && !vel) return "";
+  if(ag && ag===acc && acc===vel) return "níveis de agilidade, aceleração e velocidade "+ag;
+  if(ag && ag===acc && vel) return "níveis de agilidade e aceleração "+ag+", níveis de velocidade "+vel;
+  if(acc && acc===vel && ag) return "níveis de agilidade "+ag+", níveis de aceleração e velocidade "+acc;
+  var parts = [];
+  if(ag) parts.push("níveis de agilidade "+ag);
+  if(acc) parts.push("níveis de aceleração "+acc);
+  if(vel) parts.push("níveis de velocidade "+vel);
+  return parts.join(", ");
+}
+// Builds the auto-generated Portuguese sentence describing foot/height/estrutura/maturation/levels
+// from whichever of these are currently known — skipping any that aren't set. Returns "" if none
+// of them are known at all.
+function buildAutoAttrSentence(v){
+  var parts = [];
+  if(v.preferredFoot && FOOT_PT[v.preferredFoot]) parts.push(FOOT_PT[v.preferredFoot]);
+  if(v.height && HEIGHT_PT[v.height]) parts.push("estatura "+HEIGHT_PT[v.height]);
+  if(v.estrutura) parts.push(String(v.estrutura).toLowerCase());
+  if(v.maturation && MATURATION_PT[v.maturation]) parts.push(MATURATION_PT[v.maturation]);
+  var levels = levelsPhrasePT(v.agilityLevel,v.accelerationLevel,v.speedLevel);
+  if(levels) parts.push(levels);
+  if(!parts.length) return "";
+  return parts.join(", ")+".";
+}
+// Replaces just the auto-generated leading paragraph of a free-text field with a freshly built one,
+// preserving anything the user typed manually after it. `oldAuto` is whatever the auto paragraph
+// was the last time it was generated (tracked separately) — if the current text still starts with
+// it, that prefix is stripped before splicing in the new one; otherwise the whole current text is
+// treated as manual (never discarded).
+function spliceAutoText(currentText,oldAuto,newAuto){
+  currentText = currentText||"";
+  var manual = currentText;
+  if(oldAuto && currentText.indexOf(oldAuto)===0){
+    manual = currentText.slice(oldAuto.length).replace(/^\n+/,"");
+  }
+  return manual ? newAuto+"\n\n"+manual : newAuto;
+}
 var PLAYER_FILTERS = {q:"",position:[],club:[],nationality:[],foot:[],birthYear:[],performance:[],potential:[],competition:[],status:[],sortBy:"position",sortDir:"asc"};
 var MATCH_FILTERS = {q:"",competition:[],club:[],players:[],mode:[],status:[],sortBy:"date",sortDir:"desc"};
 var MSF_SCOPES = { players: function(){ return PLAYER_FILTERS; }, matches: function(){ return MATCH_FILTERS; } };
@@ -1396,7 +1490,7 @@ function mergePlayerInto(sourceId,targetId,opts){
   DB.evaluations.forEach(function(e){ if(e.playerId===sourceId) e.playerId = targetId; });
   if(!target.birthYear && source.birthYear) target.birthYear = source.birthYear;
   if(!target.nationality && source.nationality) target.nationality = source.nationality;
-  if(!target.preferredFoot && source.preferredFoot) target.preferredFoot = source.preferredFoot;
+  if(!target.heightExact && source.heightExact) target.heightExact = source.heightExact;
   if(!target.strengths && source.strengths) target.strengths = source.strengths;
   if(!target.weaknesses && source.weaknesses) target.weaknesses = source.weaknesses;
   // Technical-Tactical / Physical / Psychological ratings aren't tied to any match or evaluation —
@@ -1414,6 +1508,13 @@ function mergePlayerInto(sourceId,targetId,opts){
     });
   });
   applyLatestPlayerField(target,"height","heightUpdatedAt",source.height,source.heightUpdatedAt);
+  applyLatestPlayerField(target,"preferredFoot","preferredFootUpdatedAt",source.preferredFoot,source.preferredFootUpdatedAt);
+  applyLatestPlayerField(target,"positionProfile","positionProfileUpdatedAt",source.positionProfile,source.positionProfileUpdatedAt);
+  applyLatestPlayerField(target,"estrutura","estruturaUpdatedAt",source.estrutura,source.estruturaUpdatedAt);
+  applyLatestPlayerField(target,"maturation","maturationUpdatedAt",source.maturation,source.maturationUpdatedAt);
+  applyLatestPlayerField(target,"agilityLevel","agilityLevelUpdatedAt",source.agilityLevel,source.agilityLevelUpdatedAt);
+  applyLatestPlayerField(target,"accelerationLevel","accelerationLevelUpdatedAt",source.accelerationLevel,source.accelerationLevelUpdatedAt);
+  applyLatestPlayerField(target,"speedLevel","speedLevelUpdatedAt",source.speedLevel,source.speedLevelUpdatedAt);
   if(Object.prototype.hasOwnProperty.call(opts,"clubId") && opts.clubId!==target.clubId){ target.clubId = opts.clubId; target.clubUpdatedAt = todayISO(); }
   applyObservedPosition(target,source.firstPosition,source.positionUpdatedAt);
   applyObservedPosition(target,source.secondPosition,source.secondPositionUpdatedAt);
@@ -2156,7 +2257,15 @@ function prefillKnownPlayerBrief(nameField,p){
   function fillIfEmpty(el,val){ if(el && !el.value && val) el.value = val; }
   fillIfEmpty(form.querySelector('input[name="shirtNumber"]'), lastKnownShirtNumber(p.id));
   fillIfEmpty(form.querySelector('input[name="birthYear"]'), p.birthYear);
-  fillIfEmpty(form.querySelector('input[name="height"]'), p.height);
+  // height/positionProfile/estrutura/maturation/levels are <select>s — '[name=...]' (not
+  // 'input[name=...]') matches either an <input> or a <select>.
+  fillIfEmpty(form.querySelector('[name="height"]'), p.height);
+  fillIfEmpty(form.querySelector('[name="positionProfile"]'), p.positionProfile);
+  fillIfEmpty(form.querySelector('[name="estrutura"]'), p.estrutura);
+  fillIfEmpty(form.querySelector('[name="maturation"]'), p.maturation);
+  fillIfEmpty(form.querySelector('[name="agilityLevel"]'), p.agilityLevel);
+  fillIfEmpty(form.querySelector('[name="accelerationLevel"]'), p.accelerationLevel);
+  fillIfEmpty(form.querySelector('[name="speedLevel"]'), p.speedLevel);
   // Nationality is the searchable country combo (renderCountryCombo) — a plain named input, no
   // separate hidden id, only used here as "pitchSlotNat".
   fillIfEmpty(document.getElementById("pitchSlotNat_text"), p.nationality);
@@ -2350,6 +2459,11 @@ function countryDatalist(){
 }
 function positionOptions(sel){
   return '<option value="">—</option>'+POSITIONS.map(function(p){return '<option value="'+p+'"'+(p===sel?" selected":"")+'>'+p+' · '+POSITION_LABELS[p]+'</option>';}).join("");
+}
+// Abbreviation-only options (no " · Full Label") — used where two position selects need to sit
+// side by side on one line (Position 1 & Position 2 in the pitch-slot Edit Player modal).
+function positionOptionsAbbrev(sel){
+  return '<option value="">—</option>'+POSITIONS.map(function(p){return '<option value="'+p+'"'+(p===sel?" selected":"")+'>'+p+'</option>';}).join("");
 }
 
 /* ============================================================
@@ -2864,7 +2978,7 @@ function pagePlayerForm(existingId){
   html += '<p class="field-hint">A second nationality can be added later from the player\'s own page in the Players Database.</p>';
   html += '<div class="form-grid">'+
     '<div class="field"><label class="field-label">Preferred Foot</label><select class="select" name="preferredFoot"><option value="">—</option>'+FEET.map(function(ft){return '<option value="'+ft+'"'+(ft===p.preferredFoot?" selected":"")+'>'+ft+'</option>';}).join("")+'</select></div>'+
-    '<div class="field"><label class="field-label">Height (cm) <span class="opt">optional — estimate ok, e.g. "175+-"</span></label><input class="input" name="height" value="'+escAttr(p.height)+'" placeholder="e.g. 178 or 175+-"></div>'+
+    '<div class="field"><label class="field-label">Height <span class="opt">optional</span></label><select class="select" name="height"><option value="">—</option>'+HEIGHT_LEVELS.map(function(h){return '<option value="'+h+'"'+(p.height===h?" selected":"")+'>'+h+'</option>';}).join("")+'</select></div>'+
   '</div>';
   html += '<div class="form-grid">'+
     '<div class="field"><label class="field-label">Performance <span class="opt">1–5, optional</span></label><select class="select" name="currentPerformance"><option value="">—</option>'+[1,2,3,4,5].map(function(n){return '<option value="'+n+'"'+(String(n)===String(p.currentPerformance)?" selected":"")+'>'+n+'</option>';}).join("")+'</select></div>'+
@@ -3001,6 +3115,17 @@ function pagePlayerDetail(id){
     FEET.map(function(ft){return '<option value="'+ft+'"'+(ft===p.preferredFoot?" selected":"")+'>'+ft+'</option>';}).join("")+'</select>';
   var statusSelectHtml = '<select class="inline-select" data-action-select="set-player-status" data-id="'+p.id+'"><option value="">—</option>'+
     PLAYER_STATUSES.map(function(s){return '<option value="'+s+'"'+(s===p.status?" selected":"")+'>'+s+'</option>';}).join("")+'</select>';
+  var positionProfileSelectHtml = '<select class="inline-select" data-action-select="set-player-position-profile" data-id="'+p.id+'">'+positionProfileOptionsFor(p.firstPosition,p.positionProfile)+'</select>';
+  var estruturaSelectHtml = '<select class="inline-select" data-action-select="set-player-estrutura" data-id="'+p.id+'"><option value="">—</option>'+
+    ESTRUTURA_LEVELS.map(function(v){return '<option value="'+v+'"'+(v===p.estrutura?" selected":"")+'>'+v+'</option>';}).join("")+'</select>';
+  var maturationSelectHtml = '<select class="inline-select" data-action-select="set-player-maturation" data-id="'+p.id+'"><option value="">—</option>'+
+    MATURATION_LEVELS.map(function(v){return '<option value="'+v+'"'+(v===p.maturation?" selected":"")+'>'+v+'</option>';}).join("")+'</select>';
+  var agilitySelectHtml = '<select class="inline-select" data-action-select="set-player-agility" data-id="'+p.id+'"><option value="">—</option>'+
+    SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(v===p.agilityLevel?" selected":"")+'>'+v+'</option>';}).join("")+'</select>';
+  var accelerationSelectHtml = '<select class="inline-select" data-action-select="set-player-acceleration" data-id="'+p.id+'"><option value="">—</option>'+
+    SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(v===p.accelerationLevel?" selected":"")+'>'+v+'</option>';}).join("")+'</select>';
+  var speedSelectHtml = '<select class="inline-select" data-action-select="set-player-speed" data-id="'+p.id+'"><option value="">—</option>'+
+    SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(v===p.speedLevel?" selected":"")+'>'+v+'</option>';}).join("")+'</select>';
   var natFlag1 = p.nationality ? flagForNationality(p.nationality) : "";
   var natFlag2 = p.nationality2 ? flagForNationality(p.nationality2) : "";
   html += '<div class="card card-pad"><div class="profile-head">'+
@@ -3015,15 +3140,21 @@ function pagePlayerDetail(id){
     '<div class="profile-info">'+
       '<div class="profile-pos-heading" style="position:relative">'+badgePos(p.firstPosition,true)+(p.secondPosition?badgePos(p.secondPosition,true):"")+
         '<select class="ring-select-overlay" style="border-radius:8px" data-action-select="set-player-position" data-id="'+p.id+'" title="Click to change position"><option value="">–</option>'+POSITIONS.map(function(pos){return '<option value="'+pos+'"'+(pos===p.firstPosition?" selected":"")+'>'+pos+'</option>';}).join("")+'</select>'+
+        '<span class="profile-club" style="margin-left:6px">'+positionProfileSelectHtml+'</span>'+
       '</div>'+
       '<div class="profile-meta">'+
         '<span class="profile-club inline-edit" data-field="birthYear" data-edit-key="player-birthYear" data-raw="'+escAttr(byYear||"")+'" data-id="'+p.id+'"><b>Born</b> '+(byYear?byYear:"—")+'</span>'+
         '<span class="profile-club"><b>Foot</b> '+footSelectHtml+'</span>'+
-        '<span class="profile-club inline-edit" data-field="height" data-edit-key="player-height" data-raw="'+escAttr(p.height||"")+'" data-id="'+p.id+'"><b>Height</b> '+(p.height?esc(p.height):"—")+'</span>'+
+        '<span class="profile-club inline-edit" data-field="heightExact" data-edit-key="player-heightExact" data-raw="'+escAttr(p.heightExact||"")+'" data-id="'+p.id+'" title="Click to set an exact height in cm — otherwise shows the category picked in Edit Player"><b>Height</b> '+(heightDisplay(p)?esc(heightDisplay(p)):"—")+'</span>'+
       '</div>'+
-      '<div class="profile-meta" style="margin-top:14px">'+
-        '<span class="profile-club"><b>'+STATUS_FIELD_LABEL+'</b> '+statusSelectHtml+'</span>'+
-        '<span class="profile-club inline-edit" data-field="agent" data-edit-key="player-agent" data-raw="'+escAttr(p.agent||"")+'" data-id="'+p.id+'"><b>Agent</b> '+esc(p.agent||"—")+'</span>'+
+      '<div class="profile-meta" style="margin-top:10px">'+
+        '<span class="profile-club"><b>Estrutura</b> '+estruturaSelectHtml+'</span>'+
+        '<span class="profile-club"><b>Maturation</b> '+maturationSelectHtml+'</span>'+
+      '</div>'+
+      '<div class="profile-meta" style="margin-top:10px">'+
+        '<span class="profile-club"><b>Agility</b> '+agilitySelectHtml+'</span>'+
+        '<span class="profile-club"><b>Acceleration</b> '+accelerationSelectHtml+'</span>'+
+        '<span class="profile-club"><b>Speed</b> '+speedSelectHtml+'</span>'+
       '</div>'+
     '</div>'+
     '<div class="profile-side-stack profile-clubnat-stack profile-divider-left">'+
@@ -3042,6 +3173,10 @@ function pagePlayerDetail(id){
       '<div class="profile-side-item"><div class="profile-side-icon profile-ring-editable">'+gradeRing(p.currentPotential,50)+
         '<select class="ring-select-overlay" data-action-select="set-player-potential" data-id="'+p.id+'" title="Click to set Potential"><option value="">–</option>'+GRADE_LETTERS.map(function(g){return '<option value="'+g+'"'+(g===normalizeGrade(p.currentPotential)?" selected":"")+'>'+g+'</option>';}).join("")+'</select>'+
       '</div><div class="profile-side-label">Potential</div></div>'+
+    '</div>'+
+    '<div class="profile-side-stack profile-divider-left">'+
+      '<div class="profile-side-item"><div class="profile-side-value">'+statusSelectHtml+'</div><div class="profile-side-label">'+STATUS_FIELD_LABEL+'</div></div>'+
+      '<div class="profile-side-item"><div class="profile-side-value inline-edit" data-field="agent" data-edit-key="player-agent" data-raw="'+escAttr(p.agent||"")+'" data-id="'+p.id+'">'+esc(p.agent||"—")+'</div><div class="profile-side-label">Agent</div></div>'+
     '</div>'+
     '<div class="profile-side-actions profile-divider-left" style="margin-left:auto"><button class="btn btn-icon" data-action="open-merge-player" data-id="'+p.id+'" title="Merge with another player (e.g. after a transfer)">'+ic("merge")+'</button><button class="btn btn-icon" data-action="edit-player" data-id="'+p.id+'" title="Edit profile">'+ic("edit")+'</button><button class="btn btn-icon btn-danger" data-action="delete-player" data-id="'+p.id+'" title="Delete">'+ic("trash")+'</button></div>'+
   '</div></div>';
@@ -3173,10 +3308,12 @@ INLINE_EDIT_HANDLERS["player-birthYear"] = function(el,val){
   if(val && (!/^[0-9]{4}$/.test(val))) { render(); return; }
   p.birthYear = val; p.updatedAt = nowISO(); persist({});
 };
-INLINE_EDIT_HANDLERS["player-height"] = function(el,val){
+// The profile's own inline height editor sets the EXACT cm override, not the category — the
+// category (Low/Medium/…/Very High) only ever comes from Edit Player in a match. Whenever
+// heightExact is set, it's what's shown; clearing it falls back to the category again.
+INLINE_EDIT_HANDLERS["player-heightExact"] = function(el,val){
   var p = playerById(el.dataset.id); if(!p) return;
-  p.height = String(val||"").trim();
-  if(p.height) p.heightUpdatedAt = todayISO();
+  p.heightExact = String(val||"").trim();
   p.updatedAt = nowISO(); persist({});
 };
 INLINE_EDIT_HANDLERS["player-agent"] = function(el,val){
@@ -3220,6 +3357,54 @@ function wirePlayerProfileSelects(){
     sel.addEventListener("change",function(){
       var p = playerById(sel.dataset.id); if(!p) return;
       p.status = sel.value||""; p.updatedAt = nowISO(); persist({});
+    });
+  });
+  document.querySelectorAll('[data-action-select="set-player-position-profile"]').forEach(function(sel){
+    sel.addEventListener("change",function(){
+      var p = playerById(sel.dataset.id); if(!p) return;
+      p.positionProfile = sel.value||"";
+      if(p.positionProfile) p.positionProfileUpdatedAt = todayISO();
+      p.updatedAt = nowISO(); persist({});
+    });
+  });
+  document.querySelectorAll('[data-action-select="set-player-estrutura"]').forEach(function(sel){
+    sel.addEventListener("change",function(){
+      var p = playerById(sel.dataset.id); if(!p) return;
+      p.estrutura = sel.value||"";
+      if(p.estrutura) p.estruturaUpdatedAt = todayISO();
+      p.updatedAt = nowISO(); persist({});
+    });
+  });
+  document.querySelectorAll('[data-action-select="set-player-maturation"]').forEach(function(sel){
+    sel.addEventListener("change",function(){
+      var p = playerById(sel.dataset.id); if(!p) return;
+      p.maturation = sel.value||"";
+      if(p.maturation) p.maturationUpdatedAt = todayISO();
+      p.updatedAt = nowISO(); persist({});
+    });
+  });
+  document.querySelectorAll('[data-action-select="set-player-agility"]').forEach(function(sel){
+    sel.addEventListener("change",function(){
+      var p = playerById(sel.dataset.id); if(!p) return;
+      p.agilityLevel = sel.value||"";
+      if(p.agilityLevel) p.agilityLevelUpdatedAt = todayISO();
+      p.updatedAt = nowISO(); persist({});
+    });
+  });
+  document.querySelectorAll('[data-action-select="set-player-acceleration"]').forEach(function(sel){
+    sel.addEventListener("change",function(){
+      var p = playerById(sel.dataset.id); if(!p) return;
+      p.accelerationLevel = sel.value||"";
+      if(p.accelerationLevel) p.accelerationLevelUpdatedAt = todayISO();
+      p.updatedAt = nowISO(); persist({});
+    });
+  });
+  document.querySelectorAll('[data-action-select="set-player-speed"]').forEach(function(sel){
+    sel.addEventListener("change",function(){
+      var p = playerById(sel.dataset.id); if(!p) return;
+      p.speedLevel = sel.value||"";
+      if(p.speedLevel) p.speedLevelUpdatedAt = todayISO();
+      p.updatedAt = nowISO(); persist({});
     });
   });
   document.querySelectorAll('[data-action-select="set-player-performance"]').forEach(function(sel){
@@ -4489,7 +4674,7 @@ function playerHasOtherRecords(playerId,excludeMpId){
   if(!p) return false;
   // clubId, firstPosition and characteristics can be auto-filled just from being added to this lineup,
   // so they don't by themselves count as "already a record" — everything else does.
-  var extraFields = [p.secondPosition,p.dob,p.birthYear,p.nationality,p.nationality2,p.preferredFoot,p.height,p.agent,p.photo,p.extraObservations,p.currentPerformance,p.currentPotential,p.status];
+  var extraFields = [p.secondPosition,p.dob,p.birthYear,p.nationality,p.nationality2,p.preferredFoot,p.height,p.heightExact,p.positionProfile,p.estrutura,p.maturation,p.agilityLevel,p.accelerationLevel,p.speedLevel,p.agent,p.photo,p.extraObservations,p.currentPerformance,p.currentPotential,p.status];
   return extraFields.some(function(v){ return v!==undefined && v!==null && String(v).trim()!==""; });
 }
 ACTIONS["remove-lineup-entry"] = function(el){
@@ -4593,10 +4778,26 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
     '</div></div>';
   }
   html += '</div>';
-  html += '<div class="field"><label class="field-label">Position</label><select class="select" name="position">'+positionOptions(mp?mp.position:slot.pos)+'</select></div>';
+  var pos1Val = mp?mp.position:slot.pos;
+  var pos2Val = mp?mp.position2||"":"";
+  html += '<div class="field"><label class="field-label">Position 1 &amp; Position 2</label>'+
+    '<div style="display:flex;gap:8px">'+
+      '<select class="select" name="position" id="pitchSlotPos1" style="flex:1">'+positionOptionsAbbrev(pos1Val)+'</select>'+
+      '<select class="select" name="position2" id="pitchSlotPos2" style="flex:1">'+positionOptionsAbbrev(pos2Val)+'</select>'+
+    '</div></div>';
+  html += '<div class="field"><label class="field-label">Position Profile <span class="opt">optional</span></label><select class="select" name="positionProfile" id="pitchSlotPosProfile">'+positionProfileOptionsFor(pos1Val,p?p.positionProfile||"":"")+'</select></div>';
   html += '<div class="form-grid">'+
     '<div class="field"><label class="field-label">Preferred Foot <span class="opt">optional</span></label><div class="pillgroup" data-name="foot"><input type="hidden" name="preferredFoot" value="'+escAttr(p?p.preferredFoot||"":"")+'">'+FEET.map(function(ft){return '<button type="button" class="pill-opt'+(p&&ft===p.preferredFoot?" on":"")+'" data-value="'+ft+'">'+ft+'</button>';}).join("")+'</div></div>'+
-    '<div class="field"><label class="field-label">Height <span class="opt">optional — estimate ok, e.g. "175+-"</span></label><input class="input" name="height" value="'+escAttr(p?p.height||"":"")+'" placeholder="e.g. 178 or 175+-"></div>'+
+    '<div class="field"><label class="field-label">Height <span class="opt">optional</span></label><select class="select" name="height"><option value="">—</option>'+HEIGHT_LEVELS.map(function(h){return '<option value="'+h+'"'+(p&&p.height===h?" selected":"")+'>'+h+'</option>';}).join("")+'</select></div>'+
+  '</div>';
+  html += '<div class="form-grid">'+
+    '<div class="field"><label class="field-label">Estrutura <span class="opt">optional</span></label><select class="select" name="estrutura"><option value="">—</option>'+ESTRUTURA_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.estrutura===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
+    '<div class="field"><label class="field-label">Maturation <span class="opt">optional</span></label><select class="select" name="maturation"><option value="">—</option>'+MATURATION_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.maturation===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
+  '</div>';
+  html += '<div class="form-grid" style="grid-template-columns:1fr 1fr 1fr">'+
+    '<div class="field"><label class="field-label">Níveis de Agilidade <span class="opt">opt.</span></label><select class="select" name="agilityLevel"><option value="">—</option>'+SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.agilityLevel===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
+    '<div class="field"><label class="field-label">Níveis de Aceleração <span class="opt">opt.</span></label><select class="select" name="accelerationLevel"><option value="">—</option>'+SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.accelerationLevel===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
+    '<div class="field"><label class="field-label">Níveis de Velocidade <span class="opt">opt.</span></label><select class="select" name="speedLevel"><option value="">—</option>'+SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.speedLevel===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
   '</div>';
   html += '<div class="field"><label class="field-label">Characteristics <span class="opt">optional — what stood out in this match</span></label><textarea class="textarea" name="characteristics" placeholder="What stands out about their profile…">'+esc(ev?ev.characteristics||(mp?mp.matchCharacteristics||"":""):"")+'</textarea></div>';
   html += '<div class="form-grid">'+
@@ -4606,17 +4807,29 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
   html += '<div class="field"><label class="field-label">Birth Year <span class="opt">optional</span></label><input class="input" name="birthYear" type="number" min="1970" max="'+(new Date().getFullYear())+'" placeholder="e.g. 2005" value="'+escAttr(p?p.birthYear||"":"")+'"></div>';
   html += '<div class="field"><label class="field-label">Nationality <span class="opt">optional</span></label>'+renderCountryCombo("pitchSlotNat","nationality",p?p.nationality||"":"","Search nationality…")+'</div>';
   html += '<div class="field"><label class="field-label">Notes <span class="opt">optional</span></label><textarea class="textarea" name="notes" placeholder="Any notes about this player…">'+esc(mp?mp.interestNote||"":"")+'</textarea></div>';
+  // Short "#12 Name (POS)" label for another lineup entry — used to show who's on the other end of
+  // a substitution next to the minute itself.
+  function subPartnerLabel(otherMp){
+    if(!otherMp) return "";
+    var op = playerById(otherMp.playerId);
+    return (otherMp.shirtNumber?"#"+otherMp.shirtNumber+" ":"")+shortPlayerName(op?op.name:"")+(otherMp.position?" ("+otherMp.position+")":"");
+  }
   if(showSubFields && mp && mp.subMinute){
     // The minute THIS player (a substitute) came on — only shown once it's actually set (collected
     // up front by the "Add Substitute" mini-modal); editable here too, in case it needs correcting.
-    html += '<div class="field"><label class="field-label">Sub Minute <span class="opt">optional</span></label><input class="input" type="number" min="0" max="130" name="subMinute" value="'+escAttr(mp.subMinute)+'" placeholder="e.g. 63"></div>';
+    var replacedMp = mp.replacedPlayerId ? byId(DB.matchPlayers,mp.replacedPlayerId) : null;
+    var replacedLabel = subPartnerLabel(replacedMp);
+    html += '<div class="field"><label class="field-label">Sub Minute <span class="opt">optional</span></label><input class="input" type="number" min="0" max="130" name="subMinute" value="'+escAttr(mp.subMinute)+'" placeholder="e.g. 63">'+
+      (replacedLabel?'<div style="font-size:11.5px;color:var(--text-muted);margin-top:5px">&lt;- '+esc(replacedLabel)+'</div>':"")+
+    '</div>';
   }
   if(isEdit && mp){
     var subOfThis = DB.matchPlayers.find(function(x){return x.replacedPlayerId===mp.id;});
     if(subOfThis && subOfThis.subMinute){
       // Read-only — the minute this player was substituted OFF, derived from whichever substitute
       // replaced them. Not editable here; correct it on the substitute's own record instead.
-      html += '<div class="field"><label class="field-label">Substituted at Minute</label><div style="font-size:13.5px;font-weight:600;padding:4px 0 2px">'+esc(subOfThis.subMinute)+"'</div></div>";
+      var subOfThisLabel = subPartnerLabel(subOfThis);
+      html += '<div class="field"><label class="field-label">Substituted at Minute</label><div style="font-size:13.5px;font-weight:600;padding:4px 0 2px">'+esc(subOfThis.subMinute)+"' "+(subOfThisLabel?"-&gt; "+esc(subOfThisLabel):"")+'</div></div>';
     }
   }
   html += '<label class="field-checkbox"><input type="checkbox" name="playerOfInterest" value="1"'+(mp&&mp.playerOfInterest?" checked":"")+'>'+ic("star")+' <span>Player of Interest</span></label>';
@@ -4630,6 +4843,15 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
   if(!isEdit){ wirePlayerCombo("pitchSlotName",{clubId:clubId}); wireShirtNumberCombo("pitchSlotNumber","pitchSlotName",clubId); }
   else if(p){ wirePlayerCombo("pitchSlotEditName",{excludeId:p.id,emptyMessage:"No match"}); }
   wireCountryCombo("pitchSlotNat");
+  // Position Profile's option list depends on Position 1 — refresh it live as Position 1 changes,
+  // trying to keep whatever was already selected if it still applies to the new group.
+  var pos1Select = document.getElementById("pitchSlotPos1"), posProfileSelect = document.getElementById("pitchSlotPosProfile");
+  if(pos1Select && posProfileSelect){
+    pos1Select.addEventListener("change",function(){
+      var keep = posProfileSelect.value;
+      posProfileSelect.innerHTML = positionProfileOptionsFor(pos1Select.value,keep);
+    });
+  }
 }
 ACTIONS["open-pitch-slot"] = function(el){
   openPitchSlotModal(el.dataset.matchId,el.dataset.clubId,parseInt(el.dataset.slot,10),el.dataset.mpId||null);
@@ -4672,10 +4894,17 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
   var mForSlot = matchById(matchId);
   var slotsForSlot = mForSlot ? formationFor(mForSlot,clubId) : FORMATIONS["4-3-3"];
   var position = fd.get("position")||(slotsForSlot[slotIndex]?slotsForSlot[slotIndex].pos:"");
+  var position2 = fd.get("position2")||"";
+  var positionProfile = fd.get("positionProfile")||"";
   var name = (fd.get("name")||"").trim();
   var birthYear = fd.get("birthYear")||"";
   var preferredFoot = fd.get("preferredFoot")||"";
-  var height = (fd.get("height")||"").trim();
+  var height = fd.get("height")||"";
+  var estrutura = fd.get("estrutura")||"";
+  var maturation = fd.get("maturation")||"";
+  var agilityLevel = fd.get("agilityLevel")||"";
+  var accelerationLevel = fd.get("accelerationLevel")||"";
+  var speedLevel = fd.get("speedLevel")||"";
   var performance = fd.get("performance")||"";
   var potential = fd.get("potential")||"";
   var characteristics = fd.get("characteristics")||"";
@@ -4684,24 +4913,67 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
   var replacedMpId = fd.get("replacedMpId")||"";
   var subMinute = fd.get("subMinute")||"";
   var wantInterest = fd.get("playerOfInterest")==="1";
-  function applyBrief(playerId){
+  // mpForBrief: the lineup entry this observation is being recorded against — passed through so
+  // the merged (auto-text + manual) Characteristics can be written back onto it once computed, and
+  // so its own auto-paragraph bookkeeping (autoCharacteristics) can be read/updated.
+  function applyBrief(playerId,mpForBrief){
     var pl = playerById(playerId);
     if(pl){
-      // fill-if-missing for birth year/foot/nationality: don't clobber info the player profile
-      // already has. Height is different — a young player's height can change match to match, so
-      // it always tracks whichever dated entry is most recent, never letting an older match's
-      // info overwrite a newer one (see applyLatestPlayerField). The player's main Position is
-      // their identity and, once established, isn't overwritten by a match at all — a match
-      // observing a different position updates the Second Position instead (applyObservedPosition).
+      // fill-if-missing for birth year/nationality: don't clobber info the player profile already
+      // has. Preferred Foot, Height, Estrutura, Maturation and the 3 Níveis are different — they
+      // always track whichever dated entry is most recent (see applyLatestPlayerField), and any
+      // actual CHANGE among them regenerates the Portuguese "written out" summary below. The
+      // player's main Position is their identity and, once established, isn't overwritten by a
+      // match at all — a match observing a different position updates the Second Position instead
+      // (applyObservedPosition), called once per position recorded this match (Position 1 & 2).
       if(birthYear && !pl.birthYear) pl.birthYear = birthYear;
-      if(preferredFoot && !pl.preferredFoot) pl.preferredFoot = preferredFoot;
       if(nationality && !pl.nationality) pl.nationality = nationality;
       var srcDate = (mForSlot && mForSlot.date) || todayISO();
-      applyLatestPlayerField(pl,"height","heightUpdatedAt",height,srcDate);
       applyObservedPosition(pl,position,srcDate);
+      if(position2) applyObservedPosition(pl,position2,srcDate);
+
+      // Snapshot before applying, so "did anything actually change" reflects the real outcome —
+      // applyLatestPlayerField can decline an edit to an OLDER match if a newer one already set a
+      // different value, and that must NOT trigger a sentence built from the rejected value.
+      var beforeAttrs = {
+        preferredFoot: pl.preferredFoot, height: pl.height, estrutura: pl.estrutura,
+        maturation: pl.maturation, agilityLevel: pl.agilityLevel,
+        accelerationLevel: pl.accelerationLevel, speedLevel: pl.speedLevel
+      };
+      applyLatestPlayerField(pl,"preferredFoot","preferredFootUpdatedAt",preferredFoot,srcDate);
+      applyLatestPlayerField(pl,"height","heightUpdatedAt",height,srcDate);
+      applyLatestPlayerField(pl,"estrutura","estruturaUpdatedAt",estrutura,srcDate);
+      applyLatestPlayerField(pl,"maturation","maturationUpdatedAt",maturation,srcDate);
+      applyLatestPlayerField(pl,"agilityLevel","agilityLevelUpdatedAt",agilityLevel,srcDate);
+      applyLatestPlayerField(pl,"accelerationLevel","accelerationLevelUpdatedAt",accelerationLevel,srcDate);
+      applyLatestPlayerField(pl,"speedLevel","speedLevelUpdatedAt",speedLevel,srcDate);
+      applyLatestPlayerField(pl,"positionProfile","positionProfileUpdatedAt",positionProfile,srcDate);
+
+      // Did any of the "written out" attributes actually end up changing on the profile? Only a
+      // real change counts — leaving a field as-is (or blank), or an edit to an older match that
+      // applyLatestPlayerField declined, never re-triggers the automatic sentence, so the
+      // Characteristics box stays free for manual notes otherwise.
+      var attrsChanged = Object.keys(beforeAttrs).some(function(k){ return pl[k]!==beforeAttrs[k]; });
+      if(attrsChanged){
+        var sentence = buildAutoAttrSentence({
+          preferredFoot: pl.preferredFoot, height: pl.height, estrutura: pl.estrutura,
+          maturation: pl.maturation, agilityLevel: pl.agilityLevel,
+          accelerationLevel: pl.accelerationLevel, speedLevel: pl.speedLevel
+        });
+        if(sentence){
+          // Mirrored in two places: this match's own Characteristics (right where the coach is
+          // choosing these options) and the player's profile-level General Characteristics — each
+          // keeps its own manually-written text intact, only the auto paragraph itself is replaced.
+          characteristics = spliceAutoText(characteristics,mpForBrief?(mpForBrief.autoCharacteristics||""):"",sentence);
+          if(mpForBrief) mpForBrief.autoCharacteristics = sentence;
+          pl.characteristics = spliceAutoText(pl.characteristics||"",pl.autoCharacteristics||"",sentence);
+          pl.autoCharacteristics = sentence;
+        }
+      }
       pl.updatedAt = nowISO();
     }
     if(performance || potential || characteristics.trim()){ upsertMatchEvaluation(playerId,matchId,{performance:performance,potential:potential,characteristics:characteristics}); }
+    if(mpForBrief) mpForBrief.matchCharacteristics = characteristics;
   }
   if(existingMpId){
     var mp = byId(DB.matchPlayers,existingMpId);
@@ -4711,12 +4983,13 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
       mp.playerId = finalPlayerId;
       mp.shirtNumber = shirtNumber;
       mp.position = position;
+      mp.position2 = position2;
       mp.matchCharacteristics = characteristics;
       mp.interestNote = notes;
       mp.replacedPlayerId = replacedMpId;
       mp.subMinute = subMinute;
       applyInterestFlag(mp,wantInterest);
-      applyBrief(finalPlayerId);
+      applyBrief(finalPlayerId,mp);
       closeModal();
       persist({toast:"Player updated"});
     }
@@ -4750,14 +5023,14 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
   function finalize(pid,isNewPlayer){
     var mpNew = {
       id:uid("mp"), matchId:matchId, playerId:pid, clubId:clubId,
-      shirtNumber:shirtNumber, position:position, slotIndex:slotIndex,
+      shirtNumber:shirtNumber, position:position, position2:position2, slotIndex:slotIndex,
       lineupStatus:forceStatus, matchCharacteristics:characteristics,
       playerOfInterest:false, interestNote:notes, interestPriority:"",
       replacedPlayerId:replacedMpId, subMinute:subMinute, createdAt:nowISO()
     };
     DB.matchPlayers.push(mpNew);
     applyInterestFlag(mpNew,wantInterest);
-    applyBrief(pid);
+    applyBrief(pid,mpNew);
     closeModal();
     persist({toast: isNewPlayer ? "New player created and added to lineup" : "Player added to lineup"});
   }
