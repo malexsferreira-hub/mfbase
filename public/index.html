@@ -1176,6 +1176,26 @@ function playerLastObserved(playerId){
 function playerObservationCount(playerId){
   return DB.matchPlayers.filter(function(mp){return mp.playerId===playerId;}).length + DB.evaluations.filter(function(e){return e.playerId===playerId && e.evaluationType==="Manual";}).length;
 }
+// Shirt number isn't stored on the player profile itself (it can vary match to match), but the
+// most recent match they were logged in is a useful default when adding them to a new one.
+function lastKnownShirtNumber(playerId){
+  var rows = playerMatchRows(playerId).filter(function(r){return r.mp.shirtNumber;});
+  return rows.length ? rows[0].mp.shirtNumber : "";
+}
+// Every player who has ever worn a given shirt number in any match — used to surface a suggestion
+// when a coach only knows the number, not the name yet (same idea as the name combo). Narrowing to
+// one club (when given) keeps suggestions to players who plausibly belong on this lineup.
+function playersWithShirtNumber(num,clubId){
+  var target = String(num||"").trim();
+  if(!target) return [];
+  var seen = {}, out = [];
+  DB.matchPlayers.forEach(function(mp){
+    if(!mp.playerId || String(mp.shirtNumber||"")!==target || seen[mp.playerId]) return;
+    var p = playerById(mp.playerId);
+    if(p && (!clubId || p.clubId===clubId)){ seen[mp.playerId]=true; out.push(p); }
+  });
+  return out.slice(0,6);
+}
 function matchLineup(matchId,clubId){
   return DB.matchPlayers.filter(function(mp){return mp.matchId===matchId && mp.clubId===clubId;}).sort(function(a,b){
     var av=(a.shirtNumber===""||a.shirtNumber===null||a.shirtNumber===undefined)?999:parseInt(a.shirtNumber,10);
@@ -1299,6 +1319,43 @@ function findPlayerCandidates(name,clubId,nationality,birthYear){
   });
   scored.sort(function(a,b){return b.score-a.score;});
   return scored.slice(0,4);
+}
+// Recomputes a player's derived fields from their FULL evaluation history (Match + Manual alike),
+// after that history has changed shape (a merge is the only caller today). General Characteristics
+// stay whatever the earliest-dated evaluation of any type says — same rule as the single-evaluation
+// sync in upsertMatchEvaluation, just replayed over the combined set instead of one at a time.
+// Performance/Potential (updatePlayerCurrentRatings) already read across all evaluation types.
+function recomputePlayerDerivedFields(playerId){
+  var p = playerById(playerId);
+  if(!p) return;
+  var evs = DB.evaluations.filter(function(e){return e.playerId===playerId;}).slice().sort(function(a,b){
+    var d = (a.date||"").localeCompare(b.date||"");
+    if(d) return d;
+    return (a.createdAt||"").localeCompare(b.createdAt||"");
+  });
+  if(evs.length) p.characteristics = evs[0].characteristics||"";
+  updatePlayerCurrentRatings(playerId);
+  p.updatedAt = nowISO();
+}
+// A player added without a name yet ("???", or any placeholder) can later turn out to already be
+// someone in the database — e.g. once their name is confirmed. Merging folds the placeholder's
+// whole history (every match appearance and evaluation) into the real profile and discards the
+// placeholder, rather than leaving two separate profiles for the same person. Base info fills in
+// only where the surviving profile is missing it; height/position keep whichever side's dated
+// entry is most recent — same fill-if-missing / latest-wins rules a single match brief follows.
+function mergePlayerInto(sourceId,targetId){
+  if(!sourceId || !targetId || sourceId===targetId) return;
+  var source = playerById(sourceId), target = playerById(targetId);
+  if(!source || !target) return;
+  DB.matchPlayers.forEach(function(mp){ if(mp.playerId===sourceId) mp.playerId = targetId; });
+  DB.evaluations.forEach(function(e){ if(e.playerId===sourceId) e.playerId = targetId; });
+  if(!target.birthYear && source.birthYear) target.birthYear = source.birthYear;
+  if(!target.nationality && source.nationality) target.nationality = source.nationality;
+  if(!target.preferredFoot && source.preferredFoot) target.preferredFoot = source.preferredFoot;
+  applyLatestPlayerField(target,"height","heightUpdatedAt",source.height,source.heightUpdatedAt);
+  applyLatestPlayerField(target,"firstPosition","positionUpdatedAt",source.firstPosition,source.positionUpdatedAt);
+  recomputePlayerDerivedFields(targetId);
+  DB.players = DB.players.filter(function(x){return x.id!==sourceId;});
 }
 
 /* ============================================================
@@ -2020,9 +2077,36 @@ function openClubCreateModal(name,onCreate){
    ============================================================ */
 function playerComboPreview(p){
   return '<div class="combo-item" data-player-id="'+p.id+'">'+avatarHtml(p,30)+
-    '<div><div>'+esc(p.name)+'</div><div class="combo-item-sub">'+esc(clubName(p.clubId)||"No club")+(p.nationality?" · "+esc(p.nationality):"")+(dobDisplay(p)!=="—"?" · "+esc(dobDisplay(p)):"")+'</div></div></div>';
+    '<div><div class="combo-item-name">'+esc(p.name)+'</div><div class="combo-item-sub">'+(p.firstPosition?esc(p.firstPosition)+" · ":"")+esc(clubName(p.clubId)||"No club")+(p.nationality?" · "+esc(p.nationality):"")+(dobDisplay(p)!=="—"?" · "+esc(dobDisplay(p)):"")+'</div></div></div>';
 }
-function wirePlayerCombo(id){
+// Picking an existing player from the "Add Player" combo (pitch-slot modal) fills in whatever
+// base info the profile already has — number, birth year, nationality, height, preferred foot —
+// so it's identified right away; the coach only needs to add this match's observations. Never
+// overwrites something already typed into the form, and each match's own performance/potential/
+// characteristics are left alone since those are specific to this appearance, not the player.
+function prefillKnownPlayerBrief(nameField,p){
+  var form = nameField.closest("form");
+  if(!form) return;
+  function fillIfEmpty(el,val){ if(el && !el.value && val) el.value = val; }
+  fillIfEmpty(form.querySelector('input[name="shirtNumber"]'), lastKnownShirtNumber(p.id));
+  fillIfEmpty(form.querySelector('input[name="birthYear"]'), p.birthYear);
+  fillIfEmpty(form.querySelector('input[name="height"]'), p.height);
+  // Nationality is the searchable country combo (renderCountryCombo) — a plain named input, no
+  // separate hidden id, only used here as "pitchSlotNat".
+  fillIfEmpty(document.getElementById("pitchSlotNat_text"), p.nationality);
+  if(p.preferredFoot){
+    var footGroup = form.querySelector('.pillgroup[data-name="foot"]');
+    if(footGroup){
+      var footHidden = footGroup.querySelector('input[type="hidden"]');
+      if(footHidden && !footHidden.value){
+        footHidden.value = p.preferredFoot;
+        Array.prototype.forEach.call(footGroup.querySelectorAll(".pill-opt"),function(b){ b.classList.toggle("on", b.dataset.value===p.preferredFoot); });
+      }
+    }
+  }
+}
+function wirePlayerCombo(id,opts){
+  opts = opts || {};
   var text = document.getElementById(id+"_text");
   var hidden = document.getElementById(id+"_hidden");
   var list = document.getElementById(id+"_list");
@@ -2030,9 +2114,9 @@ function wirePlayerCombo(id){
   function renderList(q){
     var nn = normName(q);
     if(!nn){ list.hidden=true; return; }
-    var matches = DB.players.filter(function(p){return normName(p.name).indexOf(nn)>=0;}).slice(0,6);
+    var matches = DB.players.filter(function(p){return p.id!==opts.excludeId && (!opts.clubId || p.clubId===opts.clubId) && normName(p.name).indexOf(nn)>=0;}).slice(0,6);
     var html = matches.map(playerComboPreview).join("");
-    if(!html){ html='<div class="combo-item" style="color:var(--text-faint);cursor:default">No existing player found — will create new</div>'; }
+    if(!html){ html='<div class="combo-item" style="color:var(--text-faint);cursor:default">'+(opts.emptyMessage||"No existing player found — will create new")+'</div>'; }
     list.innerHTML = html;
     list.hidden = false;
   }
@@ -2044,10 +2128,45 @@ function wirePlayerCombo(id){
     if(item){
       var p = playerById(item.dataset.playerId);
       hidden.value = p.id; text.value = p.name; list.hidden = true;
+      prefillKnownPlayerBrief(text,p);
     }
   });
   document.addEventListener("click",function(e){
     if(!e.target.closest('[data-combo-root="'+id+'"]')) list.hidden = true;
+  });
+}
+// Same idea as wirePlayerCombo, but keyed off a shirt number instead of a name — for when the
+// coach knows the number a player has worn before but not their name yet. Picking a suggestion
+// fills in the name-combo fields (hidden playerId + visible name) plus the usual base-info prefill.
+function wireShirtNumberCombo(numId,nameId,clubId){
+  var text = document.getElementById(numId+"_text");
+  var list = document.getElementById(numId+"_list");
+  if(!text||!list) return;
+  function renderList(q){
+    var matches = playersWithShirtNumber(q,clubId);
+    if(!matches.length){ list.hidden=true; return; }
+    list.innerHTML = matches.map(playerComboPreview).join("");
+    list.hidden = false;
+  }
+  text.addEventListener("input",debounce(function(){ renderList(text.value); },120));
+  text.addEventListener("focus",function(){ if(text.value) renderList(text.value); });
+  list.addEventListener("mousedown",function(e){
+    e.preventDefault();
+    var item = e.target.closest("[data-player-id]");
+    if(item){
+      var p = playerById(item.dataset.playerId);
+      list.hidden = true;
+      var nameHidden = document.getElementById(nameId+"_hidden");
+      var nameText = document.getElementById(nameId+"_text");
+      if(nameHidden) nameHidden.value = p.id;
+      if(nameText) nameText.value = p.name;
+      var nameList = document.getElementById(nameId+"_list");
+      if(nameList) nameList.hidden = true;
+      prefillKnownPlayerBrief(text,p);
+    }
+  });
+  document.addEventListener("click",function(e){
+    if(!e.target.closest('[data-combo-root="'+numId+'"]')) list.hidden = true;
   });
 }
 
@@ -4281,9 +4400,26 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
     html += '<input type="hidden" name="subMinute" value="'+escAttr(presetSub.subMinute||"")+'">';
   }
   // Number+Name: stacked on desktop (.namenum-row), side by side only on a narrow/iPhone screen.
-  html += '<div class="namenum-row"><div class="field"><label class="field-label">Number</label><input class="input" type="number" min="1" max="99" name="shirtNumber" value="'+escAttr(mp?mp.shirtNumber||"":"")+'" placeholder="#" autofocus></div>';
   if(isEdit){
-    html += '<div class="field"><label class="field-label">Name</label><input class="input" name="name" value="'+escAttr(p?p.name:"")+'"></div>';
+    html += '<div class="namenum-row"><div class="field"><label class="field-label">Number</label><input class="input" type="number" min="1" max="99" name="shirtNumber" value="'+escAttr(mp?mp.shirtNumber||"":"")+'" placeholder="#" autofocus></div>';
+  } else {
+    // Typing a number they've worn before surfaces them here too — same idea as the name combo,
+    // for when the coach knows the number but not the name yet.
+    html += '<div class="namenum-row"><div class="field"><label class="field-label">Number</label><div class="combo" data-combo-root="pitchSlotNumber">'+
+      '<input class="input" type="number" min="1" max="99" name="shirtNumber" id="pitchSlotNumber_text" value="" placeholder="#" autocomplete="off" autofocus>'+
+      '<div class="combo-list" id="pitchSlotNumber_list" hidden></div>'+
+    '</div></div>';
+  }
+  if(isEdit){
+    // Same live-suggestion combo as "Add Player" — typing a name that matches someone already in
+    // the database surfaces them right away, so picking them here (rather than waiting for the
+    // fuzzy check on Save) links straight to that player. The current player themself is excluded
+    // from their own suggestions.
+    html += '<div class="field"><label class="field-label">Name</label><div class="combo" data-combo-root="pitchSlotEditName">'+
+      '<input type="hidden" name="linkPlayerId" id="pitchSlotEditName_hidden">'+
+      '<input class="input" name="name" id="pitchSlotEditName_text" value="'+escAttr(p?p.name:"")+'" autocomplete="off">'+
+      '<div class="combo-list" id="pitchSlotEditName_list" hidden></div>'+
+    '</div></div>';
   } else {
     html += '<div class="field"><label class="field-label">Name <span class="opt">optional, "???" if unsure</span></label><div class="combo" data-combo-root="pitchSlotName">'+
       '<input type="hidden" name="playerId" id="pitchSlotName_hidden">'+
@@ -4324,7 +4460,10 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
   }
   html += '</form></div>';
   openModal(html);
-  if(!isEdit){ wirePlayerCombo("pitchSlotName"); }
+  // Suggestions are scoped to this lineup's own club (any age group within it) — narrower and
+  // easier to pick from than the whole database.
+  if(!isEdit){ wirePlayerCombo("pitchSlotName",{clubId:clubId}); wireShirtNumberCombo("pitchSlotNumber","pitchSlotName",clubId); }
+  else if(p){ wirePlayerCombo("pitchSlotEditName",{excludeId:p.id,emptyMessage:"No match"}); }
   wireCountryCombo("pitchSlotNat");
 }
 ACTIONS["open-pitch-slot"] = function(el){
@@ -4401,17 +4540,43 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
     var mp = byId(DB.matchPlayers,existingMpId);
     if(!mp) return;
     var p = playerById(mp.playerId);
-    if(p && name && name!==p.name){ p.name = name; p.updatedAt = nowISO(); }
-    mp.shirtNumber = shirtNumber;
-    mp.position = position;
-    mp.matchCharacteristics = characteristics;
-    mp.interestNote = notes;
-    mp.replacedPlayerId = replacedMpId;
-    mp.subMinute = subMinute;
-    applyInterestFlag(mp,wantInterest);
-    applyBrief(mp.playerId);
-    closeModal();
-    persist({toast:"Player updated"});
+    function finalizeEdit(finalPlayerId){
+      mp.playerId = finalPlayerId;
+      mp.shirtNumber = shirtNumber;
+      mp.position = position;
+      mp.matchCharacteristics = characteristics;
+      mp.interestNote = notes;
+      mp.replacedPlayerId = replacedMpId;
+      mp.subMinute = subMinute;
+      applyInterestFlag(mp,wantInterest);
+      applyBrief(finalPlayerId);
+      closeModal();
+      persist({toast:"Player updated"});
+    }
+    var linkPlayerId = fd.get("linkPlayerId")||"";
+    if(p && linkPlayerId && linkPlayerId!==p.id){
+      // Already picked a specific existing player from the live name-suggestion combo — merge
+      // straight away, no need to re-run the fuzzy check below.
+      mergePlayerInto(p.id,linkPlayerId);
+      finalizeEdit(linkPlayerId);
+      return;
+    }
+    if(p && name && name!==p.name){
+      // A name typed in for the first time (e.g. confirming a "???" placeholder) might already
+      // belong to someone in the database — the same duplicate check the "Add Player" combo runs,
+      // just triggered by an edit instead. Choosing the existing player merges this placeholder's
+      // whole history into them instead of leaving two separate profiles for the same person.
+      var renameCandidates = findPlayerCandidates(name,clubId,nationality,birthYear).filter(function(c){return c.player.id!==p.id;});
+      if(renameCandidates.length){
+        openDuplicateModal(renameCandidates,function(res){
+          if(res.type==="existing"){ mergePlayerInto(p.id,res.playerId); finalizeEdit(res.playerId); }
+          else { p.name = name; p.updatedAt = nowISO(); finalizeEdit(p.id); }
+        });
+        return;
+      }
+      p.name = name; p.updatedAt = nowISO();
+    }
+    finalizeEdit(mp.playerId);
     return;
   }
   var playerId = fd.get("playerId")||"";
