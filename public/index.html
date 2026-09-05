@@ -942,20 +942,72 @@ function avatarOrNumberHtml(p,shirtNumber,size){
   }
   return avatarFallback(p.name,size);
 }
-var KNOWN_CLUB_LOGOS = {
-  "al ettifaq": function(size){
-    return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 48 48" style="border-radius:50%;display:block;flex:0 0 auto">'+
-      '<circle cx="24" cy="24" r="23" fill="#0B0B0B" stroke="#C9A227" stroke-width="2"/>'+
-      '<path d="M24 7 L37 13.5 V24 C37 32.5 31.5 39 24 42 C16.5 39 11 32.5 11 24 V13.5 Z" fill="#141210" stroke="#C9A227" stroke-width="1.4"/>'+
-      '<path d="M24 10 l1.6 3.4 3.7 0.35 -2.8 2.5 0.9 3.6 -3.4-2 -3.4 2 0.9-3.6 -2.8-2.5 3.7-0.35 Z" fill="#C9A227"/>'+
-      '<text x="24" y="34" text-anchor="middle" font-family="Georgia,\'Times New Roman\',serif" font-weight="700" font-size="13" fill="#C9A227">AE</text>'+
-    '</svg>';
-  }
+// Real club crests, fetched from the Saudi Football Federation's own site (saff.com.sa) — a club
+// uses the same crest across every one of its teams (senior and every youth age group), so this
+// covers Matches Database, the Dashboard, and Teams - Watch alike, keyed by the club's normalized
+// name (normName) so minor spelling/spacing variants still match. Any club not in this list (or
+// an image that fails to load) falls back to crestFallback's colored initials.
+var SAFF_LOGO_BASE = "https://saff.com.sa/uploadcenter/";
+var SAFF_CLUB_LOGOS = {
+  "al hilal":"saffteamsmall1661266882.png",
+  "al nassr":"saffteamsmallfkCLO1747742996.png",
+  "al ittihad":"saffteamsmall1566200867.png",
+  "al ahli":"saffteamsmallHy6F61756329988.png",
+  "al taawoun":"saffteamsmall1661203635.png",
+  "al ettifaq":"saffteamsmall1661384351.png",
+  "al shabab":"saffteamsmall1629064138.png",
+  "al fateh":"saffteamsmall1661266908.png",
+  "al fayha":"saffteamsmall1661203654.png",
+  "al khaleej":"saffteamsmall1566292050.png",
+  "al raed":"saffteamsmall1661206621.png",
+  "al wehda":"saffteamsmall1717872381.png",
+  "al okhdood":"saffteamsmall1723411515.png",
+  "damac":"saffteamsmall1647252080.png",
+  "al qadisiyah":"saffteamsmall1717872503.png",
+  "abha":"saffteamsmall1667133437.png",
+  "al riyadh":"saffteamsmall1581536401.png",
+  "al hazem":"saffteamsmall1628756061.png",
+  "al diraiyah":"saffteamsmallOrZip1757757661.png",
+  "al kholood":"saffteamsmallD5k291787207108.png",
+  "najran":"saffteamsmall1566459423.png",
+  "al orobah":"saffteamsmallCumXi1748805121.png",
+  "al zulfi":"saffteamsmall1629491477.png",
+  "alula":"saffteamsmallG1EZr1746101061.png",
+  "jeddah":"saffteamsmall1689368675.png",
+  "al tai":"saffteamsmall1688643416.png",
+  "al faisaly":"saffteamsmall0WKIZ1786063856.png",
+  "al jabalin":"saffteamsmall1566207788.png",
+  "hajer":"saffteamsmall1566459550.png",
+  "al adalah":"saffteamsmall1566371307.png",
+  "al najmah":"saffteamsmall1689367690.png",
+  "al ansar":"saffteamsmallIRgvQ1787556875.png",
+  "al tadamon":"saffteamsmallT0gEp1729538887.png",
+  "al watan":"saffteamsmall1566383980.png",
+  "muhayil":"saffteamsmallGR9Iv1726262591.png",
+  "al batin":"saffteamsmall1626725886.png",
+  "ohod":"saffteamsmall1566197894.png",
+  "al jeel":"saffteamsmall1720961316.png",
+  "al rawdah":"saffteamsmall1566292956.png",
+  "al amjad":"saffteamsmall1566199879.png",
+  "al arabi":"saffteamsmall1657809787.png",
+  "al qala":"saffteamsmalletZ6d1727623652.png",
+  "al safa":"saffteamsmall1566369665.png",
+  "alqunfidah":"saffteamsmallhjx3f1761810602.png",
+  "hetten":"saffteamsmall1723490243.png",
+  "radwa":"saffteamsmall1698014109.png",
+  "majd alqunfudhah":"saffteamsmall1703525752.png",
+  "al fao":"saffteamsmall1566374449.png",
+  "qassim":"saffteamsmall1703526299.png",
+  "al noor":"saffteamsmall1566383203.png",
+  "al bukiryah":"saffteamsmall1717872415.png",
+  "ajial academy":"saffteamsmall1708326647.png",
+  "al mowtwa":"saffteamsmallgqecx1728034935.png"
 };
 function knownClubLogo(name,size){
   if(!name) return null;
-  var key = String(name).trim().toLowerCase();
-  return KNOWN_CLUB_LOGOS[key] ? KNOWN_CLUB_LOGOS[key](size) : null;
+  var file = SAFF_CLUB_LOGOS[normName(name)];
+  if(!file) return null;
+  return '<img class="crest" style="width:'+size+'px;height:'+size+'px;object-fit:contain;background:#fff" src="'+escAttr(SAFF_LOGO_BASE+file)+'" onerror="this.outerHTML=window.__tlCrestFallback('+"'"+esc(name)+"'"+','+size+')">';
 }
 function crestHtml(club,size){
   size=size||28;
@@ -3323,9 +3375,15 @@ function pageCalendar(){
 
   var allCompetitions = Array.from(new Set(DB.fixtures.map(function(fx){return fx.competition;}).filter(Boolean))).sort();
   var addedCount = DB.fixtures.filter(function(fx){return !!fx.matchId;}).length;
+  // Same "not watched in 2+ months (or never), and not already on the Agenda" set as Teams -
+  // Watch, keyed the same way (normalized name + age group) so a fixture's team can be checked
+  // against it directly.
+  var watchIndex = {};
+  teamsToWatch().forEach(function(g){ watchIndex[normName(g.name)+"|"+g.ageGroup] = true; });
 
   var html = '<div class="stack">';
   html += '<div class="section-head"><div><div class="eyebrow">'+DB.fixtures.length+' fixtures · '+addedCount+' in Agenda</div><h1 style="font-size:22px">Calendar</h1></div></div>';
+  html += '<div style="font-size:12px;color:var(--text-muted);margin-top:-8px">'+starIcon()+' marks a team not watched in the last 2 months (or never) — see Teams - Watch.</div>';
   html += '<div class="filterbar">';
   html += '<input class="input" style="width:200px;min-height:36px;border-radius:99px" id="cf_q" placeholder="Search teams, competition…" value="'+escAttr(f.q)+'">';
   html += '<select id="cf_competition"><option value="">All Competitions</option>'+allCompetitions.map(function(c){return '<option value="'+esc(c)+'"'+(c===f.competition?" selected":"")+'>'+esc(c)+'</option>';}).join("")+'</select>';
@@ -3347,7 +3405,7 @@ function pageCalendar(){
       });
       compOrder.forEach(function(comp){
         html += '<div class="roster-group-label">'+esc(comp||"Other")+'</div>';
-        byComp[comp].forEach(function(fx){ html += fixtureRow(fx); });
+        byComp[comp].forEach(function(fx){ html += fixtureRow(fx,{watchIndex:watchIndex}); });
       });
       html += '</div></details>';
     });
@@ -3368,6 +3426,9 @@ function pageCalendar(){
   });
   return html;
 }
+function starIcon(){
+  return '<span style="color:var(--accent);font-weight:800">*</span>';
+}
 function fixtureRow(fx,opts){
   var added = !!fx.matchId;
   opts = opts || {};
@@ -3376,10 +3437,17 @@ function fixtureRow(fx,opts){
   var timeCell = opts.showDate ?
     '<div class="mono" style="width:80px;flex:0 0 auto;font-size:11.5px;color:var(--text-muted);padding-top:2px;line-height:1.5">'+esc(fmtDateShort(fx.date))+'<br>'+esc(fx.time||"—")+'</div>' :
     '<div class="mono" style="width:46px;flex:0 0 auto;font-size:12.5px;color:var(--text-muted);padding-top:2px">'+esc(fx.time||"—")+'</div>';
+  // Calendar passes a watchIndex (same set as Teams - Watch) so a team not watched in 2+ months
+  // (or never), and not otherwise on the Agenda, gets a * next to its name.
+  var fxAgeGroup = opts.watchIndex ? deriveAgeGroupFromCompetition(fx.competition) : null;
+  function teamLabel(name){
+    var onWatch = opts.watchIndex && opts.watchIndex[normName(name)+"|"+fxAgeGroup];
+    return esc(name)+(onWatch?' '+starIcon():'');
+  }
   return '<div class="roster-row" style="align-items:flex-start">'+
     timeCell+
     '<div class="roster-name-wrap">'+
-      '<div class="roster-name">'+esc(fx.team1)+' <span style="color:var(--text-faint);font-weight:400">v</span> '+esc(fx.team2)+'</div>'+
+      '<div class="roster-name">'+teamLabel(fx.team1)+' <span style="color:var(--text-faint);font-weight:400">v</span> '+teamLabel(fx.team2)+'</div>'+
       (fx.venue?'<div class="roster-chars">'+esc(fx.venue)+'</div>':'')+
     '</div>'+
     (added?
