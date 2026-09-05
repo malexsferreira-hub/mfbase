@@ -249,6 +249,7 @@ input.eval-param-input{width:44px;min-height:28px;padding:2px 4px;text-align:cen
 .badge-status-Watched{background:var(--accent-soft);color:var(--accent-strong);}
 .badge-status-Partially-Watched{background:var(--gold-soft);color:var(--gold);}
 .badge-status-Cancelled{background:var(--danger-soft);color:var(--danger);}
+.badge-status-Overdue{background:var(--danger-soft);color:var(--danger);}
 .badge-rec-High-Interest{background:var(--gold-soft);color:var(--gold);}
 .badge-rec-Interest{background:var(--accent-soft);color:var(--accent-strong);}
 .badge-rec-Monitor{background:var(--blue-soft);color:var(--blue);}
@@ -301,6 +302,7 @@ td.num,th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric
 /* ---------- forms ---------- */
 .field{display:flex;flex-direction:column;gap:6px;}
 .field-label{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;}
+.lbl-mobile{display:none;}
 .field-label .opt{text-transform:none;font-weight:500;color:var(--text-faint);letter-spacing:0;}
 .input,.select,.textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);min-height:44px;}
 .textarea{min-height:80px;resize:vertical;font-family:inherit;line-height:1.5;}
@@ -466,12 +468,14 @@ details.acc summary .count-chip{background:var(--surface-3);color:var(--text-mut
 .msf-empty{padding:8px 6px;font-size:12px;color:var(--text-faint);}
 
 /* ---------- profile header ---------- */
-.profile-head{display:flex;gap:18px;align-items:stretch;flex-wrap:wrap;}
+.profile-head{display:flex;gap:18px;align-items:center;flex-wrap:wrap;}
+.profile-info-mobile{display:none;}
 .profile-info{min-width:0;}
 .profile-info h1{font-size:27px;}
 .profile-pos-heading{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 .profile-name-under-photo{font-family:var(--font-display);font-size:20px;font-weight:700;color:var(--text);text-align:center;max-width:140px;line-height:1.15;}
 .profile-meta{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;align-items:center;}
+.profile-meta-bfh{flex-direction:column;align-items:flex-start;}
 .profile-club{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-muted);font-weight:600;max-width:260px;overflow-wrap:break-word;}
 .profile-club b{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-faint);font-weight:700;}
 .profile-club-country{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-faint);font-weight:700;margin-top:3px;text-align:center;}
@@ -490,8 +494,7 @@ details.acc summary .count-chip{background:var(--surface-3);color:var(--text-mut
 .profile-photo-col{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;flex:0 0 auto;}
 .profile-side-col{display:flex;flex-direction:column;align-items:center;gap:12px;flex:0 0 auto;}
 .profile-side-actions{display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center;}
-.profile-side-stack{display:flex;gap:20px;flex:0 0 auto;align-items:center;justify-content:center;}
-.profile-side-stack.profile-clubnat-stack{align-items:flex-start;}
+.profile-side-stack{display:flex;flex-direction:column;gap:10px;flex:0 0 auto;align-items:center;justify-content:center;}
 .profile-side-item{display:flex;flex-direction:column;align-items:center;text-align:center;gap:5px;min-width:56px;}
 .profile-side-icon{display:flex;align-items:center;justify-content:center;height:52px;position:relative;}
 .profile-side-label{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);font-weight:700;}
@@ -529,6 +532,8 @@ details.acc summary .count-chip{background:var(--surface-3);color:var(--text-mut
   .page-title-mobile{display:block;}
   .lineup-cols{grid-template-columns:1fr;}
   .form-grid{grid-template-columns:1fr;}
+  .lbl-desktop{display:none;}
+  .lbl-mobile{display:inline;}
   .dash-grid{grid-template-columns:1fr;grid-auto-flow:row;grid-template-rows:none;}
   .dash-col-agenda{order:1;}
   .dash-col-notes{order:2;}
@@ -546,6 +551,10 @@ details.acc summary .count-chip{background:var(--surface-3);color:var(--text-mut
   .profile-head{flex-direction:column;align-items:center;text-align:center;}
   .profile-meta{justify-content:center;}
   .profile-pos-heading{justify-content:center;}
+  .profile-info-desktop{display:none;}
+  .profile-info-mobile{display:block;}
+  .profile-side-actions{flex-direction:row;}
+  .profile-meta-bfh{flex-direction:row;align-items:center;}
   .profile-divider-left{border-left:none;border-top:1px solid var(--border);padding-left:0;padding-top:14px;}
   .tabbar{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:50;padding:6px 4px calc(6px + env(safe-area-inset-bottom));}
   .tab-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;color:var(--text-faint);font-size:10px;font-weight:700;border-radius:8px;}
@@ -628,10 +637,10 @@ function posLabel(code){ return code ? (POSITION_LABELS[code]||code) : ""; }
    Estrutura, Maturation, and the 3 speed-related "Níveis" scales.
    ============================================================ */
 var HEIGHT_LEVELS = ["Low","Medium/Low","Medium","Medium/High","High","Very High"];
-var ESTRUTURA_LEVELS = ["Ectomorfo","Ectomesomorfo","Mesomorfo","Mesoendomorfo","Endomorfo"];
+var ESTRUTURA_LEVELS = ["Ectomorph","Ectomesomorph","Mesomorph","Mesoendomorph","Endomorph"];
 var STRENGTH_LEVELS = ["Fragile","Mediocre","Balanced","Strong","Very Strong"];
 var MATURATION_LEVELS = ["Late","On Time","Early","Closed"];
-var SPEED_LEVELS = ["Baixos","Médio/Baixos","Médios","Médio/Altos","Altos"];
+var SPEED_LEVELS = ["Low","Medium/Low","Medium","Medium/High","High"];
 // Every concrete position code maps to one of the 9 Position Profile groups below. RM/LM (wide
 // midfield) default to the W (winger) group and SS (second striker) defaults to the FW group,
 // alongside CF — neither was called out explicitly, so treat them as the closest match; easy to
@@ -674,6 +683,14 @@ var FOOT_PT = {Right:"Pé direito",Left:"Pé esquerdo",Both:"Ambidestro"};
 var HEIGHT_PT = {"Low":"baixa","Medium/Low":"média-baixa","Medium":"média","Medium/High":"média-alta","High":"alta","Very High":"muito alta"};
 var STRENGTH_PT = {"Fragile":"pouca robustez física","Mediocre":"robustez física pouco notável","Balanced":"robustez física equilibrada","Strong":"robustez física notável","Very Strong":"robustez física muito notável"};
 var MATURATION_PT = {"Late":"parece estar atrasado maturacionalmente","On Time":"parece estar na idade maturacionalmente","Early":"parece estar adiantado maturacionalmente","Closed":"parece estar fechado maturacionalmente"};
+var ESTRUTURA_PT = {"Ectomorph":"ectomorfo","Ectomesomorph":"ectomesomorfo","Mesomorph":"mesomorfo","Mesoendomorph":"mesoendomorfo","Endomorph":"endomorfo"};
+var SPEED_PT = {"Low":"baixos","Medium/Low":"médio/baixos","Medium":"médios","Medium/High":"médio/altos","High":"altos"};
+// Compact abbreviations shown only on the mobile player-profile layout, to keep the Structure/
+// Strength/Agility/Acceleration/Pace row short enough to fit a narrow screen. The underlying stored
+// value (and the desktop display) is always the full English word — these are display-only.
+var ESTRUTURA_MOBILE_ABBR = {"Ectomorph":"Ecto","Ectomesomorph":"EctoMeso","Mesomorph":"Meso","Mesoendomorph":"EndoMeso","Endomorph":"Endo"};
+var STRENGTH_MOBILE_ABBR = {"Fragile":"F","Mediocre":"M","Balanced":"B","Strong":"S","Very Strong":"VS"};
+var SPEED_MOBILE_ABBR = {"Low":"B","Medium/Low":"M/B","Medium":"M","Medium/High":"M/A","High":"A"};
 // "Níveis de agilidade/aceleração/velocidade" — equal-adjacent scales get merged into one clause
 // (agility+acceleration, or acceleration+speed, or all three), exactly as specified:
 //  - all three equal -> "níveis de agilidade, aceleração e velocidade X"
@@ -699,14 +716,14 @@ function buildAutoAttrSentence(v){
   var parts = [];
   if(v.preferredFoot && FOOT_PT[v.preferredFoot]) parts.push(FOOT_PT[v.preferredFoot]);
   if(v.height && HEIGHT_PT[v.height]) parts.push("estatura "+HEIGHT_PT[v.height]);
-  if(v.estrutura) parts.push(String(v.estrutura).toLowerCase());
+  if(v.estrutura && ESTRUTURA_PT[v.estrutura]) parts.push(ESTRUTURA_PT[v.estrutura]);
   if(v.strength && STRENGTH_PT[v.strength]) parts.push(STRENGTH_PT[v.strength]);
   if(v.maturation && MATURATION_PT[v.maturation]) parts.push(MATURATION_PT[v.maturation]);
   var sentence1 = parts.length ? parts.join(", ")+"." : "";
   var levels = levelsPhrasePT(
-    v.agilityLevel?String(v.agilityLevel).toLowerCase():"",
-    v.accelerationLevel?String(v.accelerationLevel).toLowerCase():"",
-    v.speedLevel?String(v.speedLevel).toLowerCase():""
+    v.agilityLevel && SPEED_PT[v.agilityLevel] ? SPEED_PT[v.agilityLevel] : "",
+    v.accelerationLevel && SPEED_PT[v.accelerationLevel] ? SPEED_PT[v.accelerationLevel] : "",
+    v.speedLevel && SPEED_PT[v.speedLevel] ? SPEED_PT[v.speedLevel] : ""
   );
   var sentence2 = levels ? capitalizeFirst(levels)+"." : "";
   if(!sentence1 && !sentence2) return "";
@@ -723,7 +740,23 @@ function spliceAutoText(currentText,oldAuto,newAuto){
   if(oldAuto && currentText.indexOf(oldAuto)===0){
     manual = currentText.slice(oldAuto.length).replace(/^\n+/,"");
   }
+  if(!newAuto) return manual;
   return manual ? newAuto+"\n\n"+manual : newAuto;
+}
+// Regenerates a player's auto Portuguese sentence from whichever attributes are set on `p` right
+// now, splicing it into p.characteristics (preserving any manually-typed text, and clearing the
+// auto paragraph entirely if every attribute has been reset back to blank) — shared by the
+// pitch-slot modal's Save handler, the standalone Add/Edit Player form, and the player profile
+// page's inline attribute selects, so changing an attribute from any of those keeps the General
+// Characteristics text in sync without altering anything else that stays the same.
+function regeneratePlayerAutoSentence(p){
+  var sentence = buildAutoAttrSentence({
+    preferredFoot: p.preferredFoot, height: p.height, estrutura: p.estrutura, strength: p.strength,
+    maturation: p.maturation, agilityLevel: p.agilityLevel,
+    accelerationLevel: p.accelerationLevel, speedLevel: p.speedLevel
+  });
+  p.characteristics = spliceAutoText(p.characteristics||"",p.autoCharacteristics||"",sentence);
+  p.autoCharacteristics = sentence;
 }
 var PLAYER_FILTERS = {q:"",position:[],club:[],nationality:[],foot:[],birthYear:[],performance:[],potential:[],competition:[],status:[],sortBy:"position",sortDir:"asc"};
 var MATCH_FILTERS = {q:"",competition:[],club:[],players:[],mode:[],status:[],sortBy:"date",sortDir:"desc"};
@@ -1243,11 +1276,29 @@ function flagHtml(nat,withText){
 }
 function badgeMode(mode){ return mode ? '<span class="badge badge-mode-'+mode+'"><span class="dot"></span>'+mode+'</span>' : ""; }
 function badgeStatus(status){ return status ? '<span class="badge badge-status-'+slugSpace(status)+'">'+esc(status)+'</span>' : ""; }
+// Final result, when known — set manually via Edit Match, or filled in automatically by the SAFF
+// results check once a played match's score is posted on the site. Returns "" when no score is on
+// file yet (a match may be in the past with no result recorded, e.g. the site hasn't posted it).
+function matchScoreLabel(m){
+  if(m.homeScore===undefined||m.homeScore===null||m.homeScore===""||m.awayScore===undefined||m.awayScore===null||m.awayScore==="") return "";
+  return m.homeScore+" - "+m.awayScore;
+}
 function badgeRec(rec){ return rec ? '<span class="badge badge-rec-'+slugSpace(rec)+'">'+esc(rec)+'</span>' : '<span class="badge" style="background:var(--surface-3);color:var(--text-faint)">—</span>'; }
 function badgeType(t){ var slug=String(t||"").replace(/[^a-zA-Z0-9]+/g,""); return '<span class="badge badge-type-'+esc(slug)+'">'+esc(t)+'</span>'; }
+// A "To Watch"/"Scheduled" match whose watch day has already gone by without being marked
+// Watched/Cancelled — judged against the day it'll actually be watched (agendaDateOf: the chosen
+// watchDate for VIDEO, the real match date otherwise), not always the raw match date.
+function isMatchOverdue(m){
+  return (m.status==="To Watch"||m.status==="Scheduled") && agendaDateOf(m) && agendaDateOf(m)<todayISO();
+}
 function matchStatusSelectHtml(m){
-  return '<select class="badge-select badge-status-'+slugSpace(m.status)+'" data-action-select="set-match-status" data-id="'+m.id+'" title="Change status">'+
-    MATCH_STATUSES.map(function(s){return '<option value="'+s+'"'+(s===m.status?" selected":"")+'>'+s+'</option>';}).join("")+'</select>';
+  var overdue = isMatchOverdue(m);
+  var cls = overdue ? "badge-status-Overdue" : "badge-status-"+slugSpace(m.status);
+  return '<select class="badge-select '+cls+'" data-action-select="set-match-status" data-id="'+m.id+'" title="Change status">'+
+    MATCH_STATUSES.map(function(s){
+      var label = (overdue && s===m.status) ? "Overdue" : s;
+      return '<option value="'+s+'"'+(s===m.status?" selected":"")+'>'+esc(label)+'</option>';
+    }).join("")+'</select>';
 }
 function matchModeSelectHtml(m){
   return '<select class="badge-select badge-mode-'+m.observationMode+'" data-action-select="set-match-mode" data-id="'+m.id+'" title="Change mode">'+
@@ -1781,6 +1832,20 @@ function renderTabbar(){
   return html;
 }
 function render(){
+  // Every render() fully replaces #app's HTML — including whatever text input the person is
+  // currently typing into (a live-filtering search box, most commonly). Without this, that input
+  // is destroyed and recreated on every keystroke's debounced re-render, so focus (and the cursor
+  // position) is lost each time and typing feels like it keeps getting interrupted. Snapshot the
+  // focused field's id + selection range beforehand and restore it afterwards — the field comes
+  // back with the same value (driven from the same filter state), so this is invisible.
+  var prevFocus = null;
+  (function(){
+    var el = document.activeElement;
+    if(el && el.id && (el.tagName==="INPUT"||el.tagName==="TEXTAREA")){
+      prevFocus = {id:el.id, start:null, end:null};
+      try{ prevFocus.start = el.selectionStart; prevFocus.end = el.selectionEnd; }catch(e){}
+    }
+  })();
   var pageHtml = "";
   try{
     switch(ROUTE.name){
@@ -1811,6 +1876,15 @@ function render(){
     '<div id="modalRoot"></div>';
   wireGlobalSearch();
   runAfterRenderHooks();
+  if(prevFocus){
+    var restored = document.getElementById(prevFocus.id);
+    if(restored && (restored.tagName==="INPUT"||restored.tagName==="TEXTAREA")){
+      restored.focus();
+      if(prevFocus.start!=null && restored.setSelectionRange){
+        try{ restored.setSelectionRange(prevFocus.start,prevFocus.end); }catch(e){}
+      }
+    }
+  }
 }
 var AFTER_RENDER_HOOKS = [];
 function onAfterRender(fn){ AFTER_RENDER_HOOKS.push(fn); }
@@ -2171,6 +2245,101 @@ function wireCountryCombo(id){
     if(!e.target.closest('[data-combo-root="'+id+'"]')) list.hidden = true;
   });
 }
+// A searchable competition picker (Add/Edit Match, Add Evaluation's mini match-create modal) —
+// same combo look as the country/club pickers. Competition is just a free-text string on the match
+// record (no separate entity table), so picking a suggestion or typing a brand-new name both just
+// set the field's value; a name that doesn't exist yet is implicitly "created" the moment the match
+// is saved with it.
+function competitionOptionsList(){
+  return Array.from(new Set(
+    DB.matches.map(function(x){return x.competition;})
+      .concat((DB.fixtures||[]).map(function(fx){return fx.competition;}))
+      .filter(Boolean)
+  )).sort();
+}
+function renderCompetitionCombo(id,name,selectedName,placeholder){
+  return '<div class="combo" data-combo-root="'+id+'">'+
+    '<input class="input" name="'+name+'" id="'+id+'_text" autocomplete="off" placeholder="'+esc(placeholder||"Search or add competition…")+'" value="'+escAttr(selectedName||"")+'">'+
+    '<div class="combo-list" id="'+id+'_list" hidden></div>'+
+  '</div>';
+}
+function wireCompetitionCombo(id){
+  var text = document.getElementById(id+"_text");
+  var list = document.getElementById(id+"_list");
+  if(!text||!list) return;
+  function renderList(q){
+    var all = competitionOptionsList();
+    var nn = normName(q);
+    var matches = !nn ? all.slice(0,8) : all.filter(function(c){return normName(c).indexOf(nn)>=0;}).slice(0,8);
+    var html = matches.map(function(c){
+      return '<div class="combo-item" data-competition="'+escAttr(c)+'"><div>'+esc(c)+'</div></div>';
+    }).join("");
+    if(q && !all.some(function(c){return normName(c)===nn;})){
+      html += '<div class="combo-item combo-create" data-create-competition="'+escAttr(q)+'">+ Create "'+esc(q)+'"</div>';
+    }
+    if(!html) html = '<div class="combo-item" style="color:var(--text-faint);cursor:default">No match — your typed text will still be saved</div>';
+    list.innerHTML = html;
+    list.hidden = false;
+  }
+  text.addEventListener("focus",function(){ renderList(text.value); });
+  text.addEventListener("input",function(){ renderList(text.value); });
+  list.addEventListener("mousedown",function(e){
+    e.preventDefault();
+    var item = e.target.closest("[data-competition]");
+    var create = e.target.closest("[data-create-competition]");
+    var picked = item ? item.dataset.competition : (create ? create.dataset.createCompetition : null);
+    if(picked!==null){
+      text.value = picked; list.hidden = true;
+      text.dispatchEvent(new Event("change",{bubbles:true}));
+    }
+  });
+  document.addEventListener("click",function(e){
+    if(!e.target.closest('[data-combo-root="'+id+'"]')) list.hidden = true;
+  });
+}
+// Live-suggestion dropdown for a plain filter search box (Players/Matches/Calendar's "q" field) —
+// on top of the existing live-filtering of the list below, this surfaces actual matching names
+// (players, clubs, competitions…) as the person types, so picking one fills the box with an exact
+// value instead of having to spell the whole thing out themselves. `getSuggestions(q)` returns the
+// (already deduped/capped) list of matching strings to offer; `applyValue(v)` is called when one is
+// picked, to actually apply it as the filter.
+function wireQuickFilterSuggest(textId,suggListId,getSuggestions,applyValue){
+  var text = document.getElementById(textId);
+  var list = document.getElementById(suggListId);
+  if(!text||!list) return;
+  function renderSuggestions(q){
+    var items = q && q.trim() ? getSuggestions(q) : [];
+    if(!items.length){ list.hidden = true; list.innerHTML=""; return; }
+    list.innerHTML = items.map(function(s){return '<div class="combo-item" data-suggest="'+escAttr(s)+'">'+esc(s)+'</div>';}).join("");
+    list.hidden = false;
+  }
+  text.addEventListener("input",debounce(function(){ renderSuggestions(text.value); },120));
+  text.addEventListener("focus",function(){ renderSuggestions(text.value); });
+  list.addEventListener("mousedown",function(e){
+    e.preventDefault();
+    var item = e.target.closest("[data-suggest]");
+    if(!item) return;
+    text.value = item.dataset.suggest;
+    list.hidden = true;
+    applyValue(text.value);
+  });
+  document.addEventListener("click",function(e){
+    if(!e.target.closest('[data-combo-root="'+textId+'"]')) list.hidden = true;
+  });
+}
+function quickSuggestList(candidates,q,limit){
+  var nn = normName(q);
+  var seen = {}; var out = [];
+  candidates.forEach(function(s){
+    if(!s) return;
+    var key = normName(s);
+    if(!key || seen[key]) return;
+    if(key.indexOf(nn)<0) return;
+    seen[key] = true;
+    out.push(s);
+  });
+  return out.slice(0,limit||8);
+}
 function renderClubCombo(id,name,selectedId,placeholder){
   var selected = selectedId ? clubById(selectedId) : null;
   return '<div class="combo" data-combo-root="'+id+'">'+
@@ -2511,7 +2680,9 @@ function pageDashboard(){
   var playersOfInterestCount = new Set(DB.matchPlayers.filter(function(mp){return mp.playerOfInterest;}).map(function(mp){return mp.playerId;})).size;
   var totalEvaluations = DB.evaluations.length;
 
-  var upcoming = DB.matches.filter(function(m){return m.status==="To Watch"||m.status==="Scheduled";}).sort(function(a,b){return (a.date||"").localeCompare(b.date||"");}).slice(0,5);
+  // Sorted by the day it'll actually be watched (agendaDateOf) — the real match date for LIVE/TV,
+  // the chosen watchDate for VIDEO — not always the raw match date.
+  var upcoming = DB.matches.filter(function(m){return m.status==="To Watch"||m.status==="Scheduled";}).sort(function(a,b){return (agendaDateOf(a)||"").localeCompare(agendaDateOf(b)||"");}).slice(0,5);
   var recentMatches = DB.matches.filter(function(m){return m.status==="Watched"||m.status==="Partially Watched";}).sort(function(a,b){return (b.date||"").localeCompare(a.date||"");}).slice(0,5);
   // No "Recent Evaluations" panel anymore — that space now lets Players of Interest show more
   // rows, sorted with the most recently-evaluated player first.
@@ -2583,7 +2754,7 @@ function dashMatchRow(m){
   // so it can't be quietly forgotten. For a VIDEO match, "overdue" is judged against the day the
   // scout chose to watch it (agendaDateOf), not the real match date; LIVE/TV matches are judged
   // against their real date either way, since agendaDateOf falls back to m.date for those.
-  var isOverdue = (m.status==="To Watch"||m.status==="Scheduled") && agendaDateOf(m) && agendaDateOf(m)<todayISO();
+  var isOverdue = isMatchOverdue(m);
   // Desktop: club crests, with the competition in small gray text below the team names.
   // Mobile: no crests — the match's age group ("escalão") instead, no competition.
   var crestsHtml = '<div class="dash-match-crests" style="display:flex;align-items:center">'+crestHtml(clubById(m.homeClubId),20)+'<span style="margin:0 4px;color:var(--text-faint);font-size:11px">v</span>'+crestHtml(clubById(m.awayClubId),20)+'</div>';
@@ -2910,7 +3081,7 @@ function pagePlayers(){
   var html = '<div class="stack">';
   html += '<div class="section-head"><div><div class="eyebrow">'+dbPlayers.length+' total</div><h1 style="font-size:22px">Players Database</h1></div><a class="btn btn-primary" href="#/players/new">'+ic("plus")+' Add Player</a></div>';
 
-  html += '<div style="margin-bottom:8px"><input class="input" style="width:280px;min-height:36px;border-radius:99px" id="pf_q" placeholder="Search name, club, nationality…" value="'+escAttr(f.q)+'"></div>';
+  html += '<div class="combo" data-combo-root="pf_q" style="margin-bottom:8px;width:280px"><input class="input" style="width:280px;min-height:36px;border-radius:99px" id="pf_q" placeholder="Search name, club, nationality…" value="'+escAttr(f.q)+'" autocomplete="off"><div class="combo-list" id="pf_q_sugg" hidden></div></div>';
   html += '<div class="filterbar">';
   html += renderMSF("players","position","Position",POSITIONS);
   html += renderMSF("players","status",STATUS_FIELD_LABEL,PLAYER_STATUSES);
@@ -2963,6 +3134,12 @@ function pagePlayers(){
   onAfterRender(function(){
     var qEl=document.getElementById("pf_q");
     if(qEl) qEl.addEventListener("input",debounce(function(){ PLAYER_FILTERS.q=qEl.value; render(); },220));
+    wireQuickFilterSuggest("pf_q","pf_q_sugg",function(q){
+      var names = visiblePlayers().map(function(p){return p.name;});
+      var clubs = DB.clubs.map(function(c){return c.name;});
+      var nats = visiblePlayers().map(function(p){return p.nationality;});
+      return quickSuggestList(names.concat(clubs,nats),q);
+    },function(v){ PLAYER_FILTERS.q=v; render(); });
     var clearEl=document.getElementById("pf_clear");
     if(clearEl) clearEl.addEventListener("click",function(){ PLAYER_FILTERS={q:"",position:[],club:[],nationality:[],foot:[],birthYear:[],performance:[],potential:[],competition:[],status:[],sortBy:"position",sortDir:"asc"}; MSF_OPEN_PANEL=null; render(); });
     document.querySelectorAll("[data-sort]").forEach(function(th){
@@ -3006,10 +3183,10 @@ function pagePlayerForm(existingId){
   html += '<div class="section-head"><div><div class="eyebrow">'+(isEdit?"Edit Player":"New Profile")+'</div><h1 style="font-size:22px">'+(isEdit?"Edit "+esc(p.name):"Add Player")+'</h1></div></div>';
   html += '<form class="card card-pad stack" data-form="save-player" data-id="'+(isEdit?p.id:"")+'">';
   html += '<div class="field"><label class="field-label">Name</label><input class="input" name="name" required value="'+escAttr(p.name)+'" placeholder="Full name"></div>';
-  html += '<div class="field"><label class="field-label">Characteristics</label><textarea class="textarea" name="characteristics" placeholder="General playing style, strengths, weaknesses…">'+esc(p.characteristics)+'</textarea></div>';
-  // From here down, the same attribute fields/layout as the pitch-slot "Edit Player" modal —
-  // Position 1/2, Position Profile, Foot+Height, Structure+Strength, Maturation, Agility/
-  // Acceleration/Pace — kept in sync so both forms describe a player the same way.
+  // From here down, the same attribute fields/layout (and order) as the pitch-slot "Edit Player"
+  // modal — Position 1/2, Position Profile, Foot+Height, Structure+Strength, Maturation, Agility/
+  // Acceleration/Pace, then Characteristics, then Performance/Potential — kept in sync so both
+  // forms describe a player the same way.
   html += '<div class="form-grid">'+
     '<div class="field"><label class="field-label">Position 1</label><select class="select" name="firstPosition" id="pfPos1">'+positionOptionsAbbrev(p.firstPosition)+'</select></div>'+
     '<div class="field"><label class="field-label">Position 2</label><select class="select" name="secondPosition" id="pfPos2">'+positionOptionsAbbrev(p.secondPosition)+'</select></div>'+
@@ -3026,12 +3203,16 @@ function pagePlayerForm(existingId){
   html += '<div class="field"><label class="field-label">Maturation <span class="opt">optional</span></label><select class="select" name="maturation"><option value="">—</option>'+MATURATION_LEVELS.map(function(v){return '<option value="'+v+'"'+(p.maturation===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>';
   html += '<div class="form-grid" style="grid-template-columns:1fr 1fr 1fr">'+
     '<div class="field"><label class="field-label">Agility <span class="opt">opt.</span></label><select class="select" name="agilityLevel"><option value="">—</option>'+SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(p.agilityLevel===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
-    '<div class="field"><label class="field-label">Acceleration <span class="opt">opt.</span></label><select class="select" name="accelerationLevel"><option value="">—</option>'+SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(p.accelerationLevel===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
+    '<div class="field"><label class="field-label"><span class="lbl-desktop">Acceleration</span><span class="lbl-mobile">Accelera</span> <span class="opt">opt.</span></label><select class="select" name="accelerationLevel"><option value="">—</option>'+SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(p.accelerationLevel===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
     '<div class="field"><label class="field-label">Pace <span class="opt">opt.</span></label><select class="select" name="speedLevel"><option value="">—</option>'+SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(p.speedLevel===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
   '</div>';
+  html += '<div class="field"><label class="field-label">Characteristics</label><textarea class="textarea" name="characteristics" placeholder="General playing style, strengths, weaknesses…">'+esc(p.characteristics)+'</textarea></div>';
+  html += '<div class="field"><label class="field-label">Performance <span class="opt">1–5, optional</span></label><div class="pillgroup" data-name="performance"><input type="hidden" name="currentPerformance" value="'+escAttr(p.currentPerformance||"")+'">'+[1,2,3,4,5].map(function(n){return '<button type="button" class="pill-opt'+(String(n)===String(p.currentPerformance)?" on":"")+'" data-value="'+n+'">'+n+'</button>';}).join("")+'</div></div>';
+  html += '<div class="field"><label class="field-label">Potential <span class="opt">A–E, optional</span></label><div class="pillgroup" data-name="potential"><input type="hidden" name="currentPotential" value="'+escAttr(normalizeGrade(p.currentPotential)||"")+'">'+GRADE_LETTERS.map(function(g){return '<button type="button" class="pill-opt'+(g===normalizeGrade(p.currentPotential)?" on":"")+'" data-value="'+g+'">'+g+'</button>';}).join("")+'</div></div>';
+  if(!isEdit) html += '<p class="field-hint">Setting Performance/Potential here creates the player\'s first evaluation, so it appears in their history too.</p>';
   html += '<div class="form-grid">'+
     '<div class="field"><label class="field-label">Club</label>'+renderClubCombo("pf_club_combo","clubId",p.clubId,"Search or create club…")+'</div>'+
-    '<div class="field"><label class="field-label">Year of Birth <span class="opt">optional</span></label><input class="input" name="birthYear" type="number" min="1970" max="'+(new Date().getFullYear())+'" placeholder="e.g. 2005" value="'+escAttr(p.birthYear)+'"></div>'+
+    '<div class="field"><label class="field-label">Birth Year <span class="opt">optional</span></label><input class="input" name="birthYear" type="number" min="1970" max="'+(new Date().getFullYear())+'" placeholder="e.g. 2005" value="'+escAttr(p.birthYear)+'"></div>'+
   '</div>';
   html += '<div class="field"><label class="field-label">Date of Birth <span class="opt">optional, more precise</span></label><input class="input" name="dob" type="date" value="'+escAttr(p.dob)+'"></div>';
   html += '<div class="field"><label class="field-label">Nationality</label>'+renderCountryCombo("pf_nat_combo","nationality",p.nationality,"Search nationality…")+'</div>';
@@ -3040,11 +3221,6 @@ function pagePlayerForm(existingId){
     '<div class="field"><label class="field-label">'+STATUS_FIELD_LABEL+' <span class="opt">optional</span></label><select class="select" name="status"><option value="">—</option>'+PLAYER_STATUSES.map(function(s){return '<option value="'+s+'"'+(s===p.status?" selected":"")+'>'+s+'</option>';}).join("")+'</select></div>'+
     '<div class="field"><label class="field-label">Agent <span class="opt">optional</span></label><input class="input" name="agent" value="'+escAttr(p.agent)+'"></div>'+
   '</div>';
-  html += '<div class="form-grid">'+
-    '<div class="field"><label class="field-label">Performance <span class="opt">1–5, optional</span></label><select class="select" name="currentPerformance"><option value="">—</option>'+[1,2,3,4,5].map(function(n){return '<option value="'+n+'"'+(String(n)===String(p.currentPerformance)?" selected":"")+'>'+n+'</option>';}).join("")+'</select></div>'+
-    '<div class="field"><label class="field-label">Potential <span class="opt">A–E, optional</span></label><select class="select" name="currentPotential"><option value="">—</option>'+GRADE_LETTERS.map(function(g){return '<option value="'+g+'"'+(g===normalizeGrade(p.currentPotential)?" selected":"")+'>'+g+'</option>';}).join("")+'</select></div>'+
-  '</div>';
-  if(!isEdit) html += '<p class="field-hint">Setting Performance/Potential here creates the player\'s first evaluation, so it appears in their history too.</p>';
   html += '<div class="field"><label class="field-label">Photo URL <span class="opt">optional</span></label><input class="input" name="photo" value="'+escAttr(p.photo)+'" placeholder="https://…"></div>';
   html += '<div class="field"><label class="field-label">Extra Observations <span class="opt">optional</span></label><textarea class="textarea" name="extraObservations">'+esc(p.extraObservations)+'</textarea></div>';
   if(!isEdit){
@@ -3106,7 +3282,6 @@ FORM_HANDLERS["save-player"] = function(form){
       maturation: pl.maturation, agilityLevel: pl.agilityLevel,
       accelerationLevel: pl.accelerationLevel, speedLevel: pl.speedLevel
     });
-    if(!sentence) return characteristicsText;
     var merged = spliceAutoText(characteristicsText,pl.autoCharacteristics||"",sentence);
     pl.autoCharacteristics = sentence;
     return merged;
@@ -3240,6 +3415,18 @@ function pagePlayerDetail(id){
     SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(v===p.accelerationLevel?" selected":"")+'>'+v+'</option>';}).join("")+'</select>';
   var speedSelectHtml = '<select class="inline-select" data-action-select="set-player-speed" data-id="'+p.id+'"><option value="">—</option>'+
     SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(v===p.speedLevel?" selected":"")+'>'+v+'</option>';}).join("")+'</select>';
+  // Same selects as above, but with abbreviated option labels for the mobile layout — same field,
+  // same stored value, only the closed-select text shown on a narrow screen is shorter.
+  var estruturaSelectMobileHtml = '<select class="inline-select" data-action-select="set-player-estrutura" data-id="'+p.id+'"><option value="">—</option>'+
+    ESTRUTURA_LEVELS.map(function(v){return '<option value="'+v+'"'+(v===p.estrutura?" selected":"")+'>'+(ESTRUTURA_MOBILE_ABBR[v]||v)+'</option>';}).join("")+'</select>';
+  var strengthSelectMobileHtml = '<select class="inline-select" data-action-select="set-player-strength" data-id="'+p.id+'"><option value="">—</option>'+
+    STRENGTH_LEVELS.map(function(v){return '<option value="'+v+'"'+(v===p.strength?" selected":"")+'>'+(STRENGTH_MOBILE_ABBR[v]||v)+'</option>';}).join("")+'</select>';
+  var agilitySelectMobileHtml = '<select class="inline-select" data-action-select="set-player-agility" data-id="'+p.id+'"><option value="">—</option>'+
+    SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(v===p.agilityLevel?" selected":"")+'>'+(SPEED_MOBILE_ABBR[v]||v)+'</option>';}).join("")+'</select>';
+  var accelerationSelectMobileHtml = '<select class="inline-select" data-action-select="set-player-acceleration" data-id="'+p.id+'"><option value="">—</option>'+
+    SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(v===p.accelerationLevel?" selected":"")+'>'+(SPEED_MOBILE_ABBR[v]||v)+'</option>';}).join("")+'</select>';
+  var speedSelectMobileHtml = '<select class="inline-select" data-action-select="set-player-speed" data-id="'+p.id+'"><option value="">—</option>'+
+    SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(v===p.speedLevel?" selected":"")+'>'+(SPEED_MOBILE_ABBR[v]||v)+'</option>';}).join("")+'</select>';
   var natFlag1 = p.nationality ? flagForNationality(p.nationality) : "";
   var natFlag2 = p.nationality2 ? flagForNationality(p.nationality2) : "";
   html += '<div class="card card-pad"><div class="profile-head">'+
@@ -3252,26 +3439,40 @@ function pagePlayerDetail(id){
       '<div class="profile-pos-row profile-name-under-photo inline-edit" data-field="name" data-edit-key="player-name" data-raw="'+escAttr(p.name||"")+'" data-id="'+p.id+'" title="Click to rename">'+esc(p.name)+'</div>'+
     '</div>'+
     '<div class="profile-info">'+
+      // Position heading and the Born/Foot/Height/Maturation rows are identical on desktop and
+      // mobile (no abbreviation involved), so they're shared markup — only Structure/Strength and
+      // Agility/Acceleration/Pace differ (abbreviated on mobile) and need two variants below.
       '<div class="profile-pos-heading" style="position:relative">'+badgePos(p.firstPosition,true)+(p.secondPosition?badgePos(p.secondPosition,true):"")+
         '<select class="ring-select-overlay" style="border-radius:8px" data-action-select="set-player-position" data-id="'+p.id+'" title="Click to change position"><option value="">–</option>'+POSITIONS.map(function(pos){return '<option value="'+pos+'"'+(pos===p.firstPosition?" selected":"")+'>'+pos+'</option>';}).join("")+'</select>'+
         '<span class="profile-club" style="margin-left:6px">'+positionProfileSelectHtml+'</span>'+
       '</div>'+
-      '<div class="profile-meta">'+
+      '<div class="profile-meta profile-meta-bfh" style="margin-top:10px">'+
         '<span class="profile-club inline-edit" data-field="birthYear" data-edit-key="player-birthYear" data-raw="'+escAttr(byYear||"")+'" data-id="'+p.id+'"><b>Born</b> '+(byYear?byYear:"—")+'</span>'+
         '<span class="profile-club"><b>Foot</b> '+footSelectHtml+'</span>'+
         '<span class="profile-club inline-edit" data-field="heightExact" data-edit-key="player-heightExact" data-raw="'+escAttr(p.heightExact||"")+'" data-id="'+p.id+'" title="Click to set an exact height in cm — otherwise shows the category picked in Edit Player"><b>Height</b> '+(heightDisplay(p)?esc(heightDisplay(p)):"—")+'</span>'+
       '</div>'+
-      '<div class="profile-meta" style="margin-top:10px">'+
-        '<span class="profile-club"><b>Structure</b> '+estruturaSelectHtml+'</span>'+
-        '<span class="profile-club"><b>Strength</b> '+strengthSelectHtml+'</span>'+
+      '<div class="profile-info-desktop">'+
+        '<div class="profile-meta" style="margin-top:10px"><span class="profile-club"><b>Structure</b> '+estruturaSelectHtml+'</span></div>'+
+        '<div class="profile-meta" style="margin-top:10px"><span class="profile-club"><b>Strength</b> '+strengthSelectHtml+'</span></div>'+
       '</div>'+
-      '<div class="profile-meta" style="margin-top:10px">'+
-        '<span class="profile-club"><b>Maturation</b> '+maturationSelectHtml+'</span>'+
+      '<div class="profile-info-mobile">'+
+        '<div class="profile-meta" style="margin-top:10px">'+
+          '<span class="profile-club"><b>Structure</b> '+estruturaSelectMobileHtml+'</span>'+
+          '<span class="profile-club"><b>Strength</b> '+strengthSelectMobileHtml+'</span>'+
+        '</div>'+
       '</div>'+
-      '<div class="profile-meta" style="margin-top:10px">'+
-        '<span class="profile-club"><b>Agir</b> '+agilitySelectHtml+'</span>'+
-        '<span class="profile-club"><b>Accel</b> '+accelerationSelectHtml+'</span>'+
-        '<span class="profile-club"><b>Pace</b> '+speedSelectHtml+'</span>'+
+      '<div class="profile-meta" style="margin-top:10px"><span class="profile-club"><b>Maturation</b> '+maturationSelectHtml+'</span></div>'+
+      '<div class="profile-info-desktop">'+
+        '<div class="profile-meta" style="margin-top:10px"><span class="profile-club"><b>Agility</b> '+agilitySelectHtml+'</span></div>'+
+        '<div class="profile-meta" style="margin-top:10px"><span class="profile-club"><b>Acceleration</b> '+accelerationSelectHtml+'</span></div>'+
+        '<div class="profile-meta" style="margin-top:10px"><span class="profile-club"><b>Pace</b> '+speedSelectHtml+'</span></div>'+
+      '</div>'+
+      '<div class="profile-info-mobile">'+
+        '<div class="profile-meta" style="margin-top:10px">'+
+          '<span class="profile-club"><b>Agil</b> '+agilitySelectMobileHtml+'</span>'+
+          '<span class="profile-club"><b>Accel</b> '+accelerationSelectMobileHtml+'</span>'+
+          '<span class="profile-club"><b>Pace</b> '+speedSelectMobileHtml+'</span>'+
+        '</div>'+
       '</div>'+
     '</div>'+
     '<div class="profile-side-stack profile-clubnat-stack profile-divider-left">'+
@@ -3459,7 +3660,9 @@ function wirePlayerProfileSelects(){
   document.querySelectorAll('[data-action-select="set-player-foot"]').forEach(function(sel){
     sel.addEventListener("change",function(){
       var p = playerById(sel.dataset.id); if(!p) return;
-      p.preferredFoot = sel.value||""; p.updatedAt = nowISO(); persist({});
+      p.preferredFoot = sel.value||"";
+      regeneratePlayerAutoSentence(p);
+      p.updatedAt = nowISO(); persist({});
     });
   });
   document.querySelectorAll('[data-action-select="set-player-position"]').forEach(function(sel){
@@ -3489,6 +3692,7 @@ function wirePlayerProfileSelects(){
       var p = playerById(sel.dataset.id); if(!p) return;
       p.estrutura = sel.value||"";
       if(p.estrutura) p.estruturaUpdatedAt = todayISO();
+      regeneratePlayerAutoSentence(p);
       p.updatedAt = nowISO(); persist({});
     });
   });
@@ -3497,6 +3701,7 @@ function wirePlayerProfileSelects(){
       var p = playerById(sel.dataset.id); if(!p) return;
       p.strength = sel.value||"";
       if(p.strength) p.strengthUpdatedAt = todayISO();
+      regeneratePlayerAutoSentence(p);
       p.updatedAt = nowISO(); persist({});
     });
   });
@@ -3505,6 +3710,7 @@ function wirePlayerProfileSelects(){
       var p = playerById(sel.dataset.id); if(!p) return;
       p.maturation = sel.value||"";
       if(p.maturation) p.maturationUpdatedAt = todayISO();
+      regeneratePlayerAutoSentence(p);
       p.updatedAt = nowISO(); persist({});
     });
   });
@@ -3513,6 +3719,7 @@ function wirePlayerProfileSelects(){
       var p = playerById(sel.dataset.id); if(!p) return;
       p.agilityLevel = sel.value||"";
       if(p.agilityLevel) p.agilityLevelUpdatedAt = todayISO();
+      regeneratePlayerAutoSentence(p);
       p.updatedAt = nowISO(); persist({});
     });
   });
@@ -3521,6 +3728,7 @@ function wirePlayerProfileSelects(){
       var p = playerById(sel.dataset.id); if(!p) return;
       p.accelerationLevel = sel.value||"";
       if(p.accelerationLevel) p.accelerationLevelUpdatedAt = todayISO();
+      regeneratePlayerAutoSentence(p);
       p.updatedAt = nowISO(); persist({});
     });
   });
@@ -3529,6 +3737,7 @@ function wirePlayerProfileSelects(){
       var p = playerById(sel.dataset.id); if(!p) return;
       p.speedLevel = sel.value||"";
       if(p.speedLevel) p.speedLevelUpdatedAt = todayISO();
+      regeneratePlayerAutoSentence(p);
       p.updatedAt = nowISO(); persist({});
     });
   });
@@ -3758,11 +3967,6 @@ function openEvaluationModal(playerId,matchId,matchPlayerId){
 function openEvalMatchIntroModal(playerId,evaluationType){
   var p = playerById(playerId);
   var obsMode = /^live/i.test(evaluationType) ? "LIVE" : (/^tv/i.test(evaluationType) ? "TV" : "VIDEO");
-  var competitions = Array.from(new Set(
-    DB.matches.map(function(x){return x.competition;})
-      .concat((DB.fixtures||[]).map(function(fx){return fx.competition;}))
-      .filter(Boolean)
-  )).sort();
   var html = '<div class="modal-pad"><div class="modal-head"><div class="modal-title">Add Match</div><button class="icon-btn" data-close-modal>'+ic("close")+'</button></div>';
   html += '<div class="field-hint" style="margin-bottom:10px">A '+esc(evaluationType)+' evaluation needs a match to attach it to — add the match, then continue evaluating '+esc(p?p.name:"the player")+'.</div>';
   html += '<form data-form="save-eval-match-intro" class="stack" data-player-id="'+playerId+'" data-eval-type="'+escAttr(evaluationType)+'">';
@@ -3772,12 +3976,11 @@ function openEvalMatchIntroModal(playerId,evaluationType){
   '</div>';
   html += '<div class="field"><label class="field-label">'+esc(p?p.name:"Player")+' plays for</label><div class="pillgroup" data-name="side"><input type="hidden" name="side" value="home"><button type="button" class="pill-opt on" data-value="home">Home</button><button type="button" class="pill-opt" data-value="away">Away</button></div></div>';
   html += '<div class="field"><label class="field-label">Date</label><input class="input" type="date" name="date" value="'+escAttr(todayISO())+'" required></div>';
-  html += '<div class="field"><label class="field-label">Competition <span class="opt">optional</span></label><input class="input" name="competition" list="evalMatchCompetitionList" placeholder="e.g. Saudi Pro League"></div>';
-  html += '<datalist id="evalMatchCompetitionList">'+competitions.map(function(c){return '<option value="'+esc(c)+'">';}).join("")+'</datalist>';
+  html += '<div class="field"><label class="field-label">Competition <span class="opt">optional</span></label>'+renderCompetitionCombo("evalMatch_comp_combo","competition","","Search or add competition…")+'</div>';
   html += '<button class="btn btn-primary btn-block" type="submit">Add Match &amp; Continue</button>';
   html += '</form></div>';
   openModal(html);
-  wireClubCombo("evalMatch_home_combo"); wireClubCombo("evalMatch_away_combo");
+  wireClubCombo("evalMatch_home_combo"); wireClubCombo("evalMatch_away_combo"); wireCompetitionCombo("evalMatch_comp_combo");
 }
 FORM_HANDLERS["save-eval-match-intro"] = function(form){
   var fd = new FormData(form);
@@ -3873,7 +4076,7 @@ function pageMatches(){
 
   var html='<div class="stack">';
   html += '<div class="section-head"><div><div class="eyebrow">'+DB.matches.length+' total</div><h1 style="font-size:22px">Matches Database</h1></div><a class="btn btn-primary" href="#/matches/new">'+ic("plus")+' Add Match</a></div>';
-  html += '<div style="margin-bottom:8px"><input class="input" style="width:200px;min-height:36px;border-radius:99px" id="mf_q" placeholder="Search teams, competition…" value="'+escAttr(f.q)+'"></div>';
+  html += '<div class="combo" data-combo-root="mf_q" style="margin-bottom:8px;width:200px"><input class="input" style="width:200px;min-height:36px;border-radius:99px" id="mf_q" placeholder="Search teams, competition…" value="'+escAttr(f.q)+'" autocomplete="off"><div class="combo-list" id="mf_q_sugg" hidden></div></div>';
   html += '<div class="filterbar">';
   html += renderMSF("matches","competition","Competitions",competitions);
   html += renderMSF("matches","club","Club",clubOptions);
@@ -3905,7 +4108,7 @@ function pageMatches(){
       html += '<tr class="clickable" data-nav-row="#/matches/'+encodeURIComponent(m.id)+'">'+
         '<td class="mono">'+fmtDate(m.date)+'</td>'+
         '<td class="mono">'+esc(m.time||"—")+'</td>'+
-        '<td><div style="display:flex;align-items:center;justify-content:center;gap:6px">'+crestHtml(clubById(m.homeClubId),18)+esc(clubName(m.homeClubId))+'<span style="color:var(--text-faint)">v</span>'+esc(clubName(m.awayClubId))+crestHtml(clubById(m.awayClubId),18)+'</div></td>'+
+        '<td><div style="display:flex;align-items:center;justify-content:center;gap:6px">'+crestHtml(clubById(m.homeClubId),18)+esc(clubName(m.homeClubId))+'<span style="color:var(--text-faint)">'+(matchScoreLabel(m)||"v")+'</span>'+esc(clubName(m.awayClubId))+crestHtml(clubById(m.awayClubId),18)+'</div></td>'+
         '<td>'+esc(m.competition||"—")+(m.competition&&DB.competitionCountries[m.competition]?'<div class="profile-club-country" style="margin-top:1px">'+esc(countryAbbrev(DB.competitionCountries[m.competition]))+'</div>':'')+'</td>'+
         '<td>'+esc(m.matchday||"—")+'</td>'+
         '<td><div data-action="__noop">'+matchModeSelectHtml(m)+'</div></td>'+
@@ -3920,6 +4123,11 @@ function pageMatches(){
   onAfterRender(function(){
     var qEl=document.getElementById("mf_q");
     if(qEl) qEl.addEventListener("input",debounce(function(){ MATCH_FILTERS.q=qEl.value; render(); },220));
+    wireQuickFilterSuggest("mf_q","mf_q_sugg",function(q){
+      var teams = DB.matches.reduce(function(acc,m){ acc.push(clubName(m.homeClubId),clubName(m.awayClubId)); return acc; },[]);
+      var comps = DB.matches.map(function(m){return m.competition;});
+      return quickSuggestList(teams.concat(comps),q);
+    },function(v){ MATCH_FILTERS.q=v; render(); });
     var clearEl=document.getElementById("mf_clear");
     if(clearEl) clearEl.addEventListener("click",function(){ MATCH_FILTERS={q:"",competition:[],club:[],players:[],mode:[],status:[],sortBy:"date",sortDir:"desc"}; MSF_OPEN_PANEL=null; render(); });
     document.querySelectorAll("[data-sort]").forEach(function(th){
@@ -4074,7 +4282,7 @@ function pageCalendar(){
   html += '<div style="font-size:12px;color:var(--text-muted);margin-top:-8px">'+starIcon()+' marks a team not watched at all in the last 2 months (or never) — see Teams - Watch.</div>';
   html += '<div style="font-size:12px;color:var(--text-muted)">'+starIcon(true)+' marks a team only partially watched in the last 2 months — still needs a full watch.</div>';
   html += '<div class="filterbar">';
-  html += '<input class="input" style="width:200px;min-height:36px;border-radius:99px" id="cf_q" placeholder="Search teams, competition…" value="'+escAttr(f.q)+'">';
+  html += '<div class="combo" data-combo-root="cf_q" style="width:200px"><input class="input" style="width:200px;min-height:36px;border-radius:99px" id="cf_q" placeholder="Search teams, competition…" value="'+escAttr(f.q)+'" autocomplete="off"><div class="combo-list" id="cf_q_sugg" hidden></div></div>';
   html += '<select id="cf_competition"><option value="">All Competitions</option>'+allCompetitions.map(function(c){return '<option value="'+esc(c)+'"'+(c===f.competition?" selected":"")+'>'+esc(c)+'</option>';}).join("")+'</select>';
   html += '<button class="filter-toggle'+(f.showPast?" on":"")+'" id="cf_showpast">Show past dates</button>';
   if(f.q||f.competition) html += '<button class="filter-toggle" id="cf_clear">Clear</button>';
@@ -4092,6 +4300,11 @@ function pageCalendar(){
         if(!byComp[fx.competition]){ byComp[fx.competition]=[]; compOrder.push(fx.competition); }
         byComp[fx.competition].push(fx);
       });
+      // Sort by competition name first (not by whichever competition happens to have the earliest
+      // match that day) — matches stay grouped under their competition even if another competition
+      // has an earlier kickoff the same day. Time order is preserved *within* each competition since
+      // `list` was already date+time sorted before this grouping.
+      compOrder.sort(function(a,b){ return (a||"￿").localeCompare(b||"￿"); });
       compOrder.forEach(function(comp){
         html += '<div class="roster-group-label">'+esc(comp||"Other")+'</div>';
         byComp[comp].forEach(function(fx){ html += fixtureRow(fx,{watchIndex:watchIndex,showCrests:true}); });
@@ -4103,6 +4316,11 @@ function pageCalendar(){
   onAfterRender(function(){
     var qEl=document.getElementById("cf_q");
     if(qEl) qEl.addEventListener("input",debounce(function(){ CALENDAR_FILTERS.q=qEl.value; render(); },220));
+    wireQuickFilterSuggest("cf_q","cf_q_sugg",function(q){
+      var teams = DB.fixtures.reduce(function(acc,fx){ acc.push(fx.team1,fx.team2); return acc; },[]);
+      var comps = DB.fixtures.map(function(fx){return fx.competition;});
+      return quickSuggestList(teams.concat(comps),q);
+    },function(v){ CALENDAR_FILTERS.q=v; render(); });
     var compEl=document.getElementById("cf_competition");
     if(compEl) compEl.addEventListener("change",function(){ CALENDAR_FILTERS.competition=compEl.value; render(); });
     var pastEl=document.getElementById("cf_showpast");
@@ -4123,6 +4341,7 @@ function starIcon(doubled){
 }
 function fixtureRow(fx,opts){
   var added = !!fx.matchId;
+  var addedMatch = added ? matchById(fx.matchId) : null;
   opts = opts || {};
   // The Calendar page already groups fixtures under a per-date accordion header, so the date is
   // redundant there; Teams - Watch shows a flat list across many different dates, so it opts in.
@@ -4147,7 +4366,9 @@ function fixtureRow(fx,opts){
       (fx.venue?'<div class="roster-chars">'+esc(fx.venue)+'</div>':'')+
     '</div>'+
     (added?
-      '<button class="btn btn-sm" style="flex:0 0 auto" data-action="remove-fixture-agenda" data-match-id="'+esc(fx.matchId)+'" title="Remove from Agenda">'+ic("check")+' In Agenda</button>' :
+      '<button class="btn btn-sm" style="flex:0 0 auto" data-action="remove-fixture-agenda" data-match-id="'+esc(fx.matchId)+'" title="Remove from Agenda">'+ic("check")+' '+
+        esc(addedMatch?(addedMatch.observationMode||"LIVE"):"LIVE")+' · '+esc(addedMatch?fmtDateShort(agendaDateOf(addedMatch)):fmtDateShort(fx.date))+
+      '</button>' :
       '<button class="btn btn-sm btn-primary" style="flex:0 0 auto" data-action="add-fixture-agenda" data-fixture-id="'+fx.id+'">'+ic("plus")+' Add to Agenda</button>'
     )+
   '</div>';
@@ -4377,6 +4598,7 @@ function openAgendaDayModal(dateISO){
         html += '<div class="roster-row" data-action="open-match-preview" data-id="'+m.id+'" style="cursor:pointer">'+
           '<span class="cal-chip '+chipModeClass+'" style="flex:0 0 auto;cursor:pointer">'+(showChipTime?esc(m.time)+' ':'')+esc(m.observationMode||"LIVE")+'</span>'+
           '<div class="roster-name-wrap"><div class="roster-name">'+esc(clubName(m.homeClubId))+' <span style="color:var(--text-faint);font-weight:400">v</span> '+esc(clubName(m.awayClubId))+'</div><div class="roster-chars">'+esc(m.competition||"")+'</div></div>'+
+          '<div class="mono" style="flex:0 0 auto;font-size:11.5px;color:var(--text-muted);padding-top:2px">'+esc(fmtDateShort(m.date))+'</div>'+
         '</div>';
       });
     }
@@ -4406,7 +4628,7 @@ function openMatchPreviewModal(matchId){
   html += '<div style="text-align:center;padding:6px 0">'+
     '<div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:10px 0">'+
       '<div style="display:flex;flex-direction:column;align-items:center;gap:6px;width:100px">'+crestHtml(home,40)+'<div style="font-weight:700;font-size:12.5px">'+esc(clubName(m.homeClubId))+'</div></div>'+
-      '<div style="color:var(--text-faint);font-weight:700">VS</div>'+
+      '<div style="color:var(--text-faint);font-weight:700">'+(matchScoreLabel(m)||"VS")+'</div>'+
       '<div style="display:flex;flex-direction:column;align-items:center;gap:6px;width:100px">'+crestHtml(away,40)+'<div style="font-weight:700;font-size:12.5px">'+esc(clubName(m.awayClubId))+'</div></div>'+
     '</div>'+
     '<div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:6px">'+matchStatusSelectHtml(m)+matchModeSelectHtml(m)+'<span class="badge" style="background:var(--surface-3);color:var(--text-muted)">'+fmtDate(m.date)+(m.time?" · "+esc(m.time):"")+'</span></div>'+
@@ -4469,12 +4691,7 @@ FORM_HANDLERS["edit-agenda-task"] = function(form){
 function pageMatchForm(existingId){
   var m = existingId ? matchById(existingId) : null;
   var isEdit = !!m;
-  m = m || {homeClubId:"",awayClubId:"",date:todayISO(),time:"",venue:"",competition:"",matchday:"",ageGroup:"",observationMode:"LIVE",status:"To Watch",watchDate:""};
-  var competitions = Array.from(new Set(
-    DB.matches.map(function(x){return x.competition;})
-      .concat((DB.fixtures||[]).map(function(fx){return fx.competition;}))
-      .filter(Boolean)
-  )).sort();
+  m = m || {homeClubId:"",awayClubId:"",date:todayISO(),time:"",venue:"",competition:"",matchday:"",ageGroup:"",observationMode:"LIVE",status:"To Watch",watchDate:"",homeScore:"",awayScore:""};
   var html = '<div class="stack" style="max-width:640px">';
   html += '<div class="section-head"><div><div class="eyebrow">'+(isEdit?"Edit Match":"New Fixture")+'</div><h1 style="font-size:22px">'+(isEdit?"Edit Match":"Add Match")+'</h1></div></div>';
   html += '<form class="card card-pad stack" data-form="save-match" data-id="'+(isEdit?m.id:"")+'">';
@@ -4488,18 +4705,19 @@ function pageMatchForm(existingId){
   '</div>';
   html += '<div class="field"><label class="field-label">Location <span class="opt">optional</span></label><input class="input" name="venue" value="'+escAttr(m.venue||"")+'" placeholder="e.g. Prince Faisal bin Fahd Stadium"></div>';
   html += '<div class="form-grid">'+
-    '<div class="field"><label class="field-label">Competition <span class="opt">optional</span></label><input class="input" name="competition" list="competitionList" value="'+escAttr(m.competition)+'" placeholder="e.g. Saudi Pro League"></div>'+
+    '<div class="field"><label class="field-label">Competition <span class="opt">optional</span></label>'+renderCompetitionCombo("mf_comp_combo","competition",m.competition,"Search or add competition…")+'</div>'+
     '<div class="field"><label class="field-label">Matchday <span class="opt">optional</span></label><input class="input" name="matchday" value="'+escAttr(m.matchday)+'" placeholder="e.g. Matchday 12"></div>'+
   '</div>';
   html += '<div class="field"><label class="field-label">Competition Country <span class="opt">optional — shown as an abbreviation in Matches Database</span></label><input class="input" name="competitionCountry" list="countryList" value="'+escAttr(m.competition?(DB.competitionCountries[m.competition]||""):"")+'" placeholder="e.g. Saudi Arabia"></div>'+countryDatalist();
-  html += '<datalist id="competitionList">'+competitions.map(function(c){return '<option value="'+esc(c)+'">';}).join("")+'</datalist>';
   html += '<div class="field"><label class="field-label">Observation Mode</label><div class="pillgroup" data-name="observationMode" id="mf_obsmode_group"><input type="hidden" name="observationMode" value="'+escAttr(m.observationMode)+'">'+OBS_MODES.map(function(o){return '<button type="button" class="pill-opt'+(o===m.observationMode?" on":"")+'" data-value="'+o+'">'+o+'</button>';}).join("")+'</div></div>';
   html += '<div class="field" id="mf_watchdate_field" style="'+(m.observationMode==="VIDEO"?"":"display:none")+'"><label class="field-label">Day I\'ll Watch It <span class="opt">optional — if different from the match date</span></label><input class="input" type="date" name="watchDate" value="'+escAttr(m.watchDate||"")+'"><div class="field-hint">The match keeps its real date, but this is when it will show on your Agenda.</div></div>';
   html += '<div class="field"><label class="field-label">Match Status</label><div class="pillgroup" data-name="status"><input type="hidden" name="status" value="'+escAttr(m.status)+'">'+MATCH_STATUSES.map(function(s){return '<button type="button" class="pill-opt'+(s===m.status?" on":"")+'" data-value="'+s+'">'+s+'</button>';}).join("")+'</div></div>';
+  html += '<div class="form-grid"><div class="field"><label class="field-label">Home Score <span class="opt">optional — final result</span></label><input class="input" type="number" min="0" name="homeScore" value="'+escAttr(m.homeScore||"")+'" placeholder="e.g. 2"></div>'+
+    '<div class="field"><label class="field-label">Away Score <span class="opt">optional — final result</span></label><input class="input" type="number" min="0" name="awayScore" value="'+escAttr(m.awayScore||"")+'" placeholder="e.g. 1"></div></div>';
   html += '<div style="display:flex;gap:8px"><button class="btn btn-primary btn-block" type="submit">'+(isEdit?"Save Changes":"Create Match & Add Lineups")+'</button>'+(isEdit?'<button type="button" class="btn" data-action="go-back">Cancel</button>':'')+'</div>';
   html += '</form></div>';
   onAfterRender(function(){
-    wireClubCombo("mf_home_combo"); wireClubCombo("mf_away_combo");
+    wireClubCombo("mf_home_combo"); wireClubCombo("mf_away_combo"); wireCompetitionCombo("mf_comp_combo");
     var modeGroup = document.getElementById("mf_obsmode_group");
     var watchField = document.getElementById("mf_watchdate_field");
     if(modeGroup && watchField){
@@ -4539,7 +4757,9 @@ FORM_HANDLERS["save-match"] = function(form){
     matchday: (fd.get("matchday")||"").trim(),
     observationMode: fd.get("observationMode")||"LIVE",
     status: fd.get("status")||"To Watch",
-    watchDate: fd.get("watchDate")||""
+    watchDate: fd.get("watchDate")||"",
+    homeScore: (fd.get("homeScore")||"").trim(),
+    awayScore: (fd.get("awayScore")||"").trim()
   };
   if(vals.observationMode!=="VIDEO") vals.watchDate = "";
   if(!vals.homeClubId || !vals.awayClubId){ showToastImmediate("Please select or create both a Home Team and an Away Team."); return; }
@@ -4578,7 +4798,7 @@ function pageMatchDetail(id){
     (m.competition&&DB.competitionCountries[m.competition]?'<div class="profile-club-country" style="margin-top:2px">'+esc(countryAbbrev(DB.competitionCountries[m.competition]))+'</div>':'')+
     '<div class="match-head-teams" style="margin-top:10px">'+
       '<div class="match-head-team">'+crestHtml(home,52)+'<div class="name">'+esc(clubName(m.homeClubId))+'</div></div>'+
-      '<div class="match-head-vs">VS</div>'+
+      '<div class="match-head-vs">'+(matchScoreLabel(m)||"VS")+'</div>'+
       '<div class="match-head-team">'+crestHtml(away,52)+'<div class="name">'+esc(clubName(m.awayClubId))+'</div></div>'+
     '</div>'+
     '<div class="match-head-meta">'+matchStatusSelectHtml(m)+matchModeSelectHtml(m)+'<span class="badge" style="background:var(--surface-3);color:var(--text-muted)">'+fmtDate(m.date)+(m.time?" · "+esc(m.time):"")+'</span>'+(m.venue?'<span class="badge" style="background:var(--surface-3);color:var(--text-muted)">'+esc(m.venue)+'</span>':'')+'</div>'+
@@ -5001,16 +5221,14 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
   html += '<div class="field"><label class="field-label">Maturation <span class="opt">optional</span></label><select class="select" name="maturation" id="pitchSlotMaturation"><option value="">—</option>'+MATURATION_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.maturation===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>';
   html += '<div class="form-grid" style="grid-template-columns:1fr 1fr 1fr">'+
     '<div class="field"><label class="field-label">Agility <span class="opt">opt.</span></label><select class="select" name="agilityLevel" id="pitchSlotAgility"><option value="">—</option>'+SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.agilityLevel===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
-    '<div class="field"><label class="field-label">Acceleration <span class="opt">opt.</span></label><select class="select" name="accelerationLevel" id="pitchSlotAcceleration"><option value="">—</option>'+SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.accelerationLevel===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
+    '<div class="field"><label class="field-label"><span class="lbl-desktop">Acceleration</span><span class="lbl-mobile">Accelera</span> <span class="opt">opt.</span></label><select class="select" name="accelerationLevel" id="pitchSlotAcceleration"><option value="">—</option>'+SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.accelerationLevel===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
     '<div class="field"><label class="field-label">Pace <span class="opt">opt.</span></label><select class="select" name="speedLevel" id="pitchSlotSpeed"><option value="">—</option>'+SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.speedLevel===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
   '</div>';
   html += '<div class="field"><label class="field-label">Characteristics <span class="opt">optional — what stood out in this match</span></label><textarea class="textarea" name="characteristics" id="pitchSlotCharacteristics" placeholder="What stands out about their profile…">'+esc(ev?ev.characteristics||(mp?mp.matchCharacteristics||"":""):"")+'</textarea>'+
     '<input type="hidden" name="autoCharacteristics" id="pitchSlotAutoCharacteristics" value="'+escAttr(mp?(mp.autoCharacteristics||""):"")+'">'+
   '</div>';
-  html += '<div class="form-grid">'+
-    '<div class="field"><label class="field-label">Performance <span class="opt">1–5, optional</span></label><div class="pillgroup" data-name="performance"><input type="hidden" name="performance" value="'+escAttr(ev?ev.performance||"":"")+'">'+[1,2,3,4,5].map(function(n){return '<button type="button" class="pill-opt'+(ev&&String(n)===String(ev.performance)?" on":"")+'" data-value="'+n+'">'+n+'</button>';}).join("")+'</div></div>'+
-    '<div class="field"><label class="field-label">Potential <span class="opt">A–E, optional</span></label><div class="pillgroup" data-name="potential"><input type="hidden" name="potential" value="'+escAttr(ev?ev.potential||"":"")+'">'+GRADE_LETTERS.map(function(g){return '<button type="button" class="pill-opt'+(ev&&g===normalizeGrade(ev.potential)?" on":"")+'" data-value="'+g+'">'+g+'</button>';}).join("")+'</div></div>'+
-  '</div>';
+  html += '<div class="field"><label class="field-label">Performance <span class="opt">1–5, optional</span></label><div class="pillgroup" data-name="performance"><input type="hidden" name="performance" value="'+escAttr(ev?ev.performance||"":"")+'">'+[1,2,3,4,5].map(function(n){return '<button type="button" class="pill-opt'+(ev&&String(n)===String(ev.performance)?" on":"")+'" data-value="'+n+'">'+n+'</button>';}).join("")+'</div></div>';
+  html += '<div class="field"><label class="field-label">Potential <span class="opt">A–E, optional</span></label><div class="pillgroup" data-name="potential"><input type="hidden" name="potential" value="'+escAttr(ev?ev.potential||"":"")+'">'+GRADE_LETTERS.map(function(g){return '<button type="button" class="pill-opt'+(ev&&g===normalizeGrade(ev.potential)?" on":"")+'" data-value="'+g+'">'+g+'</button>';}).join("")+'</div></div>';
   html += '<div class="field"><label class="field-label">Birth Year <span class="opt">optional</span></label><input class="input" name="birthYear" type="number" min="1970" max="'+(new Date().getFullYear())+'" placeholder="e.g. 2005" value="'+escAttr(p?p.birthYear||"":"")+'"></div>';
   html += '<div class="field"><label class="field-label">Nationality <span class="opt">optional</span></label>'+renderCountryCombo("pitchSlotNat","nationality",p?p.nationality||"":"","Search nationality…")+'</div>';
   html += '<div class="field"><label class="field-label">Notes <span class="opt">optional</span></label><textarea class="textarea" name="notes" placeholder="Any notes about this player…">'+esc(mp?mp.interestNote||"":"")+'</textarea></div>';
@@ -5040,6 +5258,7 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
     }
   }
   html += '<label class="field-checkbox"><input type="checkbox" name="playerOfInterest" value="1"'+(mp&&mp.playerOfInterest?" checked":"")+'>'+ic("star")+' <span>Player of Interest</span></label>';
+  html += '<button type="submit" form="pitchSlotForm" class="btn btn-primary btn-block" style="margin-top:4px">Save</button>';
   if(isEdit){
     html += '<button type="button" class="btn btn-danger btn-block" data-action="remove-lineup-entry" data-id="'+mp.id+'" data-close-modal style="margin-top:8px">'+ic("trash")+' Remove from Lineup</button>';
   }
@@ -5080,7 +5299,6 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
         speedLevel: (document.getElementById("pitchSlotSpeed")||{}).value||""
       };
       var sentence = buildAutoAttrSentence(v);
-      if(!sentence) return;
       charsBox.value = spliceAutoText(charsBox.value,lastAuto,sentence);
       lastAuto = sentence;
       // Keeps track of exactly what's currently live-injected into the textarea, so Save doesn't
@@ -5207,15 +5425,14 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
           maturation: pl.maturation, agilityLevel: pl.agilityLevel,
           accelerationLevel: pl.accelerationLevel, speedLevel: pl.speedLevel
         });
-        if(sentence){
-          // Mirrored in two places: this match's own Characteristics (right where the coach is
-          // choosing these options) and the player's profile-level General Characteristics — each
-          // keeps its own manually-written text intact, only the auto paragraph itself is replaced.
-          characteristics = spliceAutoText(characteristics,clientAutoText||(mpForBrief?(mpForBrief.autoCharacteristics||""):""),sentence);
-          if(mpForBrief) mpForBrief.autoCharacteristics = sentence;
-          pl.characteristics = spliceAutoText(pl.characteristics||"",pl.autoCharacteristics||"",sentence);
-          pl.autoCharacteristics = sentence;
-        }
+        // Mirrored in two places: this match's own Characteristics (right where the coach is
+        // choosing these options) and the player's profile-level General Characteristics — each
+        // keeps its own manually-written text intact, only the auto paragraph itself is replaced
+        // (or removed, if every attribute has been reset back to blank).
+        characteristics = spliceAutoText(characteristics,clientAutoText||(mpForBrief?(mpForBrief.autoCharacteristics||""):""),sentence);
+        if(mpForBrief) mpForBrief.autoCharacteristics = sentence;
+        pl.characteristics = spliceAutoText(pl.characteristics||"",pl.autoCharacteristics||"",sentence);
+        pl.autoCharacteristics = sentence;
       }
       pl.updatedAt = nowISO();
     }
