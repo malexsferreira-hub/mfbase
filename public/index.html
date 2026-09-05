@@ -623,9 +623,9 @@ function posLabel(code){ return code ? (POSITION_LABELS[code]||code) : ""; }
    PHYSICAL/MATURATION ATTRIBUTES — Height category, Position Profile,
    Estrutura, Maturation, and the 3 speed-related "Níveis" scales.
    ============================================================ */
-var HEIGHT_LEVELS = ["Low","Medium/Low","Medium","High","Very High"];
+var HEIGHT_LEVELS = ["Low","Medium/Low","Medium","Medium/High","High","Very High"];
 var ESTRUTURA_LEVELS = ["Ectomorfo","Ectomesomorfo","Mesomorfo","Mesoendomorfo","Endomorfo"];
-var MATURATION_LEVELS = ["Atrasado","Normal","Adiantado"];
+var MATURATION_LEVELS = ["Atrasado","Na idade","Adiantado","Fechado"];
 var SPEED_LEVELS = ["baixos","médio/baixos","médios","médio/altos","altos"];
 // Every concrete position code maps to one of the 9 Position Profile groups below. RM/LM (wide
 // midfield) default to the W (winger) group and SS (second striker) defaults to the FW group,
@@ -666,8 +666,8 @@ function heightDisplay(p){
   return p.height||"";
 }
 var FOOT_PT = {Right:"Pé direito",Left:"Pé esquerdo",Both:"Ambidestro"};
-var HEIGHT_PT = {"Low":"baixa","Medium/Low":"média-baixa","Medium":"média","High":"alta","Very High":"muito alta"};
-var MATURATION_PT = {"Atrasado":"parece estar atrasado maturacionalmente","Normal":"parece estar na idade maturacionalmente","Adiantado":"parece estar adiantado maturacionalmente"};
+var HEIGHT_PT = {"Low":"baixa","Medium/Low":"média-baixa","Medium":"média","Medium/High":"média-alta","High":"alta","Very High":"muito alta"};
+var MATURATION_PT = {"Atrasado":"parece estar atrasado maturacionalmente","Na idade":"parece estar na idade maturacionalmente","Adiantado":"parece estar adiantado maturacionalmente","Fechado":"parece estar fechado maturacionalmente"};
 // "Níveis de agilidade/aceleração/velocidade" — equal-adjacent scales get merged into one clause
 // (agility+acceleration, or acceleration+speed, or all three), exactly as specified:
 //  - all three equal -> "níveis de agilidade, aceleração e velocidade X"
@@ -2658,10 +2658,11 @@ AUTOSAVE_HANDLERS["dashboard-note"] = function(el){
    The full universe of teams comes from the SAFF fixture calendar synced into DB.fixtures (every
    team the "SAFF calendar" scheduled sync has ever seen play in the U15/U16/U17/U18/U21 domestic
    leagues) — not just the clubs already referenced by matches this scout has personally logged.
-   A team (by age group) is listed if it has never been watched, or its last "Watched"/"Partially
-   Watched" match is more than 2 months old — excluding any team that already has an upcoming
-   ("To Watch"/"Scheduled") match for that same age group, since there's no need to flag a team
-   that's already coming up.
+   A team (by age group) is listed if it has never been watched, its last match was only
+   "Partially Watched" (regardless of how recent — a partial look is never enough on its own), or
+   its last fully "Watched" match is more than 2 months old — excluding any team that already has
+   an upcoming ("To Watch"/"Scheduled") match for that same age group, since there's no need to
+   flag a team that's already coming up.
    ============================================================ */
 var TEAMS_WATCH_AGE_GROUPS = ["U15","U16","U17","U18","U21"];
 var TEAMS_WATCH_EXPANDED = {}; // "<normName>|<ageGroup>" -> true when its upcoming-fixtures panel is open
@@ -2698,7 +2699,7 @@ function teamsToWatch(){
   // normalized-name + age-group key, so status lines up with the fixture universe above. Also
   // seeds the universe for a tracked team+age-group the SAFF sync hasn't (yet) surfaced a fixture
   // for, so nothing already being tracked ever silently drops off the list.
-  var status = {}; // same key -> {lastWatched, hasUpcoming}
+  var status = {}; // same key -> {lastWatched, lastWatchedStatus, hasUpcoming}
   DB.matches.forEach(function(m){
     var ag = matchAgeGroup(m);
     if(!allowed[ag]) return;
@@ -2709,21 +2710,28 @@ function teamsToWatch(){
       if(!universe[key]) universe[key] = {name:name, ageGroup:ag, competitions:{}};
       if(m.competition) universe[key].competitions[m.competition] = true;
       var s = status[key];
-      if(!s){ s = {lastWatched:null, hasUpcoming:false}; status[key]=s; }
+      if(!s){ s = {lastWatched:null, lastWatchedStatus:null, hasUpcoming:false}; status[key]=s; }
       if(m.status==="To Watch"||m.status==="Scheduled") s.hasUpcoming = true;
-      if((m.status==="Watched"||m.status==="Partially Watched") && m.date && (!s.lastWatched||m.date>s.lastWatched)) s.lastWatched = m.date;
+      if((m.status==="Watched"||m.status==="Partially Watched") && m.date && (!s.lastWatched||m.date>s.lastWatched)){ s.lastWatched = m.date; s.lastWatchedStatus = m.status; }
     });
   });
+  // A team whose most recent relevant match was only "Partially Watched" is treated as not yet
+  // properly seen — it stays on this list regardless of how recent that partial look was (unlike a
+  // full "Watched" match, which exempts the team for 2 months). `recentPartial` flags the case
+  // where that partial watch happened within the last 2 months, so the Calendar can mark it with a
+  // double asterisk (needs a full watch, but already partially seen recently) instead of a single
+  // one (not seen at all recently).
   var list = Object.keys(universe).map(function(key){
-    var u = universe[key], s = status[key]||{lastWatched:null,hasUpcoming:false};
+    var u = universe[key], s = status[key]||{lastWatched:null,lastWatchedStatus:null,hasUpcoming:false};
     var compNames = Object.keys(u.competitions).sort();
     var competition = compNames.join(", ");
     var tierRank = compNames.length ? Math.min.apply(null,compNames.map(competitionTierRank)) : 0;
-    return {name:u.name, ageGroup:u.ageGroup, competition:competition, tierRank:tierRank, lastWatched:s.lastWatched, hasUpcoming:s.hasUpcoming};
+    return {name:u.name, ageGroup:u.ageGroup, competition:competition, tierRank:tierRank, lastWatched:s.lastWatched, lastWatchedStatus:s.lastWatchedStatus, hasUpcoming:s.hasUpcoming, recentPartial: !!(s.lastWatchedStatus==="Partially Watched" && s.lastWatched && s.lastWatched>=cutoff)};
   }).filter(function(g){
     if(g.hasUpcoming) return false;
     if(!g.lastWatched) return true; // never watched at all
-    return g.lastWatched<cutoff; // watched, but more than 2 months ago
+    if(g.lastWatchedStatus==="Partially Watched") return true; // only partially seen -> still needs a proper watch
+    return g.lastWatched<cutoff; // fully watched, but more than 2 months ago
   });
   list.sort(function(a,b){
     var ka=ageGroupSortKey(a.ageGroup), kb=ageGroupSortKey(b.ageGroup);
@@ -2750,7 +2758,7 @@ function pageTeamsWatch(){
   var list = teamsToWatch();
   var html = '<div class="stack">';
   html += '<div class="section-head"><div><div class="eyebrow">Scouting</div><h1 style="font-size:24px">Teams - Watch</h1></div></div>';
-  html += '<div style="font-size:12.5px;color:var(--text-muted);margin-top:-6px">Every U15-U21 SAFF team not watched in the last 2 months (or never watched) — teams already on your Agenda are left out.</div>';
+  html += '<div style="font-size:12.5px;color:var(--text-muted);margin-top:-6px">Every U15-U21 SAFF team not fully watched in the last 2 months (or never watched, or only partially watched) — teams already on your Agenda are left out.</div>';
   if(!list.length){
     html += '<div class="card card-pad">'+emptyRow("Nothing here — every team on the SAFF calendar is either recently watched or already on your Agenda.")+'</div>';
     html += '</div>';
@@ -2765,7 +2773,7 @@ function pageTeamsWatch(){
   order.forEach(function(key){
     var rows = byGroup[key].map(function(g){
       var rowKey = normName(g.name)+"|"+g.ageGroup;
-      var sub = g.lastWatched ? "Last watched "+fmtDateShort(g.lastWatched) : "Never watched";
+      var sub = g.lastWatched ? "Last watched "+fmtDateShort(g.lastWatched)+" ("+(g.lastWatchedStatus||"Watched")+")" : "Never watched";
       var nameLine = esc(g.name)+(g.competition?' <span style="color:var(--text-faint);font-weight:400">· '+esc(g.competition)+'</span>':'');
       var expanded = !!TEAMS_WATCH_EXPANDED[rowKey];
       var fixtures = expanded ? upcomingFixturesForTeam(g.name,g.ageGroup) : [];
@@ -3870,12 +3878,15 @@ function pageCalendar(){
   // Same "not watched in 2+ months (or never), and not already on the Agenda" set as Teams -
   // Watch, keyed the same way (normalized name + age group) so a fixture's team can be checked
   // against it directly.
+  // Value is 2 (double asterisk) for a team only partially watched within the last 2 months, 1
+  // (single asterisk) for every other team on the list (never watched, or not watched in 2+ months).
   var watchIndex = {};
-  teamsToWatch().forEach(function(g){ watchIndex[normName(g.name)+"|"+g.ageGroup] = true; });
+  teamsToWatch().forEach(function(g){ watchIndex[normName(g.name)+"|"+g.ageGroup] = g.recentPartial ? 2 : 1; });
 
   var html = '<div class="stack">';
   html += '<div class="section-head"><div><div class="eyebrow">'+DB.fixtures.length+' fixtures · '+addedCount+' in Agenda</div><h1 style="font-size:22px">Calendar</h1></div></div>';
-  html += '<div style="font-size:12px;color:var(--text-muted);margin-top:-8px">'+starIcon()+' marks a team not watched in the last 2 months (or never) — see Teams - Watch.</div>';
+  html += '<div style="font-size:12px;color:var(--text-muted);margin-top:-8px">'+starIcon()+' marks a team not watched at all in the last 2 months (or never) — see Teams - Watch.</div>';
+  html += '<div style="font-size:12px;color:var(--text-muted)">'+starIcon(true)+' marks a team only partially watched in the last 2 months — still needs a full watch.</div>';
   html += '<div class="filterbar">';
   html += '<input class="input" style="width:200px;min-height:36px;border-radius:99px" id="cf_q" placeholder="Search teams, competition…" value="'+escAttr(f.q)+'">';
   html += '<select id="cf_competition"><option value="">All Competitions</option>'+allCompetitions.map(function(c){return '<option value="'+esc(c)+'"'+(c===f.competition?" selected":"")+'>'+esc(c)+'</option>';}).join("")+'</select>';
@@ -3918,8 +3929,11 @@ function pageCalendar(){
   });
   return html;
 }
-function starIcon(){
-  return '<span style="color:var(--accent);font-weight:800">*</span>';
+// A double asterisk marks a team already partially watched within the last 2 months (still needs
+// a full watch); a single asterisk marks every other case on the watch list (never watched, or not
+// watched at all in 2+ months).
+function starIcon(doubled){
+  return '<span style="color:var(--accent);font-weight:800">'+(doubled?"**":"*")+'</span>';
 }
 function fixtureRow(fx,opts){
   var added = !!fx.matchId;
@@ -3929,15 +3943,16 @@ function fixtureRow(fx,opts){
   var timeCell = opts.showDate ?
     '<div class="mono" style="width:80px;flex:0 0 auto;font-size:11.5px;color:var(--text-muted);padding-top:2px;line-height:1.5">'+esc(fmtDateShort(fx.date))+'<br>'+esc(fx.time||"—")+'</div>' :
     '<div class="mono" style="width:46px;flex:0 0 auto;font-size:12.5px;color:var(--text-muted);padding-top:2px">'+esc(fx.time||"—")+'</div>';
-  // Calendar passes a watchIndex (same set as Teams - Watch) so a team not watched in 2+ months
-  // (or never), and not otherwise on the Agenda, gets a * next to its name.
+  // Calendar passes a watchIndex (same set as Teams - Watch) so a team not otherwise on the Agenda
+  // gets a * next to its name (never watched, or not watched at all in 2+ months) — or a ** if it
+  // was only partially watched within the last 2 months (still needs a full watch).
   var fxAgeGroup = opts.watchIndex ? deriveAgeGroupFromCompetition(fx.competition) : null;
   function teamLabel(name){
     var onWatch = opts.watchIndex && opts.watchIndex[normName(name)+"|"+fxAgeGroup];
     // Crests are opt-in (Calendar only, desktop only via CSS) so Teams - Watch's fixtures panel
     // is unaffected.
     var crest = opts.showCrests ? '<span class="cal-fixture-crest">'+crestHtml({name:name},16)+'</span>' : '';
-    return crest+esc(name)+(onWatch?' '+starIcon():'');
+    return crest+esc(name)+(onWatch?' '+starIcon(onWatch===2):'');
   }
   return '<div class="roster-row" style="align-items:flex-start">'+
     timeCell+
