@@ -193,6 +193,8 @@ select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.o
 .grid > *{min-width:0;}
 .rating-grid{grid-template-columns:1fr 1fr;}
 .sw-grid{grid-template-columns:1fr 1fr;}
+.merge-compare-grid{grid-template-columns:1fr 1fr;}
+@media (max-width:520px){ .merge-compare-grid{grid-template-columns:1fr;} }
 .eval-param-grid{grid-template-columns:1fr 1fr 1fr;}
 .eval-param-card{padding:12px 14px;}
 .eval-param-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 0;}
@@ -427,6 +429,7 @@ details.acc summary .count-chip{background:var(--surface-3);color:var(--text-mut
 /* ---------- modal / sheet ---------- */
 .overlay{position:fixed;inset:0;background:rgba(10,15,11,.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px;}
 .modal{background:var(--surface);border-radius:14px;width:100%;max-width:460px;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow);}
+.modal-wide{max-width:640px;}
 .modal-pad{padding:20px;}
 .modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
 .modal-title{font-family:var(--font-display);font-weight:700;font-size:18px;}
@@ -765,8 +768,22 @@ function ageFromPlayer(p){
 }
 function dobDisplay(p){
   if(p.dob) return fmtDate(p.dob);
-  if(p.birthYear) return p.birthYear+" (year only)";
+  if(p.birthYear) return p.birthYear;
   return "—";
+}
+// The competition of the player's most recently DATED match evaluation — a quick way to tell two
+// same-named suggestions apart (e.g. "last seen in the U19 League" vs "last seen in the First
+// Division"). Manual (non-match) evaluations don't carry a competition, so those are skipped.
+function lastPlayerCompetition(playerId){
+  var evs = DB.evaluations.filter(function(e){return e.playerId===playerId && e.evaluationType==="Match" && e.matchId;});
+  if(!evs.length) return "";
+  evs.sort(function(a,b){
+    var d = (b.date||"").localeCompare(a.date||"");
+    if(d) return d;
+    return (b.createdAt||"").localeCompare(a.createdAt||"");
+  });
+  var m = matchById(evs[0].matchId);
+  return m ? (m.competition||"") : "";
 }
 function birthYearOf(p){
   if(p.dob) return parseInt(p.dob.slice(0,4),10);
@@ -1771,10 +1788,11 @@ function openSearchModal(){
 /* ============================================================
    MODAL INFRA
    ============================================================ */
-function openModal(html){
+function openModal(html,opts){
   var root = document.getElementById("modalRoot");
   if(!root) return;
-  root.innerHTML = '<div class="overlay" id="activeOverlay"><div class="modal">'+html+'</div></div>';
+  var wide = opts && opts.wide;
+  root.innerHTML = '<div class="overlay" id="activeOverlay"><div class="modal'+(wide?" modal-wide":"")+'">'+html+'</div></div>';
   var overlay = document.getElementById("activeOverlay");
   overlay.addEventListener("mousedown",function(e){ if(e.target===overlay) closeModal(); });
   document.addEventListener("keydown",escCloseOnce);
@@ -2123,8 +2141,9 @@ function openClubCreateModal(name,onCreate){
    PLAYER COMBOBOX (lineup identification + dedupe)
    ============================================================ */
 function playerComboPreview(p){
+  var lastComp = lastPlayerCompetition(p.id);
   return '<div class="combo-item" data-player-id="'+p.id+'">'+avatarHtml(p,30)+
-    '<div><div class="combo-item-name">'+esc(p.name)+'</div><div class="combo-item-sub">'+(p.firstPosition?esc(p.firstPosition)+" · ":"")+esc(clubName(p.clubId)||"No club")+(p.nationality?" · "+esc(p.nationality):"")+(dobDisplay(p)!=="—"?" · "+esc(dobDisplay(p)):"")+'</div></div></div>';
+    '<div><div class="combo-item-name">'+esc(p.name)+'</div><div class="combo-item-sub">'+(p.firstPosition?esc(p.firstPosition)+" · ":"")+esc(clubName(p.clubId)||"No club")+(p.nationality?" · "+esc(p.nationality):"")+(dobDisplay(p)!=="—"?" · "+esc(dobDisplay(p)):"")+(lastComp?" · "+esc(lastComp):"")+'</div></div></div>';
 }
 // Picking an existing player from the "Add Player" combo (pitch-slot modal) fills in whatever
 // base info the profile already has — number, birth year, nationality, height, preferred foot —
@@ -2271,12 +2290,14 @@ function wireMergeSearchCombo(id,excludeId,onSelect){
 function openMergePlayerModal(currentPlayerId){
   var current = playerById(currentPlayerId);
   if(!current) return;
+  var curMatchCount = DB.matchPlayers.filter(function(mp){return mp.playerId===currentPlayerId;}).length;
+  var curEvalCount = DB.evaluations.filter(function(e){return e.playerId===currentPlayerId;}).length;
   var html = '<div class="modal-pad"><div class="modal-head"><div class="modal-title">Merge with Another Player</div><button class="icon-btn" data-close-modal>'+ic("close")+'</button></div>'+
     '<p style="color:var(--text-muted);font-size:12.5px;margin:6px 0 12px;line-height:1.5">For when the same player ended up with two profiles — e.g. a transfer created a new one at their new club. Search for the other profile below; all of its matches and evaluations fold into <b>'+esc(current.name)+'</b> and the duplicate is removed.</p>'+
     '<div class="combo" data-combo-root="mergePlayerSearch"><input class="input" id="mergePlayerSearch_text" placeholder="Search by player name…" autocomplete="off"><div class="combo-list" id="mergePlayerSearch_list" hidden></div></div>'+
     '<div id="mergePlayerConfirmArea"></div>'+
   '</div>';
-  openModal(html);
+  openModal(html,{wide:true});
   wireMergeSearchCombo("mergePlayerSearch",currentPlayerId,function(other){
     var area = document.getElementById("mergePlayerConfirmArea");
     var matchCount = DB.matchPlayers.filter(function(mp){return mp.playerId===other.id;}).length;
@@ -2291,16 +2312,21 @@ function openMergePlayerModal(currentPlayerId){
     // point — easy to switch with one click either way.
     if((current.clubId||"")!==(other.clubId||"")){
       var defaultOther = (other.clubUpdatedAt||"") > (current.clubUpdatedAt||"");
-      clubChoiceHtml = '<div class="field" style="margin-top:12px"><label class="field-label">Which club should the merged profile show?</label>'+
+      clubChoiceHtml = '<div class="field" style="margin-top:14px"><label class="field-label">Which club should the merged profile show?</label>'+
         '<div class="pillgroup" data-name="mergeClubChoice"><input type="hidden" name="mergeClubChoice" value="'+escAttr(defaultOther?(other.clubId||""):(current.clubId||""))+'">'+
         '<button type="button" class="pill-opt'+(!defaultOther?" on":"")+'" data-value="'+escAttr(current.clubId||"")+'">'+esc(curClubName)+'</button>'+
         '<button type="button" class="pill-opt'+(defaultOther?" on":"")+'" data-value="'+escAttr(other.clubId||"")+'">'+esc(otherClubName)+'</button>'+
         '</div></div>';
     }
-    area.innerHTML = '<div class="card card-pad" style="margin-top:12px;background:var(--bg-soft)"><div style="display:flex;align-items:center;gap:10px">'+avatarHtml(other,36)+
-      '<div><div style="font-weight:700;font-size:13.5px">'+esc(other.name)+'</div><div style="font-size:11.5px;color:var(--text-muted)">'+esc(otherClubName)+' · '+matchCount+' match(es) · '+evalCount+' evaluation(s)</div></div></div>'+
+    // Both profiles shown side by side, with bigger avatars — easier to confirm at a glance that
+    // these really are the same person before merging (a destructive, one-way action).
+    area.innerHTML = '<div class="card card-pad" style="margin-top:12px;background:var(--bg-soft)">'+
+      '<div class="grid merge-compare-grid">'+
+        '<div style="display:flex;align-items:center;gap:10px"><div>'+avatarHtml(current,48)+'</div><div><div class="eyebrow" style="margin-bottom:2px">Stays</div><div style="font-weight:700;font-size:14.5px">'+esc(current.name)+'</div><div style="font-size:11.5px;color:var(--text-muted)">'+esc(curClubName)+' · '+curMatchCount+' match(es) · '+curEvalCount+' evaluation(s)</div></div></div>'+
+        '<div style="display:flex;align-items:center;gap:10px"><div>'+avatarHtml(other,48)+'</div><div><div class="eyebrow" style="margin-bottom:2px">Folds in &amp; removed</div><div style="font-weight:700;font-size:14.5px">'+esc(other.name)+'</div><div style="font-size:11.5px;color:var(--text-muted)">'+esc(otherClubName)+' · '+matchCount+' match(es) · '+evalCount+' evaluation(s)</div></div></div>'+
+      '</div>'+
       clubChoiceHtml+
-      '<div style="display:flex;gap:8px;margin-top:14px"><button class="btn btn-block" data-close-modal>Cancel</button><button class="btn btn-primary btn-block" data-confirm-merge="'+other.id+'">Merge into '+esc(current.name)+'</button></div></div>';
+      '<div style="display:flex;gap:8px;margin-top:16px"><button class="btn btn-block" data-close-modal>Cancel</button><button class="btn btn-primary btn-block" data-confirm-merge="'+other.id+'">Merge into '+esc(current.name)+'</button></div></div>';
   });
   var overlay = document.getElementById("activeOverlay");
   overlay.addEventListener("click",function(e){
@@ -4522,7 +4548,9 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
   var title = isEdit ? "Edit Player" : (forceStatus==="Substitute" ? "Add Substitute" : "Add "+slot.pos);
   var showSubFields = isEdit && mp.lineupStatus==="Substitute";
   var html = '<div class="modal-pad"><div class="modal-head"><div class="modal-title">'+title+'</div>'+
-    '<div style="display:flex;align-items:center;gap:14px"><button type="submit" form="pitchSlotForm" class="btn btn-primary btn-sm">Save</button><button class="icon-btn" data-close-modal>'+ic("close")+'</button></div>'+
+    '<div style="display:flex;align-items:center;gap:14px">'+
+      (isEdit && p ? '<button type="button" class="icon-btn" data-action="open-merge-player" data-id="'+p.id+'" title="Merge with another player (e.g. after a transfer)">'+ic("merge")+'</button>' : '')+
+      '<button type="submit" form="pitchSlotForm" class="btn btn-primary btn-sm">Save</button><button class="icon-btn" data-close-modal>'+ic("close")+'</button></div>'+
   '</div>';
   html += '<form id="pitchSlotForm" data-form="save-pitch-slot" class="stack" data-match-id="'+matchId+'" data-club-id="'+clubId+'" data-slot="'+slotIndex+'" data-mp-id="'+(mpId||"")+'" data-force-status="'+forceStatus+'">';
   if(!showSubFields && forceStatus==="Substitute" && presetSub){
