@@ -570,6 +570,10 @@ details.acc summary .count-chip{background:var(--surface-3);color:var(--text-mut
      to zoom back out cleanly, leaving the layout looking broken until the user pinches back out.
      Forcing every field to 16px on small screens stops it from triggering in the first place. */
   input,select,textarea{font-size:16px!important;}
+  /* ...except the small pill-shaped status/mode <select> badges on the Match Detail header — those
+     aren't real text-entry fields (no zoom-on-focus concern) and should stay the same size as the
+     plain date/time badge next to them, not balloon up to the 16px forced above. */
+  .badge-select{font-size:11px!important;}
 }
 @media (max-width:480px){
   .stat-grid{grid-template-columns:repeat(2,1fr);}
@@ -625,8 +629,9 @@ function posLabel(code){ return code ? (POSITION_LABELS[code]||code) : ""; }
    ============================================================ */
 var HEIGHT_LEVELS = ["Low","Medium/Low","Medium","Medium/High","High","Very High"];
 var ESTRUTURA_LEVELS = ["Ectomorfo","Ectomesomorfo","Mesomorfo","Mesoendomorfo","Endomorfo"];
-var MATURATION_LEVELS = ["Atrasado","Na idade","Adiantado","Fechado"];
-var SPEED_LEVELS = ["baixos","médio/baixos","médios","médio/altos","altos"];
+var STRENGTH_LEVELS = ["Fragile","Mediocre","Balanced","Strong","Very Strong"];
+var MATURATION_LEVELS = ["Late","On Time","Early","Closed"];
+var SPEED_LEVELS = ["Baixos","Médio/Baixos","Médios","Médio/Altos","Altos"];
 // Every concrete position code maps to one of the 9 Position Profile groups below. RM/LM (wide
 // midfield) default to the W (winger) group and SS (second striker) defaults to the FW group,
 // alongside CF — neither was called out explicitly, so treat them as the closest match; easy to
@@ -667,7 +672,8 @@ function heightDisplay(p){
 }
 var FOOT_PT = {Right:"Pé direito",Left:"Pé esquerdo",Both:"Ambidestro"};
 var HEIGHT_PT = {"Low":"baixa","Medium/Low":"média-baixa","Medium":"média","Medium/High":"média-alta","High":"alta","Very High":"muito alta"};
-var MATURATION_PT = {"Atrasado":"parece estar atrasado maturacionalmente","Na idade":"parece estar na idade maturacionalmente","Adiantado":"parece estar adiantado maturacionalmente","Fechado":"parece estar fechado maturacionalmente"};
+var STRENGTH_PT = {"Fragile":"pouca robustez física","Mediocre":"robustez física pouco notável","Balanced":"robustez física equilibrada","Strong":"robustez física notável","Very Strong":"robustez física muito notável"};
+var MATURATION_PT = {"Late":"parece estar atrasado maturacionalmente","On Time":"parece estar na idade maturacionalmente","Early":"parece estar adiantado maturacionalmente","Closed":"parece estar fechado maturacionalmente"};
 // "Níveis de agilidade/aceleração/velocidade" — equal-adjacent scales get merged into one clause
 // (agility+acceleration, or acceleration+speed, or all three), exactly as specified:
 //  - all three equal -> "níveis de agilidade, aceleração e velocidade X"
@@ -685,19 +691,26 @@ function levelsPhrasePT(ag,acc,vel){
   if(vel) parts.push("níveis de velocidade "+vel);
   return parts.join(", ");
 }
-// Builds the auto-generated Portuguese sentence describing foot/height/estrutura/maturation/levels
-// from whichever of these are currently known — skipping any that aren't set. Returns "" if none
-// of them are known at all.
+function capitalizeFirst(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1) : s; }
+// Builds the auto-generated Portuguese sentence describing foot/height/estrutura/strength/maturation
+// (sentence 1) and the agility/acceleration/pace levels (sentence 2) from whichever of these are
+// currently known — skipping any that aren't set. Returns "" if none of them are known at all.
 function buildAutoAttrSentence(v){
   var parts = [];
   if(v.preferredFoot && FOOT_PT[v.preferredFoot]) parts.push(FOOT_PT[v.preferredFoot]);
   if(v.height && HEIGHT_PT[v.height]) parts.push("estatura "+HEIGHT_PT[v.height]);
   if(v.estrutura) parts.push(String(v.estrutura).toLowerCase());
+  if(v.strength && STRENGTH_PT[v.strength]) parts.push(STRENGTH_PT[v.strength]);
   if(v.maturation && MATURATION_PT[v.maturation]) parts.push(MATURATION_PT[v.maturation]);
-  var levels = levelsPhrasePT(v.agilityLevel,v.accelerationLevel,v.speedLevel);
-  if(levels) parts.push(levels);
-  if(!parts.length) return "";
-  return parts.join(", ")+".";
+  var sentence1 = parts.length ? parts.join(", ")+"." : "";
+  var levels = levelsPhrasePT(
+    v.agilityLevel?String(v.agilityLevel).toLowerCase():"",
+    v.accelerationLevel?String(v.accelerationLevel).toLowerCase():"",
+    v.speedLevel?String(v.speedLevel).toLowerCase():""
+  );
+  var sentence2 = levels ? capitalizeFirst(levels)+"." : "";
+  if(!sentence1 && !sentence2) return "";
+  return [sentence1,sentence2].filter(Boolean).join(" ");
 }
 // Replaces just the auto-generated leading paragraph of a free-text field with a freshly built one,
 // preserving anything the user typed manually after it. `oldAuto` is whatever the auto paragraph
@@ -1511,6 +1524,7 @@ function mergePlayerInto(sourceId,targetId,opts){
   applyLatestPlayerField(target,"preferredFoot","preferredFootUpdatedAt",source.preferredFoot,source.preferredFootUpdatedAt);
   applyLatestPlayerField(target,"positionProfile","positionProfileUpdatedAt",source.positionProfile,source.positionProfileUpdatedAt);
   applyLatestPlayerField(target,"estrutura","estruturaUpdatedAt",source.estrutura,source.estruturaUpdatedAt);
+  applyLatestPlayerField(target,"strength","strengthUpdatedAt",source.strength,source.strengthUpdatedAt);
   applyLatestPlayerField(target,"maturation","maturationUpdatedAt",source.maturation,source.maturationUpdatedAt);
   applyLatestPlayerField(target,"agilityLevel","agilityLevelUpdatedAt",source.agilityLevel,source.agilityLevelUpdatedAt);
   applyLatestPlayerField(target,"accelerationLevel","accelerationLevelUpdatedAt",source.accelerationLevel,source.accelerationLevelUpdatedAt);
@@ -1707,7 +1721,7 @@ var TAB_ITEMS = [
   {key:"__fab",label:"Add",hash:"",icon:"plus"},
   {key:"agenda",label:"Agenda",hash:"#/agenda",icon:"agenda"},
   {key:"calendar",label:"Calendar",hash:"#/calendar",icon:"calendar"},
-  {key:"__brand",label:"MF",hash:"",icon:""}
+  {key:"teams-watch",label:"Watch",hash:"#/teams-watch",icon:"clock"}
 ];
 function pageActiveKey(){
   if(ROUTE.name==="match-new") return "match-new";
@@ -1759,9 +1773,6 @@ function renderTabbar(){
   TAB_ITEMS.forEach(function(t){
     if(t.key==="__fab"){
       html += '<a class="tab-item fab-item" href="#" data-action="open-add-menu"><span class="fab-circle">'+ic("plus")+'</span></a>';
-    } else if(t.key==="__brand"){
-      // Decorative only — no href/data-action, so it never navigates. Just a bit of branding at the end of the row.
-      html += '<div class="tab-item tab-item-brand"><img src="'+LOGO_DATA_URI+'" alt=""><span>'+t.label+'</span></div>';
     } else {
       html += '<a class="tab-item'+(t.key===active?' active':'')+'" href="'+t.hash+'">'+ic(t.icon)+'<span>'+t.label+'</span></a>';
     }
@@ -2220,6 +2231,13 @@ function wireClubCombo(id){
   });
 }
 function openClubCreateModal(name,onCreate){
+  // If a club combo is used from WITHIN an already-open modal (e.g. Home/Away team pickers inside
+  // a mini-modal), this "New Club" step would otherwise overwrite the single #modalRoot and
+  // permanently destroy that outer modal. Snapshot its actual DOM node (not a string — an
+  // innerHTML round-trip would lose anything already typed into it) and restore it afterwards,
+  // whether this step is completed or cancelled.
+  var root = document.getElementById("modalRoot");
+  var prevOverlay = root ? root.firstElementChild : null;
   var html = '<div class="modal-pad"><div class="modal-head"><div class="modal-title">New Club</div><button class="icon-btn" data-close-modal>'+ic("close")+'</button></div>'+
     '<form data-form="__inline_club_create" class="stack" style="margin-top:10px">'+
     '<div class="field"><label class="field-label">Club Name</label><input class="input" name="name" value="'+escAttr(name||"")+'" required></div>'+
@@ -2228,12 +2246,27 @@ function openClubCreateModal(name,onCreate){
     '<button class="btn btn-primary btn-block" type="submit">Create Club</button>'+
     '</form></div>';
   openModal(html);
+  function restorePrevModal(){
+    if(!prevOverlay || !root) return;
+    root.innerHTML = "";
+    root.appendChild(prevOverlay);
+    document.addEventListener("keydown",escCloseOnce);
+  }
+  if(prevOverlay){
+    var overlay = document.getElementById("activeOverlay");
+    var xBtn = overlay ? overlay.querySelector("[data-close-modal]") : null;
+    // Cancelling (X or clicking the dark backdrop) restores the modal underneath instead of
+    // leaving the screen blank — deferred a tick so it runs after the normal close-this-modal
+    // handling has already cleared #modalRoot.
+    if(overlay) overlay.addEventListener("mousedown",function(e){ if(e.target===overlay) setTimeout(restorePrevModal,0); });
+    if(xBtn) xBtn.addEventListener("click",function(){ setTimeout(restorePrevModal,0); });
+  }
   FORM_HANDLERS["__inline_club_create"] = function(form){
     var fd = new FormData(form);
     var club = {id:uid("club"),name:(fd.get("name")||"").trim(),country:(fd.get("country")||"").trim(),logo:(fd.get("logo")||"").trim(),createdAt:nowISO()};
     if(!club.name) return;
     DB.clubs.push(club);
-    closeModal();
+    if(prevOverlay) restorePrevModal(); else closeModal();
     onCreate(club);
   };
 }
@@ -2710,9 +2743,12 @@ function teamsToWatch(){
       if(!universe[key]) universe[key] = {name:name, ageGroup:ag, competitions:{}};
       if(m.competition) universe[key].competitions[m.competition] = true;
       var s = status[key];
-      if(!s){ s = {lastWatched:null, lastWatchedStatus:null, hasUpcoming:false}; status[key]=s; }
+      if(!s){ s = {lastWatched:null, lastWatchedStatus:null, lastWatchedOpponent:null, hasUpcoming:false}; status[key]=s; }
       if(m.status==="To Watch"||m.status==="Scheduled") s.hasUpcoming = true;
-      if((m.status==="Watched"||m.status==="Partially Watched") && m.date && (!s.lastWatched||m.date>s.lastWatched)){ s.lastWatched = m.date; s.lastWatchedStatus = m.status; }
+      if((m.status==="Watched"||m.status==="Partially Watched") && m.date && (!s.lastWatched||m.date>s.lastWatched)){
+        s.lastWatched = m.date; s.lastWatchedStatus = m.status;
+        s.lastWatchedOpponent = clubName(clubId===m.homeClubId ? m.awayClubId : m.homeClubId);
+      }
     });
   });
   // A team whose most recent relevant match was only "Partially Watched" is treated as not yet
@@ -2722,11 +2758,11 @@ function teamsToWatch(){
   // double asterisk (needs a full watch, but already partially seen recently) instead of a single
   // one (not seen at all recently).
   var list = Object.keys(universe).map(function(key){
-    var u = universe[key], s = status[key]||{lastWatched:null,lastWatchedStatus:null,hasUpcoming:false};
+    var u = universe[key], s = status[key]||{lastWatched:null,lastWatchedStatus:null,lastWatchedOpponent:null,hasUpcoming:false};
     var compNames = Object.keys(u.competitions).sort();
     var competition = compNames.join(", ");
     var tierRank = compNames.length ? Math.min.apply(null,compNames.map(competitionTierRank)) : 0;
-    return {name:u.name, ageGroup:u.ageGroup, competition:competition, tierRank:tierRank, lastWatched:s.lastWatched, lastWatchedStatus:s.lastWatchedStatus, hasUpcoming:s.hasUpcoming, recentPartial: !!(s.lastWatchedStatus==="Partially Watched" && s.lastWatched && s.lastWatched>=cutoff)};
+    return {name:u.name, ageGroup:u.ageGroup, competition:competition, tierRank:tierRank, lastWatched:s.lastWatched, lastWatchedStatus:s.lastWatchedStatus, lastWatchedOpponent:s.lastWatchedOpponent, hasUpcoming:s.hasUpcoming, recentPartial: !!(s.lastWatchedStatus==="Partially Watched" && s.lastWatched && s.lastWatched>=cutoff)};
   }).filter(function(g){
     if(g.hasUpcoming) return false;
     if(!g.lastWatched) return true; // never watched at all
@@ -2773,7 +2809,7 @@ function pageTeamsWatch(){
   order.forEach(function(key){
     var rows = byGroup[key].map(function(g){
       var rowKey = normName(g.name)+"|"+g.ageGroup;
-      var sub = g.lastWatched ? "Last watched "+fmtDateShort(g.lastWatched)+" ("+(g.lastWatchedStatus||"Watched")+")" : "Never watched";
+      var sub = g.lastWatched ? "Last watched "+fmtDateShort(g.lastWatched)+(g.lastWatchedOpponent?" vs "+esc(g.lastWatchedOpponent):"")+" ("+(g.lastWatchedStatus||"Watched")+")" : "Never watched";
       var nameLine = esc(g.name)+(g.competition?' <span style="color:var(--text-faint);font-weight:400">· '+esc(g.competition)+'</span>':'');
       var expanded = !!TEAMS_WATCH_EXPANDED[rowKey];
       var fixtures = expanded ? upcomingFixturesForTeam(g.name,g.ageGroup) : [];
@@ -2965,38 +3001,50 @@ ACTIONS["delete-player"] = function(el){
 function pagePlayerForm(existingId){
   var p = existingId ? playerById(existingId) : null;
   var isEdit = !!p;
-  p = p || {name:"",firstPosition:"",secondPosition:"",dob:"",birthYear:"",clubId:"",nationality:"",nationality2:"",preferredFoot:"",height:"",characteristics:"",extraObservations:"",currentPerformance:"",currentPotential:"",agent:"",photo:"",status:""};
+  p = p || {name:"",firstPosition:"",secondPosition:"",positionProfile:"",dob:"",birthYear:"",clubId:"",nationality:"",nationality2:"",preferredFoot:"",height:"",estrutura:"",strength:"",maturation:"",agilityLevel:"",accelerationLevel:"",speedLevel:"",characteristics:"",extraObservations:"",currentPerformance:"",currentPotential:"",agent:"",photo:"",status:""};
   var html = '<div class="stack" style="max-width:640px">';
   html += '<div class="section-head"><div><div class="eyebrow">'+(isEdit?"Edit Player":"New Profile")+'</div><h1 style="font-size:22px">'+(isEdit?"Edit "+esc(p.name):"Add Player")+'</h1></div></div>';
   html += '<form class="card card-pad stack" data-form="save-player" data-id="'+(isEdit?p.id:"")+'">';
   html += '<div class="field"><label class="field-label">Name</label><input class="input" name="name" required value="'+escAttr(p.name)+'" placeholder="Full name"></div>';
   html += '<div class="field"><label class="field-label">Characteristics</label><textarea class="textarea" name="characteristics" placeholder="General playing style, strengths, weaknesses…">'+esc(p.characteristics)+'</textarea></div>';
+  // From here down, the same attribute fields/layout as the pitch-slot "Edit Player" modal —
+  // Position 1/2, Position Profile, Foot+Height, Structure+Strength, Maturation, Agility/
+  // Acceleration/Pace — kept in sync so both forms describe a player the same way.
   html += '<div class="form-grid">'+
-    '<div class="field"><label class="field-label">First Position</label><select class="select" name="firstPosition">'+positionOptions(p.firstPosition)+'</select></div>'+
-    '<div class="field"><label class="field-label">Second Position <span class="opt">optional</span></label><select class="select" name="secondPosition">'+positionOptions(p.secondPosition)+'</select></div>'+
+    '<div class="field"><label class="field-label">Position 1</label><select class="select" name="firstPosition" id="pfPos1">'+positionOptionsAbbrev(p.firstPosition)+'</select></div>'+
+    '<div class="field"><label class="field-label">Position 2</label><select class="select" name="secondPosition" id="pfPos2">'+positionOptionsAbbrev(p.secondPosition)+'</select></div>'+
+  '</div>';
+  html += '<div class="field"><label class="field-label">Position Profile <span class="opt">optional</span></label><select class="select" name="positionProfile" id="pfPosProfile">'+positionProfileOptionsFor(p.firstPosition,p.positionProfile||"")+'</select></div>';
+  html += '<div class="form-grid" style="grid-template-columns:1fr 1fr">'+
+    '<div class="field"><label class="field-label">Foot <span class="opt">optional</span></label><div class="pillgroup" data-name="foot"><input type="hidden" name="preferredFoot" value="'+escAttr(p.preferredFoot||"")+'">'+FEET.map(function(ft){return '<button type="button" class="pill-opt'+(ft===p.preferredFoot?" on":"")+'" data-value="'+ft+'">'+ft+'</button>';}).join("")+'</div></div>'+
+    '<div class="field"><label class="field-label">Height <span class="opt">optional</span></label><select class="select" name="height"><option value="">—</option>'+HEIGHT_LEVELS.map(function(h){return '<option value="'+h+'"'+(p.height===h?" selected":"")+'>'+h+'</option>';}).join("")+'</select></div>'+
   '</div>';
   html += '<div class="form-grid">'+
-    '<div class="field"><label class="field-label">Year of Birth <span class="opt">optional</span></label><input class="input" name="birthYear" type="number" min="1970" max="'+(new Date().getFullYear())+'" placeholder="e.g. 2005" value="'+escAttr(p.birthYear)+'"></div>'+
-    '<div class="field"><label class="field-label">Date of Birth <span class="opt">optional, more precise</span></label><input class="input" name="dob" type="date" value="'+escAttr(p.dob)+'"></div>'+
+    '<div class="field"><label class="field-label">Structure <span class="opt">optional</span></label><select class="select" name="estrutura"><option value="">—</option>'+ESTRUTURA_LEVELS.map(function(v){return '<option value="'+v+'"'+(p.estrutura===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
+    '<div class="field"><label class="field-label">Strength <span class="opt">optional</span></label><select class="select" name="strength"><option value="">—</option>'+STRENGTH_LEVELS.map(function(v){return '<option value="'+v+'"'+(p.strength===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
+  '</div>';
+  html += '<div class="field"><label class="field-label">Maturation <span class="opt">optional</span></label><select class="select" name="maturation"><option value="">—</option>'+MATURATION_LEVELS.map(function(v){return '<option value="'+v+'"'+(p.maturation===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>';
+  html += '<div class="form-grid" style="grid-template-columns:1fr 1fr 1fr">'+
+    '<div class="field"><label class="field-label">Agility <span class="opt">opt.</span></label><select class="select" name="agilityLevel"><option value="">—</option>'+SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(p.agilityLevel===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
+    '<div class="field"><label class="field-label">Acceleration <span class="opt">opt.</span></label><select class="select" name="accelerationLevel"><option value="">—</option>'+SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(p.accelerationLevel===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
+    '<div class="field"><label class="field-label">Pace <span class="opt">opt.</span></label><select class="select" name="speedLevel"><option value="">—</option>'+SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(p.speedLevel===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
   '</div>';
   html += '<div class="form-grid">'+
     '<div class="field"><label class="field-label">Club</label>'+renderClubCombo("pf_club_combo","clubId",p.clubId,"Search or create club…")+'</div>'+
-    '<div class="field"><label class="field-label">Nationality</label>'+renderCountryCombo("pf_nat_combo","nationality",p.nationality,"Search nationality…")+'</div>'+
+    '<div class="field"><label class="field-label">Year of Birth <span class="opt">optional</span></label><input class="input" name="birthYear" type="number" min="1970" max="'+(new Date().getFullYear())+'" placeholder="e.g. 2005" value="'+escAttr(p.birthYear)+'"></div>'+
   '</div>';
+  html += '<div class="field"><label class="field-label">Date of Birth <span class="opt">optional, more precise</span></label><input class="input" name="dob" type="date" value="'+escAttr(p.dob)+'"></div>';
+  html += '<div class="field"><label class="field-label">Nationality</label>'+renderCountryCombo("pf_nat_combo","nationality",p.nationality,"Search nationality…")+'</div>';
   html += '<p class="field-hint">A second nationality can be added later from the player\'s own page in the Players Database.</p>';
   html += '<div class="form-grid">'+
-    '<div class="field"><label class="field-label">Preferred Foot</label><select class="select" name="preferredFoot"><option value="">—</option>'+FEET.map(function(ft){return '<option value="'+ft+'"'+(ft===p.preferredFoot?" selected":"")+'>'+ft+'</option>';}).join("")+'</select></div>'+
-    '<div class="field"><label class="field-label">Height <span class="opt">optional</span></label><select class="select" name="height"><option value="">—</option>'+HEIGHT_LEVELS.map(function(h){return '<option value="'+h+'"'+(p.height===h?" selected":"")+'>'+h+'</option>';}).join("")+'</select></div>'+
+    '<div class="field"><label class="field-label">'+STATUS_FIELD_LABEL+' <span class="opt">optional</span></label><select class="select" name="status"><option value="">—</option>'+PLAYER_STATUSES.map(function(s){return '<option value="'+s+'"'+(s===p.status?" selected":"")+'>'+s+'</option>';}).join("")+'</select></div>'+
+    '<div class="field"><label class="field-label">Agent <span class="opt">optional</span></label><input class="input" name="agent" value="'+escAttr(p.agent)+'"></div>'+
   '</div>';
   html += '<div class="form-grid">'+
     '<div class="field"><label class="field-label">Performance <span class="opt">1–5, optional</span></label><select class="select" name="currentPerformance"><option value="">—</option>'+[1,2,3,4,5].map(function(n){return '<option value="'+n+'"'+(String(n)===String(p.currentPerformance)?" selected":"")+'>'+n+'</option>';}).join("")+'</select></div>'+
     '<div class="field"><label class="field-label">Potential <span class="opt">A–E, optional</span></label><select class="select" name="currentPotential"><option value="">—</option>'+GRADE_LETTERS.map(function(g){return '<option value="'+g+'"'+(g===normalizeGrade(p.currentPotential)?" selected":"")+'>'+g+'</option>';}).join("")+'</select></div>'+
   '</div>';
   if(!isEdit) html += '<p class="field-hint">Setting Performance/Potential here creates the player\'s first evaluation, so it appears in their history too.</p>';
-  html += '<div class="form-grid">'+
-    '<div class="field"><label class="field-label">'+STATUS_FIELD_LABEL+' <span class="opt">optional</span></label><select class="select" name="status"><option value="">—</option>'+PLAYER_STATUSES.map(function(s){return '<option value="'+s+'"'+(s===p.status?" selected":"")+'>'+s+'</option>';}).join("")+'</select></div>'+
-    '<div class="field"><label class="field-label">Agent <span class="opt">optional</span></label><input class="input" name="agent" value="'+escAttr(p.agent)+'"></div>'+
-  '</div>';
   html += '<div class="field"><label class="field-label">Photo URL <span class="opt">optional</span></label><input class="input" name="photo" value="'+escAttr(p.photo)+'" placeholder="https://…"></div>';
   html += '<div class="field"><label class="field-label">Extra Observations <span class="opt">optional</span></label><textarea class="textarea" name="extraObservations">'+esc(p.extraObservations)+'</textarea></div>';
   if(!isEdit){
@@ -3004,7 +3052,16 @@ function pagePlayerForm(existingId){
   }
   html += '<div style="display:flex;gap:8px"><button class="btn btn-primary btn-block" type="submit">'+(isEdit?"Save Changes":"Save Player")+'</button>'+(isEdit?'<button type="button" class="btn" data-action="go-back">Cancel</button>':'')+'</div>';
   html += '</form></div>';
-  onAfterRender(function(){ wireClubCombo("pf_club_combo"); wireCountryCombo("pf_nat_combo"); });
+  onAfterRender(function(){
+    wireClubCombo("pf_club_combo"); wireCountryCombo("pf_nat_combo");
+    var pos1Select = document.getElementById("pfPos1"), posProfileSelect = document.getElementById("pfPosProfile");
+    if(pos1Select && posProfileSelect){
+      pos1Select.addEventListener("change",function(){
+        var keep = posProfileSelect.value;
+        posProfileSelect.innerHTML = positionProfileOptionsFor(pos1Select.value,keep);
+      });
+    }
+  });
   return html;
 }
 FORM_HANDLERS["save-player"] = function(form){
@@ -3015,6 +3072,7 @@ FORM_HANDLERS["save-player"] = function(form){
     name:(fd.get("name")||"").trim(),
     firstPosition:fd.get("firstPosition")||"",
     secondPosition:fd.get("secondPosition")||"",
+    positionProfile:fd.get("positionProfile")||"",
     birthYear:fd.get("birthYear")||"",
     dob:fd.get("dob")||"",
     clubId:fd.get("clubId")||"",
@@ -3023,6 +3081,12 @@ FORM_HANDLERS["save-player"] = function(form){
     // the player's own profile page, so it's never touched (and never wiped) here.
     preferredFoot:fd.get("preferredFoot")||"",
     height:fd.get("height")||"",
+    estrutura:fd.get("estrutura")||"",
+    strength:fd.get("strength")||"",
+    maturation:fd.get("maturation")||"",
+    agilityLevel:fd.get("agilityLevel")||"",
+    accelerationLevel:fd.get("accelerationLevel")||"",
+    speedLevel:fd.get("speedLevel")||"",
     agent:(fd.get("agent")||"").trim(),
     photo:(fd.get("photo")||"").trim(),
     characteristics:fd.get("characteristics")||"",
@@ -3033,10 +3097,32 @@ FORM_HANDLERS["save-player"] = function(form){
   };
   if(!vals.name) return;
   var evaluationType = fd.get("evaluationType")||"Manual";
+  // Regenerates the auto Portuguese sentence from whichever attributes are set on `pl` right now,
+  // splicing it into `characteristicsText` (preserving manual text) the same way the pitch-slot
+  // modal does — `pl.autoCharacteristics` is the previous auto paragraph to strip before replacing.
+  function applyAutoSentence(pl,characteristicsText){
+    var sentence = buildAutoAttrSentence({
+      preferredFoot: pl.preferredFoot, height: pl.height, estrutura: pl.estrutura, strength: pl.strength,
+      maturation: pl.maturation, agilityLevel: pl.agilityLevel,
+      accelerationLevel: pl.accelerationLevel, speedLevel: pl.speedLevel
+    });
+    if(!sentence) return characteristicsText;
+    var merged = spliceAutoText(characteristicsText,pl.autoCharacteristics||"",sentence);
+    pl.autoCharacteristics = sentence;
+    return merged;
+  }
   if(isEdit){
     var p = playerById(id);
     Object.assign(p,vals);
+    p.characteristics = applyAutoSentence(p,vals.characteristics);
     if(vals.height) p.heightUpdatedAt = todayISO();
+    if(vals.estrutura) p.estruturaUpdatedAt = todayISO();
+    if(vals.strength) p.strengthUpdatedAt = todayISO();
+    if(vals.maturation) p.maturationUpdatedAt = todayISO();
+    if(vals.agilityLevel) p.agilityLevelUpdatedAt = todayISO();
+    if(vals.accelerationLevel) p.accelerationLevelUpdatedAt = todayISO();
+    if(vals.speedLevel) p.speedLevelUpdatedAt = todayISO();
+    if(vals.positionProfile) p.positionProfileUpdatedAt = todayISO();
     if(vals.firstPosition) p.positionUpdatedAt = todayISO();
     if(vals.clubId) p.clubUpdatedAt = todayISO();
     p.updatedAt = nowISO();
@@ -3045,7 +3131,15 @@ FORM_HANDLERS["save-player"] = function(form){
   }
   function createNewPlayer(){
     var np = Object.assign({id:uid("player")},vals,{createdAt:nowISO(),updatedAt:nowISO()});
+    np.characteristics = applyAutoSentence(np,vals.characteristics);
     if(vals.height) np.heightUpdatedAt = todayISO();
+    if(vals.estrutura) np.estruturaUpdatedAt = todayISO();
+    if(vals.strength) np.strengthUpdatedAt = todayISO();
+    if(vals.maturation) np.maturationUpdatedAt = todayISO();
+    if(vals.agilityLevel) np.agilityLevelUpdatedAt = todayISO();
+    if(vals.accelerationLevel) np.accelerationLevelUpdatedAt = todayISO();
+    if(vals.speedLevel) np.speedLevelUpdatedAt = todayISO();
+    if(vals.positionProfile) np.positionProfileUpdatedAt = todayISO();
     if(vals.firstPosition) np.positionUpdatedAt = todayISO();
     if(vals.clubId) np.clubUpdatedAt = todayISO();
     DB.players.push(np);
@@ -3053,7 +3147,7 @@ FORM_HANDLERS["save-player"] = function(form){
       DB.evaluations.push({
         id:uid("eval"),playerId:np.id,matchId:null,evaluationType:evaluationType,date:todayISO(),
         performance:vals.currentPerformance,potential:vals.currentPotential,
-        characteristics:vals.characteristics,observations:"Initial baseline evaluation at profile creation.",
+        characteristics:np.characteristics,observations:"Initial baseline evaluation at profile creation.",
         recommendation:"",scoutId:DB.currentScoutId,createdAt:nowISO()
       });
     }
@@ -3072,11 +3166,21 @@ FORM_HANDLERS["save-player"] = function(form){
         // already on file — same fill-if-missing rule used everywhere else in the app (club
         // included — there's no confirmation step here to ask which club should win, unlike the
         // explicit "Merge with another player" flow, so it plays safe and never changes it).
-        ["firstPosition","secondPosition","birthYear","dob","clubId","nationality","preferredFoot","agent","photo","characteristics","extraObservations","status"].forEach(function(k){
+        ["firstPosition","secondPosition","birthYear","dob","clubId","nationality","preferredFoot","agent","photo","extraObservations","status"].forEach(function(k){
           if(vals[k] && !existing[k]) existing[k] = vals[k];
         });
         applyLatestPlayerField(existing,"height","heightUpdatedAt",vals.height,todayISO());
+        applyLatestPlayerField(existing,"estrutura","estruturaUpdatedAt",vals.estrutura,todayISO());
+        applyLatestPlayerField(existing,"strength","strengthUpdatedAt",vals.strength,todayISO());
+        applyLatestPlayerField(existing,"maturation","maturationUpdatedAt",vals.maturation,todayISO());
+        applyLatestPlayerField(existing,"agilityLevel","agilityLevelUpdatedAt",vals.agilityLevel,todayISO());
+        applyLatestPlayerField(existing,"accelerationLevel","accelerationLevelUpdatedAt",vals.accelerationLevel,todayISO());
+        applyLatestPlayerField(existing,"speedLevel","speedLevelUpdatedAt",vals.speedLevel,todayISO());
+        applyLatestPlayerField(existing,"positionProfile","positionProfileUpdatedAt",vals.positionProfile,todayISO());
         applyObservedPosition(existing,vals.firstPosition,todayISO());
+        // Same fill-if-missing rule as the other fields above: only regenerate/merge the auto
+        // sentence into General Characteristics if the existing profile didn't already have some.
+        if(!existing.characteristics) existing.characteristics = applyAutoSentence(existing,vals.characteristics||"");
         existing.updatedAt = nowISO();
         if(vals.currentPerformance || vals.currentPotential){
           DB.evaluations.push({
@@ -3126,6 +3230,8 @@ function pagePlayerDetail(id){
   var positionProfileSelectHtml = '<select class="inline-select" data-action-select="set-player-position-profile" data-id="'+p.id+'">'+positionProfileOptionsFor(p.firstPosition,p.positionProfile)+'</select>';
   var estruturaSelectHtml = '<select class="inline-select" data-action-select="set-player-estrutura" data-id="'+p.id+'"><option value="">—</option>'+
     ESTRUTURA_LEVELS.map(function(v){return '<option value="'+v+'"'+(v===p.estrutura?" selected":"")+'>'+v+'</option>';}).join("")+'</select>';
+  var strengthSelectHtml = '<select class="inline-select" data-action-select="set-player-strength" data-id="'+p.id+'"><option value="">—</option>'+
+    STRENGTH_LEVELS.map(function(v){return '<option value="'+v+'"'+(v===p.strength?" selected":"")+'>'+v+'</option>';}).join("")+'</select>';
   var maturationSelectHtml = '<select class="inline-select" data-action-select="set-player-maturation" data-id="'+p.id+'"><option value="">—</option>'+
     MATURATION_LEVELS.map(function(v){return '<option value="'+v+'"'+(v===p.maturation?" selected":"")+'>'+v+'</option>';}).join("")+'</select>';
   var agilitySelectHtml = '<select class="inline-select" data-action-select="set-player-agility" data-id="'+p.id+'"><option value="">—</option>'+
@@ -3156,13 +3262,16 @@ function pagePlayerDetail(id){
         '<span class="profile-club inline-edit" data-field="heightExact" data-edit-key="player-heightExact" data-raw="'+escAttr(p.heightExact||"")+'" data-id="'+p.id+'" title="Click to set an exact height in cm — otherwise shows the category picked in Edit Player"><b>Height</b> '+(heightDisplay(p)?esc(heightDisplay(p)):"—")+'</span>'+
       '</div>'+
       '<div class="profile-meta" style="margin-top:10px">'+
-        '<span class="profile-club"><b>Estrutura</b> '+estruturaSelectHtml+'</span>'+
+        '<span class="profile-club"><b>Structure</b> '+estruturaSelectHtml+'</span>'+
+        '<span class="profile-club"><b>Strength</b> '+strengthSelectHtml+'</span>'+
+      '</div>'+
+      '<div class="profile-meta" style="margin-top:10px">'+
         '<span class="profile-club"><b>Maturation</b> '+maturationSelectHtml+'</span>'+
       '</div>'+
       '<div class="profile-meta" style="margin-top:10px">'+
-        '<span class="profile-club"><b>Agility</b> '+agilitySelectHtml+'</span>'+
-        '<span class="profile-club"><b>Acceleration</b> '+accelerationSelectHtml+'</span>'+
-        '<span class="profile-club"><b>Speed</b> '+speedSelectHtml+'</span>'+
+        '<span class="profile-club"><b>Agir</b> '+agilitySelectHtml+'</span>'+
+        '<span class="profile-club"><b>Accel</b> '+accelerationSelectHtml+'</span>'+
+        '<span class="profile-club"><b>Pace</b> '+speedSelectHtml+'</span>'+
       '</div>'+
     '</div>'+
     '<div class="profile-side-stack profile-clubnat-stack profile-divider-left">'+
@@ -3380,6 +3489,14 @@ function wirePlayerProfileSelects(){
       var p = playerById(sel.dataset.id); if(!p) return;
       p.estrutura = sel.value||"";
       if(p.estrutura) p.estruturaUpdatedAt = todayISO();
+      p.updatedAt = nowISO(); persist({});
+    });
+  });
+  document.querySelectorAll('[data-action-select="set-player-strength"]').forEach(function(sel){
+    sel.addEventListener("change",function(){
+      var p = playerById(sel.dataset.id); if(!p) return;
+      p.strength = sel.value||"";
+      if(p.strength) p.strengthUpdatedAt = todayISO();
       p.updatedAt = nowISO(); persist({});
     });
   });
@@ -3606,7 +3723,7 @@ function openEvaluationModal(playerId,matchId,matchPlayerId){
   '</div></div></div>';
   html += '<form data-form="save-evaluation" class="stack" data-player-id="'+playerId+'" data-match-id="'+(matchId||"")+'">';
   if(!isMatchEval){
-    html += '<div class="field"><label class="field-label">Type</label><div class="pillgroup" data-name="evaluationType"><input type="hidden" name="evaluationType" value="Manual">'+EVAL_TYPES.map(function(t){return '<button type="button" class="pill-opt'+(t==="Manual"?" on":"")+'" data-value="'+t+'">'+t+'</button>';}).join("")+'</div></div>';
+    html += '<div class="field"><label class="field-label">Type</label><div class="pillgroup" data-name="evaluationType" id="evalTypeGroup"><input type="hidden" name="evaluationType" value="Manual">'+EVAL_TYPES.map(function(t){return '<button type="button" class="pill-opt'+(t==="Manual"?" on":"")+'" data-value="'+t+'">'+t+'</button>';}).join("")+'</div></div>';
   }
   html += '<div class="form-grid"><div class="field"><label class="field-label">Date</label><input class="input" type="date" name="date" value="'+(isMatchEval?escAttr(m.date):todayISO())+'" '+(isMatchEval?"readonly":"")+'></div>'+
     '<div class="field"><label class="field-label">Position Observed <span class="opt">optional</span></label><select class="select" name="position">'+positionOptions(mp?mp.position:p.firstPosition)+'</select></div></div>';
@@ -3620,7 +3737,76 @@ function openEvaluationModal(playerId,matchId,matchPlayerId){
   html += '<button class="btn btn-primary btn-block" type="submit">Save Evaluation</button>';
   html += '</form></div>';
   openModal(html);
+  if(!isMatchEval){
+    // Picking a Type that's actually a match (Live/TV/Video Match) needs a real Match record to
+    // attach to — pop a small mini-modal to create/pick one, then re-open this same evaluation
+    // modal bound to it, so it shows up correctly in the player's Evaluation History afterwards
+    // (which requires a real matchPlayers row, not just an evaluation with a matchId).
+    var typeGroup = document.getElementById("evalTypeGroup");
+    var typeHidden = typeGroup ? typeGroup.querySelector("input[type=hidden]") : null;
+    if(typeHidden){
+      typeHidden.addEventListener("change",function(){
+        if(/match/i.test(typeHidden.value)) openEvalMatchIntroModal(playerId,typeHidden.value);
+      });
+    }
+  }
 }
+// Small sub-modal used when the standalone "Add Evaluation" Type is set to one of the match types
+// (Live/TV/Video Match) — creates the underlying Match + an off-formation matchPlayers row
+// (slotIndex -1, so it never shows up on the pitch grid), then re-opens the evaluation modal bound
+// to it. Competition is optional here, same as the normal Add Match form.
+function openEvalMatchIntroModal(playerId,evaluationType){
+  var p = playerById(playerId);
+  var obsMode = /^live/i.test(evaluationType) ? "LIVE" : (/^tv/i.test(evaluationType) ? "TV" : "VIDEO");
+  var competitions = Array.from(new Set(
+    DB.matches.map(function(x){return x.competition;})
+      .concat((DB.fixtures||[]).map(function(fx){return fx.competition;}))
+      .filter(Boolean)
+  )).sort();
+  var html = '<div class="modal-pad"><div class="modal-head"><div class="modal-title">Add Match</div><button class="icon-btn" data-close-modal>'+ic("close")+'</button></div>';
+  html += '<div class="field-hint" style="margin-bottom:10px">A '+esc(evaluationType)+' evaluation needs a match to attach it to — add the match, then continue evaluating '+esc(p?p.name:"the player")+'.</div>';
+  html += '<form data-form="save-eval-match-intro" class="stack" data-player-id="'+playerId+'" data-eval-type="'+escAttr(evaluationType)+'">';
+  html += '<div class="form-grid">'+
+    '<div class="field"><label class="field-label">Home Team</label>'+renderClubCombo("evalMatch_home_combo","homeClubId","","Search or create club…")+'</div>'+
+    '<div class="field"><label class="field-label">Away Team</label>'+renderClubCombo("evalMatch_away_combo","awayClubId","","Search or create club…")+'</div>'+
+  '</div>';
+  html += '<div class="field"><label class="field-label">'+esc(p?p.name:"Player")+' plays for</label><div class="pillgroup" data-name="side"><input type="hidden" name="side" value="home"><button type="button" class="pill-opt on" data-value="home">Home</button><button type="button" class="pill-opt" data-value="away">Away</button></div></div>';
+  html += '<div class="field"><label class="field-label">Date</label><input class="input" type="date" name="date" value="'+escAttr(todayISO())+'" required></div>';
+  html += '<div class="field"><label class="field-label">Competition <span class="opt">optional</span></label><input class="input" name="competition" list="evalMatchCompetitionList" placeholder="e.g. Saudi Pro League"></div>';
+  html += '<datalist id="evalMatchCompetitionList">'+competitions.map(function(c){return '<option value="'+esc(c)+'">';}).join("")+'</datalist>';
+  html += '<button class="btn btn-primary btn-block" type="submit">Add Match &amp; Continue</button>';
+  html += '</form></div>';
+  openModal(html);
+  wireClubCombo("evalMatch_home_combo"); wireClubCombo("evalMatch_away_combo");
+}
+FORM_HANDLERS["save-eval-match-intro"] = function(form){
+  var fd = new FormData(form);
+  var playerId = form.dataset.playerId;
+  var evaluationType = form.dataset.evalType;
+  var homeClubId = fd.get("homeClubId")||"", awayClubId = fd.get("awayClubId")||"";
+  if(!homeClubId || !awayClubId){ showToastImmediate("Please select or create both a Home Team and an Away Team."); return; }
+  var obsMode = /^live/i.test(evaluationType) ? "LIVE" : (/^tv/i.test(evaluationType) ? "TV" : "VIDEO");
+  var side = fd.get("side")||"home";
+  var m = {
+    id:uid("match"), homeClubId:homeClubId, awayClubId:awayClubId,
+    date: fd.get("date")||todayISO(), time:"", venue:"",
+    competition: (fd.get("competition")||"").trim(), matchday:"", ageGroup:"",
+    observationMode: obsMode, status:"Watched", watchDate:"",
+    matchObservations:"", createdAt:nowISO(), updatedAt:nowISO()
+  };
+  DB.matches.push(m);
+  var mp = {
+    id:uid("mp"), matchId:m.id, playerId:playerId, clubId: side==="away"?awayClubId:homeClubId,
+    shirtNumber:"", position:"", position2:"", slotIndex:-1,
+    lineupStatus:"Starting XI", matchCharacteristics:"",
+    playerOfInterest:false, interestNote:"", interestPriority:"",
+    replacedPlayerId:"", subMinute:"", createdAt:nowISO()
+  };
+  DB.matchPlayers.push(mp);
+  closeModal();
+  persist({});
+  openEvaluationModal(playerId,m.id,mp.id);
+};
 FORM_HANDLERS["save-evaluation"] = function(form){
   var fd = new FormData(form);
   var playerId = form.dataset.playerId;
@@ -4283,8 +4469,12 @@ FORM_HANDLERS["edit-agenda-task"] = function(form){
 function pageMatchForm(existingId){
   var m = existingId ? matchById(existingId) : null;
   var isEdit = !!m;
-  m = m || {homeClubId:"",awayClubId:"",date:todayISO(),time:"",competition:"",matchday:"",ageGroup:"",observationMode:"LIVE",status:"To Watch",watchDate:""};
-  var competitions = Array.from(new Set(DB.matches.map(function(x){return x.competition;}).filter(Boolean)));
+  m = m || {homeClubId:"",awayClubId:"",date:todayISO(),time:"",venue:"",competition:"",matchday:"",ageGroup:"",observationMode:"LIVE",status:"To Watch",watchDate:""};
+  var competitions = Array.from(new Set(
+    DB.matches.map(function(x){return x.competition;})
+      .concat((DB.fixtures||[]).map(function(fx){return fx.competition;}))
+      .filter(Boolean)
+  )).sort();
   var html = '<div class="stack" style="max-width:640px">';
   html += '<div class="section-head"><div><div class="eyebrow">'+(isEdit?"Edit Match":"New Fixture")+'</div><h1 style="font-size:22px">'+(isEdit?"Edit Match":"Add Match")+'</h1></div></div>';
   html += '<form class="card card-pad stack" data-form="save-match" data-id="'+(isEdit?m.id:"")+'">';
@@ -4296,11 +4486,11 @@ function pageMatchForm(existingId){
     '<div class="field"><label class="field-label">Date</label><input class="input" type="date" name="date" value="'+escAttr(m.date)+'" required></div>'+
     '<div class="field"><label class="field-label">Time <span class="opt">optional</span></label><input class="input" type="time" name="time" value="'+escAttr(m.time)+'"></div>'+
   '</div>';
+  html += '<div class="field"><label class="field-label">Location <span class="opt">optional</span></label><input class="input" name="venue" value="'+escAttr(m.venue||"")+'" placeholder="e.g. Prince Faisal bin Fahd Stadium"></div>';
   html += '<div class="form-grid">'+
-    '<div class="field"><label class="field-label">Competition</label><input class="input" name="competition" list="competitionList" value="'+escAttr(m.competition)+'" placeholder="e.g. Saudi Pro League"></div>'+
+    '<div class="field"><label class="field-label">Competition <span class="opt">optional</span></label><input class="input" name="competition" list="competitionList" value="'+escAttr(m.competition)+'" placeholder="e.g. Saudi Pro League"></div>'+
     '<div class="field"><label class="field-label">Matchday <span class="opt">optional</span></label><input class="input" name="matchday" value="'+escAttr(m.matchday)+'" placeholder="e.g. Matchday 12"></div>'+
   '</div>';
-  html += '<div class="field"><label class="field-label">Age Group / Escalão <span class="opt">optional — shown in place of crests in the mobile Dashboard. Left blank, it\'s guessed from the Competition name (e.g. "U-15" in "Saudi U-15 Premier League")</span></label><input class="input" name="ageGroup" value="'+escAttr(m.ageGroup||"")+'" placeholder="e.g. U19, Sub-23, Sénior"></div>';
   html += '<div class="field"><label class="field-label">Competition Country <span class="opt">optional — shown as an abbreviation in Matches Database</span></label><input class="input" name="competitionCountry" list="countryList" value="'+escAttr(m.competition?(DB.competitionCountries[m.competition]||""):"")+'" placeholder="e.g. Saudi Arabia"></div>'+countryDatalist();
   html += '<datalist id="competitionList">'+competitions.map(function(c){return '<option value="'+esc(c)+'">';}).join("")+'</datalist>';
   html += '<div class="field"><label class="field-label">Observation Mode</label><div class="pillgroup" data-name="observationMode" id="mf_obsmode_group"><input type="hidden" name="observationMode" value="'+escAttr(m.observationMode)+'">'+OBS_MODES.map(function(o){return '<button type="button" class="pill-opt'+(o===m.observationMode?" on":"")+'" data-value="'+o+'">'+o+'</button>';}).join("")+'</div></div>';
@@ -4344,9 +4534,9 @@ FORM_HANDLERS["save-match"] = function(form){
     awayClubId: fd.get("awayClubId")||"",
     date: fd.get("date")||todayISO(),
     time: fd.get("time")||"",
+    venue: (fd.get("venue")||"").trim(),
     competition: (fd.get("competition")||"").trim(),
     matchday: (fd.get("matchday")||"").trim(),
-    ageGroup: (fd.get("ageGroup")||"").trim(),
     observationMode: fd.get("observationMode")||"LIVE",
     status: fd.get("status")||"To Watch",
     watchDate: fd.get("watchDate")||""
@@ -4795,26 +4985,28 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
   html += '</div>';
   var pos1Val = mp?mp.position:slot.pos;
   var pos2Val = mp?mp.position2||"":"";
-  html += '<div class="field"><label class="field-label">Position 1 &amp; Position 2</label>'+
-    '<div style="display:flex;gap:8px">'+
-      '<select class="select" name="position" id="pitchSlotPos1" style="flex:1">'+positionOptionsAbbrev(pos1Val)+'</select>'+
-      '<select class="select" name="position2" id="pitchSlotPos2" style="flex:1">'+positionOptionsAbbrev(pos2Val)+'</select>'+
-    '</div></div>';
+  html += '<div class="form-grid">'+
+    '<div class="field"><label class="field-label">Position 1</label><select class="select" name="position" id="pitchSlotPos1">'+positionOptionsAbbrev(pos1Val)+'</select></div>'+
+    '<div class="field"><label class="field-label">Position 2</label><select class="select" name="position2" id="pitchSlotPos2">'+positionOptionsAbbrev(pos2Val)+'</select></div>'+
+  '</div>';
   html += '<div class="field"><label class="field-label">Position Profile <span class="opt">optional</span></label><select class="select" name="positionProfile" id="pitchSlotPosProfile">'+positionProfileOptionsFor(pos1Val,p?p.positionProfile||"":"")+'</select></div>';
-  html += '<div class="form-grid">'+
-    '<div class="field"><label class="field-label">Preferred Foot <span class="opt">optional</span></label><div class="pillgroup" data-name="foot"><input type="hidden" name="preferredFoot" value="'+escAttr(p?p.preferredFoot||"":"")+'">'+FEET.map(function(ft){return '<button type="button" class="pill-opt'+(p&&ft===p.preferredFoot?" on":"")+'" data-value="'+ft+'">'+ft+'</button>';}).join("")+'</div></div>'+
-    '<div class="field"><label class="field-label">Height <span class="opt">optional</span></label><select class="select" name="height"><option value="">—</option>'+HEIGHT_LEVELS.map(function(h){return '<option value="'+h+'"'+(p&&p.height===h?" selected":"")+'>'+h+'</option>';}).join("")+'</select></div>'+
+  html += '<div class="form-grid" style="grid-template-columns:1fr 1fr" id="pitchSlotFootHeightRow">'+
+    '<div class="field"><label class="field-label">Foot <span class="opt">optional</span></label><div class="pillgroup" data-name="foot"><input type="hidden" name="preferredFoot" id="pitchSlotFoot" value="'+escAttr(p?p.preferredFoot||"":"")+'">'+FEET.map(function(ft){return '<button type="button" class="pill-opt'+(p&&ft===p.preferredFoot?" on":"")+'" data-value="'+ft+'">'+ft+'</button>';}).join("")+'</div></div>'+
+    '<div class="field"><label class="field-label">Height <span class="opt">optional</span></label><select class="select" name="height" id="pitchSlotHeight"><option value="">—</option>'+HEIGHT_LEVELS.map(function(h){return '<option value="'+h+'"'+(p&&p.height===h?" selected":"")+'>'+h+'</option>';}).join("")+'</select></div>'+
   '</div>';
   html += '<div class="form-grid">'+
-    '<div class="field"><label class="field-label">Estrutura <span class="opt">optional</span></label><select class="select" name="estrutura"><option value="">—</option>'+ESTRUTURA_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.estrutura===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
-    '<div class="field"><label class="field-label">Maturation <span class="opt">optional</span></label><select class="select" name="maturation"><option value="">—</option>'+MATURATION_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.maturation===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
+    '<div class="field"><label class="field-label">Structure <span class="opt">optional</span></label><select class="select" name="estrutura" id="pitchSlotEstrutura"><option value="">—</option>'+ESTRUTURA_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.estrutura===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
+    '<div class="field"><label class="field-label">Strength <span class="opt">optional</span></label><select class="select" name="strength" id="pitchSlotStrength"><option value="">—</option>'+STRENGTH_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.strength===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
   '</div>';
+  html += '<div class="field"><label class="field-label">Maturation <span class="opt">optional</span></label><select class="select" name="maturation" id="pitchSlotMaturation"><option value="">—</option>'+MATURATION_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.maturation===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>';
   html += '<div class="form-grid" style="grid-template-columns:1fr 1fr 1fr">'+
-    '<div class="field"><label class="field-label">Níveis de Agilidade <span class="opt">opt.</span></label><select class="select" name="agilityLevel"><option value="">—</option>'+SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.agilityLevel===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
-    '<div class="field"><label class="field-label">Níveis de Aceleração <span class="opt">opt.</span></label><select class="select" name="accelerationLevel"><option value="">—</option>'+SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.accelerationLevel===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
-    '<div class="field"><label class="field-label">Níveis de Velocidade <span class="opt">opt.</span></label><select class="select" name="speedLevel"><option value="">—</option>'+SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.speedLevel===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
+    '<div class="field"><label class="field-label">Agility <span class="opt">opt.</span></label><select class="select" name="agilityLevel" id="pitchSlotAgility"><option value="">—</option>'+SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.agilityLevel===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
+    '<div class="field"><label class="field-label">Acceleration <span class="opt">opt.</span></label><select class="select" name="accelerationLevel" id="pitchSlotAcceleration"><option value="">—</option>'+SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.accelerationLevel===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
+    '<div class="field"><label class="field-label">Pace <span class="opt">opt.</span></label><select class="select" name="speedLevel" id="pitchSlotSpeed"><option value="">—</option>'+SPEED_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.speedLevel===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
   '</div>';
-  html += '<div class="field"><label class="field-label">Characteristics <span class="opt">optional — what stood out in this match</span></label><textarea class="textarea" name="characteristics" placeholder="What stands out about their profile…">'+esc(ev?ev.characteristics||(mp?mp.matchCharacteristics||"":""):"")+'</textarea></div>';
+  html += '<div class="field"><label class="field-label">Characteristics <span class="opt">optional — what stood out in this match</span></label><textarea class="textarea" name="characteristics" id="pitchSlotCharacteristics" placeholder="What stands out about their profile…">'+esc(ev?ev.characteristics||(mp?mp.matchCharacteristics||"":""):"")+'</textarea>'+
+    '<input type="hidden" name="autoCharacteristics" id="pitchSlotAutoCharacteristics" value="'+escAttr(mp?(mp.autoCharacteristics||""):"")+'">'+
+  '</div>';
   html += '<div class="form-grid">'+
     '<div class="field"><label class="field-label">Performance <span class="opt">1–5, optional</span></label><div class="pillgroup" data-name="performance"><input type="hidden" name="performance" value="'+escAttr(ev?ev.performance||"":"")+'">'+[1,2,3,4,5].map(function(n){return '<button type="button" class="pill-opt'+(ev&&String(n)===String(ev.performance)?" on":"")+'" data-value="'+n+'">'+n+'</button>';}).join("")+'</div></div>'+
     '<div class="field"><label class="field-label">Potential <span class="opt">A–E, optional</span></label><div class="pillgroup" data-name="potential"><input type="hidden" name="potential" value="'+escAttr(ev?ev.potential||"":"")+'">'+GRADE_LETTERS.map(function(g){return '<button type="button" class="pill-opt'+(ev&&g===normalizeGrade(ev.potential)?" on":"")+'" data-value="'+g+'">'+g+'</button>';}).join("")+'</div></div>'+
@@ -4867,6 +5059,40 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
       posProfileSelect.innerHTML = positionProfileOptionsFor(pos1Select.value,keep);
     });
   }
+  // Live-update the Characteristics textarea as Foot/Height/Structure/Strength/Maturation/
+  // Agility/Acceleration/Pace are picked — same auto-sentence + splice logic used on Save, just run
+  // client-side on every change so there's no need to Save and reopen to see it reflected.
+  (function wireLiveCharacteristics(){
+    var charsBox = document.getElementById("pitchSlotCharacteristics");
+    var autoField = document.getElementById("pitchSlotAutoCharacteristics");
+    if(!charsBox) return;
+    var lastAuto = mp ? (mp.autoCharacteristics||"") : "";
+    var watchIds = ["pitchSlotFoot","pitchSlotHeight","pitchSlotEstrutura","pitchSlotStrength","pitchSlotMaturation","pitchSlotAgility","pitchSlotAcceleration","pitchSlotSpeed"];
+    function recompute(){
+      var v = {
+        preferredFoot: (document.getElementById("pitchSlotFoot")||{}).value||"",
+        height: (document.getElementById("pitchSlotHeight")||{}).value||"",
+        estrutura: (document.getElementById("pitchSlotEstrutura")||{}).value||"",
+        strength: (document.getElementById("pitchSlotStrength")||{}).value||"",
+        maturation: (document.getElementById("pitchSlotMaturation")||{}).value||"",
+        agilityLevel: (document.getElementById("pitchSlotAgility")||{}).value||"",
+        accelerationLevel: (document.getElementById("pitchSlotAcceleration")||{}).value||"",
+        speedLevel: (document.getElementById("pitchSlotSpeed")||{}).value||""
+      };
+      var sentence = buildAutoAttrSentence(v);
+      if(!sentence) return;
+      charsBox.value = spliceAutoText(charsBox.value,lastAuto,sentence);
+      lastAuto = sentence;
+      // Keeps track of exactly what's currently live-injected into the textarea, so Save doesn't
+      // treat this already-generated sentence as manually-typed text and prepend a second copy of
+      // itself on top.
+      if(autoField) autoField.value = sentence;
+    }
+    watchIds.forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.addEventListener("change",recompute);
+    });
+  })();
 }
 ACTIONS["open-pitch-slot"] = function(el){
   openPitchSlotModal(el.dataset.matchId,el.dataset.clubId,parseInt(el.dataset.slot,10),el.dataset.mpId||null);
@@ -4916,6 +5142,7 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
   var preferredFoot = fd.get("preferredFoot")||"";
   var height = fd.get("height")||"";
   var estrutura = fd.get("estrutura")||"";
+  var strength = fd.get("strength")||"";
   var maturation = fd.get("maturation")||"";
   var agilityLevel = fd.get("agilityLevel")||"";
   var accelerationLevel = fd.get("accelerationLevel")||"";
@@ -4923,6 +5150,10 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
   var performance = fd.get("performance")||"";
   var potential = fd.get("potential")||"";
   var characteristics = fd.get("characteristics")||"";
+  // What the Characteristics textarea's auto paragraph currently is, as tracked live in the browser
+  // (see wireLiveCharacteristics) — used below so Save doesn't mistake an already-live-injected
+  // sentence for manually-typed text and duplicate it.
+  var clientAutoText = fd.get("autoCharacteristics")||"";
   var notes = fd.get("notes")||"";
   var nationality = (fd.get("nationality")||"").trim();
   var replacedMpId = fd.get("replacedMpId")||"";
@@ -4951,13 +5182,14 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
       // applyLatestPlayerField can decline an edit to an OLDER match if a newer one already set a
       // different value, and that must NOT trigger a sentence built from the rejected value.
       var beforeAttrs = {
-        preferredFoot: pl.preferredFoot, height: pl.height, estrutura: pl.estrutura,
+        preferredFoot: pl.preferredFoot, height: pl.height, estrutura: pl.estrutura, strength: pl.strength,
         maturation: pl.maturation, agilityLevel: pl.agilityLevel,
         accelerationLevel: pl.accelerationLevel, speedLevel: pl.speedLevel
       };
       applyLatestPlayerField(pl,"preferredFoot","preferredFootUpdatedAt",preferredFoot,srcDate);
       applyLatestPlayerField(pl,"height","heightUpdatedAt",height,srcDate);
       applyLatestPlayerField(pl,"estrutura","estruturaUpdatedAt",estrutura,srcDate);
+      applyLatestPlayerField(pl,"strength","strengthUpdatedAt",strength,srcDate);
       applyLatestPlayerField(pl,"maturation","maturationUpdatedAt",maturation,srcDate);
       applyLatestPlayerField(pl,"agilityLevel","agilityLevelUpdatedAt",agilityLevel,srcDate);
       applyLatestPlayerField(pl,"accelerationLevel","accelerationLevelUpdatedAt",accelerationLevel,srcDate);
@@ -4971,7 +5203,7 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
       var attrsChanged = Object.keys(beforeAttrs).some(function(k){ return pl[k]!==beforeAttrs[k]; });
       if(attrsChanged){
         var sentence = buildAutoAttrSentence({
-          preferredFoot: pl.preferredFoot, height: pl.height, estrutura: pl.estrutura,
+          preferredFoot: pl.preferredFoot, height: pl.height, estrutura: pl.estrutura, strength: pl.strength,
           maturation: pl.maturation, agilityLevel: pl.agilityLevel,
           accelerationLevel: pl.accelerationLevel, speedLevel: pl.speedLevel
         });
@@ -4979,7 +5211,7 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
           // Mirrored in two places: this match's own Characteristics (right where the coach is
           // choosing these options) and the player's profile-level General Characteristics — each
           // keeps its own manually-written text intact, only the auto paragraph itself is replaced.
-          characteristics = spliceAutoText(characteristics,mpForBrief?(mpForBrief.autoCharacteristics||""):"",sentence);
+          characteristics = spliceAutoText(characteristics,clientAutoText||(mpForBrief?(mpForBrief.autoCharacteristics||""):""),sentence);
           if(mpForBrief) mpForBrief.autoCharacteristics = sentence;
           pl.characteristics = spliceAutoText(pl.characteristics||"",pl.autoCharacteristics||"",sentence);
           pl.autoCharacteristics = sentence;
