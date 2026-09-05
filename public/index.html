@@ -1227,17 +1227,36 @@ function updatePlayerCurrentRatings(playerId){
   }
   p.updatedAt=nowISO();
 }
-// Height and Position track the most recently *dated* observation, not just the most recently
-// entered one — so going back to fill in an older match afterwards never overwrites what a newer
-// match already established (a young player's height/best position can shift month to month).
-// `dateField` remembers the source date of whatever's currently stored, so later comparisons are
-// always against the true latest, regardless of the order things were entered in.
+// Height tracks the most recently *dated* observation, not just the most recently entered one —
+// so going back to fill in an older match afterwards never overwrites what a newer match already
+// established (a young player's height can shift month to month). `dateField` remembers the
+// source date of whatever's currently stored, so later comparisons are always against the true
+// latest, regardless of the order things were entered in.
 function applyLatestPlayerField(p,field,dateField,value,sourceDate){
   if(value===undefined || value===null || String(value).trim()==="") return;
   if(!sourceDate) return;
   if(sourceDate >= (p[dateField]||"")){
     p[field] = value;
     p[dateField] = sourceDate;
+  }
+}
+// Position is different from height: the profile's main ("first") position, once established,
+// stays put — it's the player's identity, not something a single match should silently overwrite.
+// A match observing a DIFFERENT position doesn't replace it; it's tracked as the Second Position
+// instead (latest-dated distinct observation wins there, same idea as applyLatestPlayerField).
+// If there's no first position on file yet at all, this observation becomes it.
+function applyObservedPosition(p,position,sourceDate){
+  if(!position) return;
+  if(!sourceDate) return;
+  if(!p.firstPosition){
+    p.firstPosition = position;
+    p.positionUpdatedAt = sourceDate;
+    return;
+  }
+  if(position===p.firstPosition) return;
+  if(sourceDate >= (p.secondPositionUpdatedAt||"")){
+    p.secondPosition = position;
+    p.secondPositionUpdatedAt = sourceDate;
   }
 }
 function maybeSeedGeneralCharacteristics(playerId,text){
@@ -1340,20 +1359,47 @@ function recomputePlayerDerivedFields(playerId){
 // A player added without a name yet ("???", or any placeholder) can later turn out to already be
 // someone in the database — e.g. once their name is confirmed. Merging folds the placeholder's
 // whole history (every match appearance and evaluation) into the real profile and discards the
-// placeholder, rather than leaving two separate profiles for the same person. Base info fills in
-// only where the surviving profile is missing it; height/position keep whichever side's dated
-// entry is most recent — same fill-if-missing / latest-wins rules a single match brief follows.
-function mergePlayerInto(sourceId,targetId){
+// placeholder, rather than leaving two separate profiles for the same person. This is also how a
+// transfer is reconciled — a player getting a second, separate profile at their new club (since
+// the name-suggestion combo is club-scoped, see wirePlayerCombo) gets merged back into one record
+// via "Merge with another player" on the profile page. Base info fills in only where the surviving
+// profile is missing it; height keeps whichever side's dated entry is most recent, and position
+// follows applyObservedPosition's own anchor rule (see there). Club is different: which side's club
+// is truly "current" can't be inferred reliably from timestamps alone (a manually-created profile
+// is dated when it was entered, not when that club spell started), so opts.clubId lets the caller
+// state it explicitly — the "Merge with another player" modal always does. Automatic merge paths
+// that have no such confirmation step (the pitch-slot rename flow, the duplicate-name link flow)
+// omit it and simply keep the target's own club, unchanged, as they always have.
+function mergePlayerInto(sourceId,targetId,opts){
   if(!sourceId || !targetId || sourceId===targetId) return;
   var source = playerById(sourceId), target = playerById(targetId);
   if(!source || !target) return;
+  opts = opts || {};
   DB.matchPlayers.forEach(function(mp){ if(mp.playerId===sourceId) mp.playerId = targetId; });
   DB.evaluations.forEach(function(e){ if(e.playerId===sourceId) e.playerId = targetId; });
   if(!target.birthYear && source.birthYear) target.birthYear = source.birthYear;
   if(!target.nationality && source.nationality) target.nationality = source.nationality;
   if(!target.preferredFoot && source.preferredFoot) target.preferredFoot = source.preferredFoot;
+  if(!target.strengths && source.strengths) target.strengths = source.strengths;
+  if(!target.weaknesses && source.weaknesses) target.weaknesses = source.weaknesses;
+  // Technical-Tactical / Physical / Psychological ratings aren't tied to any match or evaluation —
+  // they're plain fields edited directly on the profile, with no date to compare — so there's no
+  // "most recent" to pick here. Fill-if-missing per individual rating (and per comment) instead,
+  // same idea as birth year/nationality/foot above, so nothing on either side is silently lost.
+  ["techTactical","physical","psychological"].forEach(function(group){
+    var sg = source[group];
+    if(!sg) return;
+    var tg = target[group] || (target[group] = {});
+    Object.keys(sg).forEach(function(k){
+      var has = tg[k]!==undefined && tg[k]!==null && tg[k]!=="";
+      var incoming = sg[k]!==undefined && sg[k]!==null && sg[k]!=="";
+      if(!has && incoming) tg[k] = sg[k];
+    });
+  });
   applyLatestPlayerField(target,"height","heightUpdatedAt",source.height,source.heightUpdatedAt);
-  applyLatestPlayerField(target,"firstPosition","positionUpdatedAt",source.firstPosition,source.positionUpdatedAt);
+  if(Object.prototype.hasOwnProperty.call(opts,"clubId") && opts.clubId!==target.clubId){ target.clubId = opts.clubId; target.clubUpdatedAt = todayISO(); }
+  applyObservedPosition(target,source.firstPosition,source.positionUpdatedAt);
+  applyObservedPosition(target,source.secondPosition,source.secondPositionUpdatedAt);
   recomputePlayerDerivedFields(targetId);
   DB.players = DB.players.filter(function(x){return x.id!==sourceId;});
 }
@@ -1493,7 +1539,8 @@ var ICONS = {
   task:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 12l2.5 2.5L16 9"/></svg>',
   backup:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4.2-4.2M12 15l4.2-4.2"/><path d="M4.5 16.5v2A2.5 2.5 0 007 21h10a2.5 2.5 0 002.5-2.5v-2"/></svg>',
   note:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M8 12h8M8 16h5"/></svg>',
-  clock:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>'
+  clock:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>',
+  merge:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.6"/><circle cx="6" cy="18" r="2.6"/><circle cx="18" cy="15" r="2.6"/><path d="M6 8.6V13a4 4 0 004 4h5.6M6 8.6v6.8"/></svg>'
 };
 function ic(name){ return ICONS[name]||""; }
 
@@ -2190,6 +2237,85 @@ function openDuplicateModal(candidates,onResolve){
     if(e.target.closest("[data-create-new-anyway]")){ closeModal(); onResolve({type:"new"}); return; }
   });
 }
+// A simple name-search combo for the "Merge with another player" modal — unlike wirePlayerCombo
+// (used on the pitch-slot form) this isn't scoped to any club and doesn't prefill match-specific
+// fields; it just hands the picked player to onSelect.
+function wireMergeSearchCombo(id,excludeId,onSelect){
+  var text = document.getElementById(id+"_text");
+  var list = document.getElementById(id+"_list");
+  if(!text||!list) return;
+  function renderList(q){
+    var nn = normName(q);
+    if(!nn){ list.hidden=true; return; }
+    var matches = DB.players.filter(function(p){return p.id!==excludeId && normName(p.name).indexOf(nn)>=0;}).slice(0,8);
+    var html = matches.map(playerComboPreview).join("");
+    if(!html){ html='<div class="combo-item" style="color:var(--text-faint);cursor:default">No match</div>'; }
+    list.innerHTML = html;
+    list.hidden = false;
+  }
+  text.addEventListener("input",debounce(function(){ renderList(text.value); },120));
+  text.addEventListener("focus",function(){ if(text.value) renderList(text.value); });
+  list.addEventListener("mousedown",function(e){
+    e.preventDefault();
+    var item = e.target.closest("[data-player-id]");
+    if(item){ list.hidden = true; onSelect(playerById(item.dataset.playerId)); }
+  });
+  document.addEventListener("click",function(e){
+    if(!e.target.closest('[data-combo-root="'+id+'"]')) list.hidden = true;
+  });
+}
+// "Merge with another player" — for reconciling a player who ended up with two separate profiles,
+// most commonly after a transfer (the new club's copy was created separately because the
+// name-suggestion combo is club-scoped). The profile you open this from is the one that survives;
+// search for and pick the other one, confirm, and its whole history folds in (see mergePlayerInto).
+function openMergePlayerModal(currentPlayerId){
+  var current = playerById(currentPlayerId);
+  if(!current) return;
+  var html = '<div class="modal-pad"><div class="modal-head"><div class="modal-title">Merge with Another Player</div><button class="icon-btn" data-close-modal>'+ic("close")+'</button></div>'+
+    '<p style="color:var(--text-muted);font-size:12.5px;margin:6px 0 12px;line-height:1.5">For when the same player ended up with two profiles — e.g. a transfer created a new one at their new club. Search for the other profile below; all of its matches and evaluations fold into <b>'+esc(current.name)+'</b> and the duplicate is removed.</p>'+
+    '<div class="combo" data-combo-root="mergePlayerSearch"><input class="input" id="mergePlayerSearch_text" placeholder="Search by player name…" autocomplete="off"><div class="combo-list" id="mergePlayerSearch_list" hidden></div></div>'+
+    '<div id="mergePlayerConfirmArea"></div>'+
+  '</div>';
+  openModal(html);
+  wireMergeSearchCombo("mergePlayerSearch",currentPlayerId,function(other){
+    var area = document.getElementById("mergePlayerConfirmArea");
+    var matchCount = DB.matchPlayers.filter(function(mp){return mp.playerId===other.id;}).length;
+    var evalCount = DB.evaluations.filter(function(e){return e.playerId===other.id;}).length;
+    var curClubName = clubName(current.clubId)||"No club";
+    var otherClubName = clubName(other.clubId)||"No club";
+    var clubChoiceHtml = "";
+    // Only ask when the two sides actually disagree on club — this is exactly the transfer case,
+    // and there's no reliable way to infer which one is truly "current" from timestamps alone
+    // (a profile's dates reflect when it was entered, not when that club spell started), so the
+    // person doing the merge decides. Pre-select whichever was set more recently as a starting
+    // point — easy to switch with one click either way.
+    if((current.clubId||"")!==(other.clubId||"")){
+      var defaultOther = (other.clubUpdatedAt||"") > (current.clubUpdatedAt||"");
+      clubChoiceHtml = '<div class="field" style="margin-top:12px"><label class="field-label">Which club should the merged profile show?</label>'+
+        '<div class="pillgroup" data-name="mergeClubChoice"><input type="hidden" name="mergeClubChoice" value="'+escAttr(defaultOther?(other.clubId||""):(current.clubId||""))+'">'+
+        '<button type="button" class="pill-opt'+(!defaultOther?" on":"")+'" data-value="'+escAttr(current.clubId||"")+'">'+esc(curClubName)+'</button>'+
+        '<button type="button" class="pill-opt'+(defaultOther?" on":"")+'" data-value="'+escAttr(other.clubId||"")+'">'+esc(otherClubName)+'</button>'+
+        '</div></div>';
+    }
+    area.innerHTML = '<div class="card card-pad" style="margin-top:12px;background:var(--bg-soft)"><div style="display:flex;align-items:center;gap:10px">'+avatarHtml(other,36)+
+      '<div><div style="font-weight:700;font-size:13.5px">'+esc(other.name)+'</div><div style="font-size:11.5px;color:var(--text-muted)">'+esc(otherClubName)+' · '+matchCount+' match(es) · '+evalCount+' evaluation(s)</div></div></div>'+
+      clubChoiceHtml+
+      '<div style="display:flex;gap:8px;margin-top:14px"><button class="btn btn-block" data-close-modal>Cancel</button><button class="btn btn-primary btn-block" data-confirm-merge="'+other.id+'">Merge into '+esc(current.name)+'</button></div></div>';
+  });
+  var overlay = document.getElementById("activeOverlay");
+  overlay.addEventListener("click",function(e){
+    var btn = e.target.closest("[data-confirm-merge]");
+    if(btn){
+      var opts = {};
+      var clubHidden = document.querySelector('.pillgroup[data-name="mergeClubChoice"] input[type=hidden]');
+      if(clubHidden) opts.clubId = clubHidden.value;
+      mergePlayerInto(btn.dataset.confirmMerge,currentPlayerId,opts);
+      closeModal();
+      persist({toast:"Players merged"});
+    }
+  });
+}
+ACTIONS["open-merge-player"] = function(el){ openMergePlayerModal(el.dataset.id); };
 function countryDatalist(){
   return '<datalist id="countryList">'+COUNTRY_LIST.map(function(c){return '<option value="'+esc(c)+'">';}).join("")+'</datalist>';
 }
@@ -2761,6 +2887,7 @@ FORM_HANDLERS["save-player"] = function(form){
     Object.assign(p,vals);
     if(vals.height) p.heightUpdatedAt = todayISO();
     if(vals.firstPosition) p.positionUpdatedAt = todayISO();
+    if(vals.clubId) p.clubUpdatedAt = todayISO();
     p.updatedAt = nowISO();
     persist({toast:"Player updated", redirectHash:"#/players/"+encodeURIComponent(p.id)});
     return;
@@ -2769,6 +2896,7 @@ FORM_HANDLERS["save-player"] = function(form){
     var np = Object.assign({id:uid("player")},vals,{createdAt:nowISO(),updatedAt:nowISO()});
     if(vals.height) np.heightUpdatedAt = todayISO();
     if(vals.firstPosition) np.positionUpdatedAt = todayISO();
+    if(vals.clubId) np.clubUpdatedAt = todayISO();
     DB.players.push(np);
     if(vals.currentPerformance || vals.currentPotential){
       DB.evaluations.push({
@@ -2790,12 +2918,14 @@ FORM_HANDLERS["save-player"] = function(form){
         var existing = playerById(res.playerId);
         if(!existing) return;
         // Link to the existing player: fill in whatever they were missing, never overwrite what's
-        // already on file — same fill-if-missing rule used everywhere else in the app.
+        // already on file — same fill-if-missing rule used everywhere else in the app (club
+        // included — there's no confirmation step here to ask which club should win, unlike the
+        // explicit "Merge with another player" flow, so it plays safe and never changes it).
         ["firstPosition","secondPosition","birthYear","dob","clubId","nationality","preferredFoot","agent","photo","characteristics","extraObservations","status"].forEach(function(k){
           if(vals[k] && !existing[k]) existing[k] = vals[k];
         });
         applyLatestPlayerField(existing,"height","heightUpdatedAt",vals.height,todayISO());
-        applyLatestPlayerField(existing,"firstPosition","positionUpdatedAt",vals.firstPosition,todayISO());
+        applyObservedPosition(existing,vals.firstPosition,todayISO());
         existing.updatedAt = nowISO();
         if(vals.currentPerformance || vals.currentPotential){
           DB.evaluations.push({
@@ -2884,7 +3014,7 @@ function pagePlayerDetail(id){
         '<select class="ring-select-overlay" data-action-select="set-player-potential" data-id="'+p.id+'" title="Click to set Potential"><option value="">–</option>'+GRADE_LETTERS.map(function(g){return '<option value="'+g+'"'+(g===normalizeGrade(p.currentPotential)?" selected":"")+'>'+g+'</option>';}).join("")+'</select>'+
       '</div><div class="profile-side-label">Potential</div></div>'+
     '</div>'+
-    '<div class="profile-side-actions profile-divider-left" style="margin-left:auto"><button class="btn btn-icon" data-action="edit-player" data-id="'+p.id+'" title="Edit profile">'+ic("edit")+'</button><button class="btn btn-icon btn-danger" data-action="delete-player" data-id="'+p.id+'" title="Delete">'+ic("trash")+'</button></div>'+
+    '<div class="profile-side-actions profile-divider-left" style="margin-left:auto"><button class="btn btn-icon" data-action="open-merge-player" data-id="'+p.id+'" title="Merge with another player (e.g. after a transfer)">'+ic("merge")+'</button><button class="btn btn-icon" data-action="edit-player" data-id="'+p.id+'" title="Edit profile">'+ic("edit")+'</button><button class="btn btn-icon btn-danger" data-action="delete-player" data-id="'+p.id+'" title="Delete">'+ic("trash")+'</button></div>'+
   '</div></div>';
 
   // WHAT DO I THINK OF HIM
@@ -4351,10 +4481,10 @@ INLINE_EDIT_HANDLERS["mp-interestNote"] = function(el,val){
   mp.interestNote = val; persist({});
 };
 
-function createPlayerMinimal(name,clubId,characteristics,firstPosition){
+function createPlayerMinimal(name,clubId,characteristics,firstPosition,clubDate){
   var p = {
     id:uid("player"), photo:"", name:name, firstPosition:firstPosition||"", secondPosition:"",
-    dob:"", birthYear:"", clubId:clubId||"", nationality:"", nationality2:"", preferredFoot:"",
+    dob:"", birthYear:"", clubId:clubId||"", clubUpdatedAt:clubId?(clubDate||todayISO()):"", nationality:"", nationality2:"", preferredFoot:"",
     height:"", characteristics:characteristics||"", extraObservations:"",
     currentPerformance:"", currentPotential:"", agent:"",
     // created from a match lineup — stays out of the Players Database until marked as a Player of Interest.
@@ -4523,15 +4653,17 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
     var pl = playerById(playerId);
     if(pl){
       // fill-if-missing for birth year/foot/nationality: don't clobber info the player profile
-      // already has. Height and Position are different — a young player's height and best-fit
-      // role can change match to match, so they always track whichever dated entry is most
-      // recent, never letting an older match's info overwrite a newer one (see applyLatestPlayerField).
+      // already has. Height is different — a young player's height can change match to match, so
+      // it always tracks whichever dated entry is most recent, never letting an older match's
+      // info overwrite a newer one (see applyLatestPlayerField). The player's main Position is
+      // their identity and, once established, isn't overwritten by a match at all — a match
+      // observing a different position updates the Second Position instead (applyObservedPosition).
       if(birthYear && !pl.birthYear) pl.birthYear = birthYear;
       if(preferredFoot && !pl.preferredFoot) pl.preferredFoot = preferredFoot;
       if(nationality && !pl.nationality) pl.nationality = nationality;
       var srcDate = (mForSlot && mForSlot.date) || todayISO();
       applyLatestPlayerField(pl,"height","heightUpdatedAt",height,srcDate);
-      applyLatestPlayerField(pl,"firstPosition","positionUpdatedAt",position,srcDate);
+      applyObservedPosition(pl,position,srcDate);
       pl.updatedAt = nowISO();
     }
     if(performance || potential || characteristics.trim()){ upsertMatchEvaluation(playerId,matchId,{performance:performance,potential:potential,characteristics:characteristics}); }
@@ -4594,9 +4726,10 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
     closeModal();
     persist({toast: isNewPlayer ? "New player created and added to lineup" : "Player added to lineup"});
   }
+  var clubDate = (mForSlot && mForSlot.date) || todayISO();
   if(playerId){ finalize(playerId,false); return; }
   if(!name){
-    var npBlank = createPlayerMinimal("???",clubId,"",position);
+    var npBlank = createPlayerMinimal("???",clubId,"",position,clubDate);
     finalize(npBlank.id,true);
     return;
   }
@@ -4604,10 +4737,10 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
   if(candidates.length){
     openDuplicateModal(candidates,function(res){
       if(res.type==="existing"){ finalize(res.playerId,false); }
-      else { var np = createPlayerMinimal(name,clubId,"",position); finalize(np.id,true); }
+      else { var np = createPlayerMinimal(name,clubId,"",position,clubDate); finalize(np.id,true); }
     });
   } else {
-    var np2 = createPlayerMinimal(name,clubId,"",position);
+    var np2 = createPlayerMinimal(name,clubId,"",position,clubDate);
     finalize(np2.id,true);
   }
 };
