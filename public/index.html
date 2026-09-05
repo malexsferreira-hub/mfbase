@@ -2292,7 +2292,10 @@ function openMergePlayerModal(currentPlayerId){
   if(!current) return;
   var curMatchCount = DB.matchPlayers.filter(function(mp){return mp.playerId===currentPlayerId;}).length;
   var curEvalCount = DB.evaluations.filter(function(e){return e.playerId===currentPlayerId;}).length;
-  var html = '<div class="modal-pad"><div class="modal-head"><div class="modal-title">Merge with Another Player</div><button class="icon-btn" data-close-modal>'+ic("close")+'</button></div>'+
+  // min-height reserves room below the search box for the suggestion dropdown (up to 280px tall,
+  // absolutely positioned) — without it, the modal's own box stays only as tall as the static
+  // content above, and its overflow-y:auto clips the bottom of the dropdown instead of showing it.
+  var html = '<div class="modal-pad" style="min-height:560px"><div class="modal-head"><div class="modal-title">Merge with Another Player</div><button class="icon-btn" data-close-modal>'+ic("close")+'</button></div>'+
     '<p style="color:var(--text-muted);font-size:12.5px;margin:6px 0 12px;line-height:1.5">For when the same player ended up with two profiles — e.g. a transfer created a new one at their new club. Search for the other profile below; all of its matches and evaluations fold into <b>'+esc(current.name)+'</b> and the duplicate is removed.</p>'+
     '<div class="combo" data-combo-root="mergePlayerSearch"><input class="input" id="mergePlayerSearch_text" placeholder="Search by player name…" autocomplete="off"><div class="combo-list" id="mergePlayerSearch_list" hidden></div></div>'+
     '<div id="mergePlayerConfirmArea"></div>'+
@@ -4556,6 +4559,10 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
   if(!showSubFields && forceStatus==="Substitute" && presetSub){
     html += '<input type="hidden" name="replacedMpId" value="'+escAttr(presetSub.replacedMpId||"")+'">';
     html += '<input type="hidden" name="subMinute" value="'+escAttr(presetSub.subMinute||"")+'">';
+  } else if(showSubFields){
+    // "Substituted For" is no longer shown/editable here — preserved via a hidden input so saving
+    // this form doesn't wipe it. Sub Minute itself has moved to right after Notes (see below).
+    html += '<input type="hidden" name="replacedMpId" value="'+escAttr(mp&&mp.replacedPlayerId||"")+'">';
   }
   // Number+Name: stacked on desktop (.namenum-row), side by side only on a narrow/iPhone screen.
   if(isEdit){
@@ -4587,19 +4594,6 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
   }
   html += '</div>';
   html += '<div class="field"><label class="field-label">Position</label><select class="select" name="position">'+positionOptions(mp?mp.position:slot.pos)+'</select></div>';
-  if(showSubFields){
-    var onPitch = onPitchPlayers(matchId,clubId,mp?mp.id:null);
-    html += '<div class="form-grid">'+
-      '<div class="field"><label class="field-label">Substituted For <span class="opt">optional — might not be the same slot</span></label><select class="select" name="replacedMpId"><option value="">—</option>'+
-        onPitch.map(function(x){
-          var xp = playerById(x.playerId);
-          var label = (x.shirtNumber?"#"+x.shirtNumber+" ":"")+shortPlayerName(xp?xp.name:"")+(x.position?" ("+x.position+")":"");
-          return '<option value="'+x.id+'"'+(mp&&mp.replacedPlayerId===x.id?" selected":"")+'>'+esc(label)+'</option>';
-        }).join("")+
-      '</select></div>'+
-      '<div class="field"><label class="field-label">Sub Minute <span class="opt">optional</span></label><input class="input" type="number" min="0" max="130" name="subMinute" value="'+escAttr(mp?mp.subMinute||"":"")+'" placeholder="e.g. 63"></div>'+
-    '</div>';
-  }
   html += '<div class="form-grid">'+
     '<div class="field"><label class="field-label">Preferred Foot <span class="opt">optional</span></label><div class="pillgroup" data-name="foot"><input type="hidden" name="preferredFoot" value="'+escAttr(p?p.preferredFoot||"":"")+'">'+FEET.map(function(ft){return '<button type="button" class="pill-opt'+(p&&ft===p.preferredFoot?" on":"")+'" data-value="'+ft+'">'+ft+'</button>';}).join("")+'</div></div>'+
     '<div class="field"><label class="field-label">Height <span class="opt">optional — estimate ok, e.g. "175+-"</span></label><input class="input" name="height" value="'+escAttr(p?p.height||"":"")+'" placeholder="e.g. 178 or 175+-"></div>'+
@@ -4612,6 +4606,19 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
   html += '<div class="field"><label class="field-label">Birth Year <span class="opt">optional</span></label><input class="input" name="birthYear" type="number" min="1970" max="'+(new Date().getFullYear())+'" placeholder="e.g. 2005" value="'+escAttr(p?p.birthYear||"":"")+'"></div>';
   html += '<div class="field"><label class="field-label">Nationality <span class="opt">optional</span></label>'+renderCountryCombo("pitchSlotNat","nationality",p?p.nationality||"":"","Search nationality…")+'</div>';
   html += '<div class="field"><label class="field-label">Notes <span class="opt">optional</span></label><textarea class="textarea" name="notes" placeholder="Any notes about this player…">'+esc(mp?mp.interestNote||"":"")+'</textarea></div>';
+  if(showSubFields && mp && mp.subMinute){
+    // The minute THIS player (a substitute) came on — only shown once it's actually set (collected
+    // up front by the "Add Substitute" mini-modal); editable here too, in case it needs correcting.
+    html += '<div class="field"><label class="field-label">Sub Minute <span class="opt">optional</span></label><input class="input" type="number" min="0" max="130" name="subMinute" value="'+escAttr(mp.subMinute)+'" placeholder="e.g. 63"></div>';
+  }
+  if(isEdit && mp){
+    var subOfThis = DB.matchPlayers.find(function(x){return x.replacedPlayerId===mp.id;});
+    if(subOfThis && subOfThis.subMinute){
+      // Read-only — the minute this player was substituted OFF, derived from whichever substitute
+      // replaced them. Not editable here; correct it on the substitute's own record instead.
+      html += '<div class="field"><label class="field-label">Substituted at Minute</label><div style="font-size:13.5px;font-weight:600;padding:4px 0 2px">'+esc(subOfThis.subMinute)+"'</div></div>";
+    }
+  }
   html += '<label class="field-checkbox"><input type="checkbox" name="playerOfInterest" value="1"'+(mp&&mp.playerOfInterest?" checked":"")+'>'+ic("star")+' <span>Player of Interest</span></label>';
   if(isEdit){
     html += '<button type="button" class="btn btn-danger btn-block" data-action="remove-lineup-entry" data-id="'+mp.id+'" data-close-modal style="margin-top:8px">'+ic("trash")+' Remove from Lineup</button>';
