@@ -192,6 +192,7 @@ select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.o
 .grid{display:grid;gap:14px;}
 .grid > *{min-width:0;}
 .rating-grid{grid-template-columns:1fr 1fr;}
+.sw-grid{grid-template-columns:1fr 1fr;}
 .eval-param-grid{grid-template-columns:1fr 1fr 1fr;}
 .eval-param-card{padding:12px 14px;}
 .eval-param-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 0;}
@@ -275,7 +276,7 @@ input.eval-param-input{width:44px;min-height:28px;padding:2px 4px;text-align:cen
 .rating-bar-fill{height:100%;border-radius:99px;}
 .rating-row{display:flex;align-items:center;gap:8px;}
 .rating-num-sm{font-family:var(--font-mono);font-weight:600;font-size:12.5px;width:30px;text-align:right;flex:0 0 auto;}
-.grade-chip{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;border:1.5px solid currentColor;font-family:var(--font-mono);font-weight:700;font-size:12.5px;flex:0 0 auto;}
+.grade-chip{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 3px;border-radius:6px;border:1.5px solid currentColor;font-family:var(--font-mono);font-weight:700;font-size:12.5px;flex:0 0 auto;}
 
 /* ---------- tables ---------- */
 .table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);}
@@ -537,6 +538,7 @@ details.acc summary .count-chip{background:var(--surface-3);color:var(--text-mut
   .dash-agenda-competition{display:none!important;}
   .cal-fixture-crest{display:none!important;}
   .rating-grid{grid-template-columns:1fr;}
+  .sw-grid{grid-template-columns:1fr;}
   .kv-grid{grid-template-columns:repeat(2,1fr);}
   .profile-head{flex-direction:column;align-items:center;text-align:center;}
   .profile-meta{justify-content:center;}
@@ -829,8 +831,8 @@ function clubName(id){ var c=clubById(id); return c?c.name:"—"; }
 function currentScout(){ return scoutById(DB.currentScoutId) || DB.scouts[0]; }
 
 // Performance: integer 1–5. Potential: letter grade A (best) – E (weakest).
-var GRADE_LETTERS = ["A","B","C","D","E"];
-var GRADE_RANK = {A:5,B:4,C:3,D:2,E:1};
+var GRADE_LETTERS = ["A","B+","B","C+","C","D","E"];
+var GRADE_RANK = {A:7,"B+":6,B:5,"C+":4,C:3,D:2,E:1};
 function normalizeGrade(v){
   var g = String(v||"").trim().toUpperCase();
   return GRADE_RANK[g] ? g : "";
@@ -839,8 +841,8 @@ function gradeColor(v){
   var g = normalizeGrade(v);
   if(!g) return "var(--text-faint)";
   if(g==="A") return "var(--rate-5)";
-  if(g==="B") return "var(--rate-blue)";
-  if(g==="C") return "var(--rate-3)";
+  if(g==="B+"||g==="B") return "var(--rate-blue)";
+  if(g==="C+"||g==="C") return "var(--rate-3)";
   if(g==="D") return "var(--rate-2)";
   return "var(--rate-1)";
 }
@@ -870,7 +872,7 @@ function gradeRing(value,size){
   size=size||46;
   var r=(size-8)/2, c=2*Math.PI*r;
   var g = normalizeGrade(value);
-  var pct = g ? (GRADE_RANK[g]-1)/4 : 0;
+  var pct = g ? (GRADE_RANK[g]-1)/6 : 0;
   var color = gradeColor(value);
   var dash = c*pct;
   return '<div class="rating-ring" style="width:'+size+'px;height:'+size+'px;">'+
@@ -2777,6 +2779,11 @@ function pagePlayerDetail(id){
     evalParamBlock("techTactical",p)+evalParamBlock("physical",p)+evalParamBlock("psychological",p)+
   '</div>';
 
+  // Strengths / Weaknesses — side by side, profile page only (not on the per-match eval form).
+  html += '<div class="grid sw-grid">'+
+    swBlock("strengths","Strengths",p)+swBlock("weaknesses","Weaknesses",p)+
+  '</div>';
+
   if(evals.length>=2){
     html += '<div class="card card-pad"><div class="section-title" style="margin-bottom:10px">Rating Evolution</div><div class="spark-wrap">'+
       sparkBlock("Performance",evals)+sparkBlock("Potential",evals)+
@@ -3008,6 +3015,12 @@ function evalParamBlock(groupKey,p){
   html += '</div>';
   return html;
 }
+function swBlock(field,label,p){
+  var val = p[field] || "";
+  return '<div class="card card-pad"><div class="section-head"><div class="section-title">'+esc(label)+'</div><span class="autosaved-tick" id="tick-'+field+'">'+ic("check")+' Saved</span></div>'+
+    '<textarea class="textarea" data-autosave="player-'+field+'" data-id="'+p.id+'" data-initial="'+escAttr(val)+'" placeholder="'+(field==="strengths"?"What this player does well…":"Areas to develop…")+'">'+esc(val)+'</textarea>'+
+  '</div>';
+}
 AUTOSAVE_HANDLERS["player-eval-param"] = function(el){
   var p = playerById(el.dataset.id); if(!p) return;
   var group = el.dataset.group, key = el.dataset.key;
@@ -3033,6 +3046,18 @@ AUTOSAVE_HANDLERS["player-extra"] = function(el){
   var p = playerById(el.dataset.id); if(!p) return;
   p.extraObservations = el.value; p.updatedAt = nowISO();
   flashTick("tick-extra");
+  persist({});
+};
+AUTOSAVE_HANDLERS["player-strengths"] = function(el){
+  var p = playerById(el.dataset.id); if(!p) return;
+  p.strengths = el.value; p.updatedAt = nowISO();
+  flashTick("tick-strengths");
+  persist({});
+};
+AUTOSAVE_HANDLERS["player-weaknesses"] = function(el){
+  var p = playerById(el.dataset.id); if(!p) return;
+  p.weaknesses = el.value; p.updatedAt = nowISO();
+  flashTick("tick-weaknesses");
   persist({});
 };
 function flashTick(id){
@@ -4286,12 +4311,12 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
     '<div class="field"><label class="field-label">Height <span class="opt">optional — estimate ok, e.g. "175+-"</span></label><input class="input" name="height" value="'+escAttr(p?p.height||"":"")+'" placeholder="e.g. 178 or 175+-"></div>'+
   '</div>';
   html += '<div class="field"><label class="field-label">Characteristics <span class="opt">optional — what stood out in this match</span></label><textarea class="textarea" name="characteristics" placeholder="What stands out about their profile…">'+esc(ev?ev.characteristics||(mp?mp.matchCharacteristics||"":""):"")+'</textarea></div>';
-  html += '<div class="field"><label class="field-label">Birth Year <span class="opt">optional</span></label><input class="input" name="birthYear" type="number" min="1970" max="'+(new Date().getFullYear())+'" placeholder="e.g. 2005" value="'+escAttr(p?p.birthYear||"":"")+'"></div>';
-  html += '<div class="field"><label class="field-label">Nationality <span class="opt">optional</span></label>'+renderCountryCombo("pitchSlotNat","nationality",p?p.nationality||"":"","Search nationality…")+'</div>';
   html += '<div class="form-grid">'+
     '<div class="field"><label class="field-label">Performance <span class="opt">1–5, optional</span></label><div class="pillgroup" data-name="performance"><input type="hidden" name="performance" value="'+escAttr(ev?ev.performance||"":"")+'">'+[1,2,3,4,5].map(function(n){return '<button type="button" class="pill-opt'+(ev&&String(n)===String(ev.performance)?" on":"")+'" data-value="'+n+'">'+n+'</button>';}).join("")+'</div></div>'+
     '<div class="field"><label class="field-label">Potential <span class="opt">A–E, optional</span></label><div class="pillgroup" data-name="potential"><input type="hidden" name="potential" value="'+escAttr(ev?ev.potential||"":"")+'">'+GRADE_LETTERS.map(function(g){return '<button type="button" class="pill-opt'+(ev&&g===normalizeGrade(ev.potential)?" on":"")+'" data-value="'+g+'">'+g+'</button>';}).join("")+'</div></div>'+
   '</div>';
+  html += '<div class="field"><label class="field-label">Birth Year <span class="opt">optional</span></label><input class="input" name="birthYear" type="number" min="1970" max="'+(new Date().getFullYear())+'" placeholder="e.g. 2005" value="'+escAttr(p?p.birthYear||"":"")+'"></div>';
+  html += '<div class="field"><label class="field-label">Nationality <span class="opt">optional</span></label>'+renderCountryCombo("pitchSlotNat","nationality",p?p.nationality||"":"","Search nationality…")+'</div>';
   html += '<div class="field"><label class="field-label">Notes <span class="opt">optional</span></label><textarea class="textarea" name="notes" placeholder="Any notes about this player…">'+esc(mp?mp.interestNote||"":"")+'</textarea></div>';
   html += '<label class="field-checkbox"><input type="checkbox" name="playerOfInterest" value="1"'+(mp&&mp.playerOfInterest?" checked":"")+'>'+ic("star")+' <span>Player of Interest</span></label>';
   if(isEdit){
