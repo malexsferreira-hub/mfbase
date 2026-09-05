@@ -343,6 +343,7 @@ td.num,th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric
 .roster-name{font-weight:700;font-size:13.5px;}
 .roster-chars{font-size:12px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .roster-actions{display:flex;align-items:center;gap:2px;flex:0 0 auto;}
+.cal-fixture-crest{display:inline-flex;align-items:center;vertical-align:middle;margin-right:4px;}
 
 /* ---------- 4-3-3 pitch formation ---------- */
 .pitch-wrap{margin:10px 0 14px;}
@@ -534,6 +535,7 @@ details.acc summary .count-chip{background:var(--surface-3);color:var(--text-mut
   .dash-match-competition{display:none!important;}
   .dash-agenda-agegroup{display:inline-flex!important;}
   .dash-agenda-competition{display:none!important;}
+  .cal-fixture-crest{display:none!important;}
   .rating-grid{grid-template-columns:1fr;}
   .kv-grid{grid-template-columns:repeat(2,1fr);}
   .profile-head{flex-direction:column;align-items:center;text-align:center;}
@@ -3405,7 +3407,7 @@ function pageCalendar(){
       });
       compOrder.forEach(function(comp){
         html += '<div class="roster-group-label">'+esc(comp||"Other")+'</div>';
-        byComp[comp].forEach(function(fx){ html += fixtureRow(fx,{watchIndex:watchIndex}); });
+        byComp[comp].forEach(function(fx){ html += fixtureRow(fx,{watchIndex:watchIndex,showCrests:true}); });
       });
       html += '</div></details>';
     });
@@ -3442,7 +3444,10 @@ function fixtureRow(fx,opts){
   var fxAgeGroup = opts.watchIndex ? deriveAgeGroupFromCompetition(fx.competition) : null;
   function teamLabel(name){
     var onWatch = opts.watchIndex && opts.watchIndex[normName(name)+"|"+fxAgeGroup];
-    return esc(name)+(onWatch?' '+starIcon():'');
+    // Crests are opt-in (Calendar only, desktop only via CSS) so Teams - Watch's fixtures panel
+    // is unaffected.
+    var crest = opts.showCrests ? '<span class="cal-fixture-crest">'+crestHtml({name:name},16)+'</span>' : '';
+    return crest+esc(name)+(onWatch?' '+starIcon():'');
   }
   return '<div class="roster-row" style="align-items:flex-start">'+
     timeCell+
