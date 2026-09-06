@@ -328,8 +328,9 @@ td.num,th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric
   "potential potential performance performance matchlevel matchlevel";
 }
 /* Number+Name on the pitch-slot modal: side by side on desktop, stacked one per line on mobile
-   (see the max-width:860px override below). */
-.namenum-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+   (see the max-width:860px override below). Number only ever needs to fit a couple of digits, so
+   it gets a narrow fixed share and Name gets the rest. */
+.namenum-row{display:grid;grid-template-columns:0.6fr 1.6fr;gap:14px;}
 /* Maturation+Birth Year on the pitch-slot modal: side by side on both desktop and mobile — unlike
    .form-grid, this one never collapses to a single column. */
 .strength-maturation-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
@@ -501,8 +502,10 @@ details.acc summary .count-chip{background:var(--surface-3);color:var(--text-mut
    is itself centered (as a unit) under the position heading above it, via the parent's centering. */
 .profile-attr-lines{display:inline-flex;flex-direction:column;align-items:flex-start;gap:8px;margin-top:10px;}
 /* Nationality+Club, Performance+Potential, and Assessment+Agent each sit side by side rather than
-   stacked (the .profile-side-stack default) — every one of these ends up with exactly two items. */
-.profile-clubnat-stack,.profile-rating-stack,.profile-assess-stack{flex-direction:row;}
+   stacked (the .profile-side-stack default) — every one of these ends up with exactly two items.
+   Doubled-up class selector so this reliably beats .profile-side-stack's own column rule below,
+   regardless of source order (equal single-class specificity was letting that one win before). */
+.profile-side-stack.profile-clubnat-stack,.profile-side-stack.profile-rating-stack,.profile-side-stack.profile-assess-stack{flex-direction:row;}
 .profile-club{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-muted);font-weight:600;max-width:260px;overflow-wrap:break-word;}
 .profile-club b{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-faint);font-weight:700;}
 .profile-club-country{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-faint);font-weight:700;margin-top:3px;text-align:center;}
@@ -535,7 +538,17 @@ details.acc summary .count-chip{background:var(--surface-3);color:var(--text-mut
 .flag-emoji-lg{font-size:32px;line-height:1;}
 .profile-ring-editable{cursor:pointer;}
 .ring-select-overlay{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border-radius:50%;}
-.profile-divider-left{border-left:1px solid var(--border);padding-left:16px;}
+/* Groups the 4 divider-bearing blocks (club/nat, performance/potential, assessment/agent, action
+   icons) into their own non-wrapping row, so they always share one flex line together — letting
+   them wrap away from the photo/info column as a whole is fine, but if they wrapped independently
+   of each other (possible when they were direct children of .profile-head, whose own flex-wrap is
+   needed for narrower desktop widths), align-self:stretch below would only equalize whichever
+   subset landed on the same line, not all 4. */
+.profile-side-groups{display:flex;gap:18px;flex-wrap:nowrap;}
+/* Stretched to the row's full height (rather than each block's own natural height) so all four
+   divider lines along the header row come out the same length, regardless of how much content
+   (2nd nat., club country, etc.) any one block happens to have. */
+.profile-divider-left{border-left:1px solid var(--border);padding-left:16px;align-self:stretch;}
 .kv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;}
 .kv-item .kv-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);font-weight:700;margin-bottom:3px;}
 .kv-item .kv-val{font-size:13.5px;font-weight:600;}
@@ -591,8 +604,9 @@ details.acc summary .count-chip{background:var(--surface-3);color:var(--text-mut
   .kv-grid{grid-template-columns:repeat(2,1fr);}
   .profile-head{flex-direction:column;align-items:center;text-align:center;}
   .profile-info{margin-left:0;}
+  .profile-side-groups{flex-direction:column;width:100%;}
   .profile-side-actions{flex-direction:row;}
-  .profile-divider-left{border-left:none;border-top:1px solid var(--border);padding-left:0;padding-top:14px;}
+  .profile-divider-left{border-left:none;border-top:1px solid var(--border);padding-left:0;padding-top:14px;align-self:auto;}
   .tabbar{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:50;padding:6px 4px calc(6px + env(safe-area-inset-bottom));}
   .tab-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;color:var(--text-faint);font-size:10px;font-weight:700;border-radius:8px;}
   .tab-item svg{width:20px;height:20px;}
@@ -736,11 +750,10 @@ var SPEED_MOBILE_ABBR = {"Low":"B","Medium/Low":"M/B","Medium":"M","Medium/High"
 // changes (see deriveAutoPhysicalMetrics below) — High and Very High both map to the same top score.
 var STRENGTH_TO_NUM = {"Fragile":1,"Mediocre":2,"Balanced":3,"Strong":4,"Very Strong":5};
 // "Strength" was renamed "Athletic" — the select stores a plain 1-5 number (matching the
-// Agility/Acceleration/Pace pattern) instead of an English word. Options are shown in English
-// (ATHLETIC_OPTION_LABEL); only the auto-sentence phrase (ATHLETIC_SENTENCE_PT) is Portuguese.
-// athleticLevelToNum() accepts either that number or an old STRENGTH_LEVELS word (still on file
-// for players saved before this change) so existing data keeps working unchanged.
-var ATHLETIC_OPTION_LABEL = {1:"Underdeveloped",2:"Slight",3:"Fair",4:"Developed",5:"Very Developed"};
+// Agility/Acceleration/Pace/Strength pattern), shown as a plain number too (not an English word
+// label) so it's visually consistent with those. Only the auto-sentence phrase (ATHLETIC_SENTENCE_PT)
+// is Portuguese. athleticLevelToNum() accepts either that number or an old STRENGTH_LEVELS word
+// (still on file for players saved before this change) so existing data keeps working unchanged.
 // Auto-sentence phrasing — every level is a full "perfil atlético …" phrase now.
 var ATHLETIC_SENTENCE_PT = {1:"perfil atlético muito pouco desenvolvido",2:"perfil atlético pouco desenvolvido",3:"perfil atlético razoável",4:"perfil atlético desenvolvido",5:"perfil atlético muito desenvolvido"};
 function athleticLevelToNum(v){
@@ -755,7 +768,7 @@ function athleticSentenceWord(v){
 }
 function athleticOptionsHtml(current){
   var sel = athleticLevelToNum(current);
-  return '<option value="">—</option>'+[1,2,3,4,5].map(function(n){return '<option value="'+n+'"'+(sel===n?" selected":"")+'>'+ATHLETIC_OPTION_LABEL[n]+'</option>';}).join("");
+  return '<option value="">—</option>'+[1,2,3,4,5].map(function(n){return '<option value="'+n+'"'+(sel===n?" selected":"")+'>'+n+'</option>';}).join("");
 }
 // NEW, separate "Strength" parameter (força física) — distinct from Athletic above. Plain 1-5
 // number, same UI pattern as Agility/Acceleration/Pace (speedNumOptionsHtml/speedLevelToNum are
@@ -867,14 +880,16 @@ function manualCharacteristicsOf(p){
   if(p.manualCharacteristics!==undefined) return p.manualCharacteristics;
   return spliceAutoText(p.characteristics||"",p.autoCharacteristics||"","");
 }
-// Keeps the Physical block's Body Composition / Speed-Agility / Pace numbers (0-5, manually visible
-// and editable on the profile) in sync with the general Athletic / Agility / Pace attributes,
-// overwriting them every time one of those attributes changes — first evaluation or any later one.
-// Body Composition (not Strength-Power, which is now a manual-only field) is what Athletic drives.
+// Keeps the Physical block's Body Composition / Strength-Power / Speed-Agility / Pace numbers (0-5,
+// manually visible and editable on the profile) in sync with the general Athletic / Strength /
+// Agility / Pace attributes, overwriting them every time one of those attributes changes — first
+// evaluation or any later one. Body Composition is driven by Athletic; Strength-Power is driven by
+// the separate Strength (força física) parameter.
 function deriveAutoPhysicalMetrics(p){
   if(!p) return;
   if(!p.physical) p.physical = {};
   var ath = athleticLevelToNum(p.strength); if(ath!==null) p.physical.bodyComposition = ath;
+  var str = speedLevelToNum(p.strengthLevel); if(str!==null) p.physical.strengthPower = str;
   var ag = speedLevelToNum(p.agilityLevel); if(ag!==null) p.physical.speedAgility = ag;
   var pc = speedLevelToNum(p.speedLevel); if(pc!==null) p.physical.pace = pc;
 }
@@ -2355,6 +2370,7 @@ function startInlineEdit(el){
   // pitch-slot forms, right on the profile — so a scout can double-check the spelling matches the
   // rest of the app instead of retyping into a plain text box.
   if(field==="nationality" || field==="nationality2"){ startInlineCountryEdit(el,current); return; }
+  if(field==="height"){ startInlineHeightEdit(el,current); return; }
   var input = document.createElement("input");
   input.className = "input";
   input.style.minHeight="30px"; input.style.padding="4px 7px"; input.style.fontSize="inherit"; input.style.fontWeight="inherit"; input.style.width = Math.max(60, el.offsetWidth+30)+"px";
@@ -2395,6 +2411,69 @@ function startInlineCountryEdit(el,current){
   var input = document.getElementById(comboId+"_text");
   input.style.minHeight="30px"; input.style.padding="4px 7px"; input.style.fontSize="inherit"; input.style.fontWeight="inherit";
   wireCountryCombo(comboId);
+  input.focus(); input.select();
+  function commit(){
+    var val = input.value;
+    wrap.remove();
+    el.style.display="";
+    el.classList.remove("editing");
+    if(val !== (current==="—"?"":current)){
+      INLINE_EDIT_HANDLERS[editKey] && INLINE_EDIT_HANDLERS[editKey](el,val);
+    }
+  }
+  input.addEventListener("blur",commit);
+  input.addEventListener("keydown",function(e){
+    if(e.key==="Enter"){ e.preventDefault(); input.blur(); }
+    if(e.key==="Escape"){ input.removeEventListener("blur",commit); wrap.remove(); el.style.display=""; el.classList.remove("editing"); }
+  });
+}
+// Height's own combo (fixed list, no free-create) — same look/interaction as the country picker,
+// but suggesting the 6 standard categories. Typing a plain number is just as valid (an exact cm
+// figure); the handler below (INLINE_EDIT_HANDLERS["player-height"]) decides which one a given
+// value means.
+function renderHeightCombo(id,selectedValue,placeholder){
+  return '<div class="combo" data-combo-root="'+id+'">'+
+    '<input class="input" id="'+id+'_text" autocomplete="off" placeholder="'+esc(placeholder||"e.g. 178, or a category")+'" value="'+escAttr(selectedValue||"")+'">'+
+    '<div class="combo-list" id="'+id+'_list" hidden></div>'+
+  '</div>';
+}
+function wireHeightCombo(id){
+  var text = document.getElementById(id+"_text");
+  var list = document.getElementById(id+"_list");
+  if(!text||!list) return;
+  function renderList(q){
+    var nn = (q||"").trim().toLowerCase();
+    var matches = !nn ? HEIGHT_LEVELS.slice() : HEIGHT_LEVELS.filter(function(h){return h.toLowerCase().indexOf(nn)>=0;});
+    var html = matches.map(function(h){return '<div class="combo-item" data-height="'+escAttr(h)+'"><div>'+esc(h)+'</div></div>';}).join("");
+    if(!html) html = '<div class="combo-item" style="color:var(--text-faint);cursor:default">No matching category — an exact cm figure still works</div>';
+    list.innerHTML = html;
+    list.hidden = false;
+  }
+  text.addEventListener("focus",function(){ renderList(text.value); });
+  text.addEventListener("input",function(){ renderList(text.value); });
+  list.addEventListener("mousedown",function(e){
+    e.preventDefault();
+    var item = e.target.closest("[data-height]");
+    if(item){ text.value = item.dataset.height; list.hidden = true; }
+  });
+  document.addEventListener("click",function(e){
+    if(!e.target.closest('[data-combo-root="'+id+'"]')) list.hidden = true;
+  });
+}
+function startInlineHeightEdit(el,current){
+  var editKey = el.dataset.editKey;
+  var comboId = "inlineHeightCombo_"+el.dataset.id;
+  el.classList.add("editing");
+  el.style.display="none";
+  var wrap = document.createElement("div");
+  wrap.style.display="inline-block";
+  wrap.style.minWidth = Math.max(150, el.offsetWidth+40)+"px";
+  wrap.style.verticalAlign="middle";
+  wrap.innerHTML = renderHeightCombo(comboId,current==="—"?"":current,"e.g. 178, or a category");
+  el.parentNode.insertBefore(wrap, el);
+  var input = document.getElementById(comboId+"_text");
+  input.style.minHeight="30px"; input.style.padding="4px 7px"; input.style.fontSize="inherit"; input.style.fontWeight="inherit";
+  wireHeightCombo(comboId);
   input.focus(); input.select();
   function commit(){
     var val = input.value;
@@ -2617,8 +2696,8 @@ function openClubCreateModal(name,onCreate){
   var html = '<div class="modal-pad"><div class="modal-head"><div class="modal-title">New Club</div><button class="icon-btn" data-close-modal>'+ic("close")+'</button></div>'+
     '<form data-form="__inline_club_create" class="stack" style="margin-top:10px">'+
     '<div class="field"><label class="field-label">Club Name</label><input class="input" name="name" value="'+escAttr(name||"")+'" required></div>'+
-    '<div class="field"><label class="field-label">Country <span class="opt">optional</span></label><input class="input" name="country" placeholder="e.g. Saudi Arabia" list="countryList"></div>'+
-    '<div class="field"><label class="field-label">Logo URL <span class="opt">optional</span></label><input class="input" name="logo" placeholder="https://…"></div>'+
+    '<div class="field"><label class="field-label">Country</label><input class="input" name="country" placeholder="e.g. Saudi Arabia" list="countryList"></div>'+
+    '<div class="field"><label class="field-label">Logo URL</label><input class="input" name="logo" placeholder="https://…"></div>'+
     '<button class="btn btn-primary btn-block" type="submit">Create Club</button>'+
     '</form></div>';
   openModal(html);
@@ -3421,68 +3500,71 @@ function pagePlayerForm(existingId){
   var p = existingId ? playerById(existingId) : null;
   var isEdit = !!p;
   p = p || {name:"",firstPosition:"",secondPosition:"",positionProfile:"",secondPositionProfile:"",dob:"",birthYear:"",clubId:"",competition:"",nationality:"",nationality2:"",preferredFoot:"",height:"",estrutura:"",strength:"",strengthLevel:"",maturation:"",agilityLevel:"",accelerationLevel:"",speedLevel:"",characteristics:"",extraObservations:"",currentPerformance:"",currentPotential:"",currentMatchLevel:"",agent:"",photo:"",status:""};
-  // Pure manual text only — the auto-generated Portuguese sentence never shows up here, on either
-  // Add or Edit Player; it's composed alongside this manual text only on the player's own profile
-  // page (General Characteristics). Defaults to "Jogador " when there's no manual text yet, since
-  // that's how every entry starts.
+  // On Edit Player this stays pure manual text, same as everywhere else — the auto-generated
+  // Portuguese sentence never shows up here, only alongside this manual text on the player's own
+  // profile page (General Characteristics). Defaults to "Jogador " when empty, since that's how
+  // every entry starts. On Add Player (a brand-new profile with nothing typed yet) it instead
+  // live-updates with the auto sentence as attributes are picked (wired below), so there's no
+  // "Jogador " filler to drop first.
   var manualChars = manualCharacteristicsOf(p);
   var html = '<div class="stack" style="max-width:640px">';
   html += '<div class="section-head"><div><div class="eyebrow">'+(isEdit?"Edit Player":"New Profile")+'</div><h1 style="font-size:22px">'+(isEdit?"Edit "+esc(p.name):"Add Player")+'</h1></div></div>';
   html += '<form class="card card-pad stack" data-form="save-player" data-id="'+(isEdit?p.id:"")+'">';
-  html += '<div class="field"><label class="field-label">Name <span class="opt">optional</span></label><input class="input" name="name" value="'+escAttr(p.name)+'" placeholder="Full name"></div>';
+  html += '<div class="field"><label class="field-label">Name</label><input class="input" name="name" value="'+escAttr(p.name)+'" placeholder="Full name"></div>';
   // Position 1 + its Profile share a line, Position 2 + its Profile share the line below — kept in
   // sync with the pitch-slot "Edit Player" modal, which lays these out the same way.
   html += '<div class="form-grid">'+
     '<div class="field"><label class="field-label">Position 1</label><select class="select" name="firstPosition" id="pfPos1">'+positionOptionsAbbrev(p.firstPosition)+'</select></div>'+
-    '<div class="field"><label class="field-label"><span class="lbl-desktop">Position 1 - Profile</span><span class="lbl-mobile">POS 1 - PROF</span> <span class="opt">opt.</span></label><select class="select" name="positionProfile" id="pfPosProfile">'+positionProfileOptionsFor(p.firstPosition,p.positionProfile||"")+'</select></div>'+
+    '<div class="field"><label class="field-label">Position 1 - Profile</label><select class="select" name="positionProfile" id="pfPosProfile">'+positionProfileOptionsFor(p.firstPosition,p.positionProfile||"")+'</select></div>'+
   '</div>';
   html += '<div class="form-grid">'+
-    '<div class="field"><label class="field-label">Position 2 <span class="opt">optional</span></label><select class="select" name="secondPosition" id="pfPos2">'+positionOptionsAbbrev(p.secondPosition)+'</select></div>'+
-    '<div class="field"><label class="field-label"><span class="lbl-desktop">Position 2 - Profile</span><span class="lbl-mobile">POS 2 - PROF</span> <span class="opt">opt.</span></label><select class="select" name="secondPositionProfile" id="pfPos2Profile">'+positionProfileOptionsFor(p.secondPosition,p.secondPositionProfile||"")+'</select></div>'+
+    '<div class="field"><label class="field-label">Position 2</label><select class="select" name="secondPosition" id="pfPos2">'+positionOptionsAbbrev(p.secondPosition)+'</select></div>'+
+    '<div class="field"><label class="field-label">Position 2 - Profile</label><select class="select" name="secondPositionProfile" id="pfPos2Profile">'+positionProfileOptionsFor(p.secondPosition,p.secondPositionProfile||"")+'</select></div>'+
   '</div>';
   // Club/Competition sit right after Position (identity-ish fields), ahead of the evaluation
   // parameters below — keeps Match Level -> Birth Year -> Nationality adjacent further down.
   html += '<div class="form-grid">'+
-    '<div class="field"><label class="field-label">Club <span class="opt">optional</span></label>'+renderClubCombo("pf_club_combo","clubId",p.clubId,"Search or create club…")+'</div>'+
-    '<div class="field"><label class="field-label">Competition <span class="opt">optional</span></label>'+renderCompetitionCombo("pf_comp_combo","competition",p.competition,"Search or add competition…")+'</div>'+
+    '<div class="field"><label class="field-label">Club</label>'+renderClubCombo("pf_club_combo","clubId",p.clubId,"Search or create club…")+'</div>'+
+    '<div class="field"><label class="field-label">Competition</label>'+renderCompetitionCombo("pf_comp_combo","competition",p.competition,"Search or add competition…")+'</div>'+
   '</div>';
-  html += '<div class="field"><label class="field-label">Characteristics</label><textarea class="textarea" name="characteristics" placeholder="General playing style, strengths, weaknesses…">'+esc(manualChars||"Jogador ")+'</textarea></div>';
+  html += '<div class="field"><label class="field-label">Characteristics</label><textarea class="textarea" id="pfCharacteristics" name="characteristics" placeholder="General playing style, strengths, weaknesses…">'+esc(isEdit ? (manualChars||"Jogador ") : manualChars)+'</textarea></div>';
   html += '<div class="form-grid" style="grid-template-columns:1fr 1fr">'+
-    '<div class="field"><label class="field-label">Foot <span class="opt">optional</span></label><div class="pillgroup" data-name="foot"><input type="hidden" name="preferredFoot" value="'+escAttr(p.preferredFoot||"")+'">'+FEET.map(function(ft){return '<button type="button" class="pill-opt'+(ft===p.preferredFoot?" on":"")+'" data-value="'+ft+'">'+ft+'</button>';}).join("")+'</div></div>'+
-    '<div class="field"><label class="field-label">Height <span class="opt">optional</span></label><select class="select" name="height"><option value="">—</option>'+HEIGHT_LEVELS.map(function(h){return '<option value="'+h+'"'+(p.height===h?" selected":"")+'>'+h+'</option>';}).join("")+'</select></div>'+
+    // Foot's pill labels abbreviate to R/L/B on mobile so Foot+Height still fit on one line.
+    '<div class="field"><label class="field-label">Foot</label><div class="pillgroup" data-name="foot"><input type="hidden" name="preferredFoot" value="'+escAttr(p.preferredFoot||"")+'">'+FEET.map(function(ft){return '<button type="button" class="pill-opt'+(ft===p.preferredFoot?" on":"")+'" data-value="'+ft+'"><span class="lbl-desktop">'+ft+'</span><span class="lbl-mobile">'+ft.charAt(0)+'</span></button>';}).join("")+'</div></div>'+
+    '<div class="field"><label class="field-label">Height</label><select class="select" name="height"><option value="">—</option>'+HEIGHT_LEVELS.map(function(h){return '<option value="'+h+'"'+(p.height===h?" selected":"")+'>'+h+'</option>';}).join("")+'</select></div>'+
   '</div>';
-  html += '<div class="form-grid">'+
-    '<div class="field"><label class="field-label">Structure <span class="opt">optional</span></label><select class="select" name="estrutura"><option value="">—</option>'+ESTRUTURA_LEVELS.map(function(v){return '<option value="'+v+'"'+(p.estrutura===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
-    '<div class="field"><label class="field-label">Athletic <span class="opt">optional</span></label><select class="select" name="strength">'+athleticOptionsHtml(p.strength)+'</select></div>'+
+  html += '<div class="form-grid" style="grid-template-columns:1fr 1fr">'+
+    '<div class="field"><label class="field-label">Structure</label><select class="select" name="estrutura"><option value="">—</option>'+ESTRUTURA_LEVELS.map(function(v){return '<option value="'+v+'"'+(p.estrutura===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
+    '<div class="field"><label class="field-label">Athletic</label><select class="select" name="strength">'+athleticOptionsHtml(p.strength)+'</select></div>'+
   '</div>';
   html += '<div class="form-grid" style="grid-template-columns:1fr 1fr 1fr">'+
-    '<div class="field"><label class="field-label">Agility <span class="opt">1–5, opt.</span></label><select class="select" name="agilityLevel">'+speedNumOptionsHtml(p.agilityLevel)+'</select></div>'+
-    '<div class="field"><label class="field-label"><span class="lbl-desktop">Acceleration</span><span class="lbl-mobile">Accelera</span> <span class="opt">1–5, opt.</span></label><select class="select" name="accelerationLevel">'+speedNumOptionsHtml(p.accelerationLevel)+'</select></div>'+
-    '<div class="field"><label class="field-label">Pace <span class="opt">1–5, opt.</span></label><select class="select" name="speedLevel">'+speedNumOptionsHtml(p.speedLevel)+'</select></div>'+
+    '<div class="field"><label class="field-label">Agility</label><select class="select" name="agilityLevel">'+speedNumOptionsHtml(p.agilityLevel)+'</select></div>'+
+    '<div class="field"><label class="field-label"><span class="lbl-desktop">Acceleration</span><span class="lbl-mobile">Accelera</span></label><select class="select" name="accelerationLevel">'+speedNumOptionsHtml(p.accelerationLevel)+'</select></div>'+
+    '<div class="field"><label class="field-label">Pace</label><select class="select" name="speedLevel">'+speedNumOptionsHtml(p.speedLevel)+'</select></div>'+
   '</div>';
   // Strength (força física — distinct from Athletic above) shares a line with Maturation.
   html += '<div class="strength-maturation-row">'+
-    '<div class="field"><label class="field-label">Strength <span class="opt">1–5, opt.</span></label><select class="select" name="strengthLevel">'+speedNumOptionsHtml(p.strengthLevel)+'</select></div>'+
-    '<div class="field"><label class="field-label">Maturation <span class="opt">optional</span></label><select class="select" name="maturation"><option value="">—</option>'+MATURATION_LEVELS.map(function(v){return '<option value="'+v+'"'+(p.maturation===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
+    '<div class="field"><label class="field-label">Strength</label><select class="select" name="strengthLevel">'+speedNumOptionsHtml(p.strengthLevel)+'</select></div>'+
+    '<div class="field"><label class="field-label">Maturation</label><select class="select" name="maturation"><option value="">—</option>'+MATURATION_LEVELS.map(function(v){return '<option value="'+v+'"'+(p.maturation===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
   '</div>';
-  html += '<div class="field"><label class="field-label">Performance <span class="opt">1–5, optional</span></label><div class="pillgroup" data-name="performance"><input type="hidden" name="currentPerformance" value="'+escAttr(p.currentPerformance||"")+'">'+[1,2,3,4,5].map(function(n){return '<button type="button" class="pill-opt'+(String(n)===String(p.currentPerformance)?" on":"")+'" data-value="'+n+'">'+n+'</button>';}).join("")+'</div></div>';
-  html += '<div class="field"><label class="field-label">Potential <span class="opt">A–E, optional</span></label><div class="pillgroup" data-name="potential"><input type="hidden" name="currentPotential" value="'+escAttr(normalizeGrade(p.currentPotential)||"")+'">'+GRADE_LETTERS.map(function(g){return '<button type="button" class="pill-opt'+(g===normalizeGrade(p.currentPotential)?" on":"")+'" data-value="'+g+'">'+g+'</button>';}).join("")+'</div></div>';
-  html += '<div class="field"><label class="field-label">Match Level <span class="opt">optional</span></label><div class="pillgroup" data-name="matchLevel"><input type="hidden" name="currentMatchLevel" value="'+escAttr(p.currentMatchLevel||"")+'">'+MATCH_LEVELS.map(function(m){return '<button type="button" class="pill-opt'+(m===p.currentMatchLevel?" on":"")+'" data-value="'+m+'">'+m+'</button>';}).join("")+'</div></div>';
+  html += '<div class="field"><label class="field-label">Performance</label><div class="pillgroup" data-name="performance"><input type="hidden" name="currentPerformance" value="'+escAttr(p.currentPerformance||"")+'">'+[1,2,3,4,5].map(function(n){return '<button type="button" class="pill-opt'+(String(n)===String(p.currentPerformance)?" on":"")+'" data-value="'+n+'">'+n+'</button>';}).join("")+'</div></div>';
+  html += '<div class="field"><label class="field-label">Potential</label><div class="pillgroup" data-name="potential"><input type="hidden" name="currentPotential" value="'+escAttr(normalizeGrade(p.currentPotential)||"")+'">'+GRADE_LETTERS.map(function(g){return '<button type="button" class="pill-opt'+(g===normalizeGrade(p.currentPotential)?" on":"")+'" data-value="'+g+'">'+g+'</button>';}).join("")+'</div></div>';
+  html += '<div class="field"><label class="field-label">Match Level</label><div class="pillgroup" data-name="matchLevel"><input type="hidden" name="currentMatchLevel" value="'+escAttr(p.currentMatchLevel||"")+'">'+MATCH_LEVELS.map(function(m){return '<button type="button" class="pill-opt'+(m===p.currentMatchLevel?" on":"")+'" data-value="'+m+'">'+m+'</button>';}).join("")+'</div></div>';
   if(!isEdit) html += '<p class="field-hint">Setting Performance/Potential/Match Level here creates the player\'s first evaluation, so it appears in their history too.</p>';
   html += '<div class="form-grid">'+
-    '<div class="field"><label class="field-label">Birth Year <span class="opt">optional</span></label><input class="input" name="birthYear" type="number" min="1970" max="'+(new Date().getFullYear())+'" placeholder="e.g. 2005" value="'+escAttr(p.birthYear)+'"></div>'+
-    '<div class="field"><label class="field-label">Date of Birth <span class="opt">optional, more precise</span></label><input class="input" name="dob" type="date" value="'+escAttr(p.dob)+'"></div>'+
+    '<div class="field"><label class="field-label">Birth Year</label><input class="input" name="birthYear" type="number" min="1970" max="'+(new Date().getFullYear())+'" placeholder="e.g. 2005" value="'+escAttr(p.birthYear)+'"></div>'+
+    '<div class="field"><label class="field-label">Date of Birth</label><input class="input" name="dob" type="date" value="'+escAttr(p.dob)+'"></div>'+
   '</div>';
-  html += '<div class="field"><label class="field-label">Nationality <span class="opt">optional</span></label>'+renderCountryCombo("pf_nat_combo","nationality",p.nationality,"Search nationality…")+'</div>';
+  html += '<div class="field"><label class="field-label">Nationality</label>'+renderCountryCombo("pf_nat_combo","nationality",p.nationality,"Search nationality…")+'</div>';
   html += '<p class="field-hint">A second nationality can be added later from the player\'s own page in the Players Database.</p>';
   html += '<div class="form-grid">'+
-    '<div class="field"><label class="field-label">'+STATUS_FIELD_LABEL+' <span class="opt">optional</span></label><select class="select" name="status"><option value="">—</option>'+PLAYER_STATUSES.map(function(s){return '<option value="'+s+'"'+(s===p.status?" selected":"")+'>'+s+'</option>';}).join("")+'</select></div>'+
-    '<div class="field"><label class="field-label">Agent <span class="opt">optional</span></label><input class="input" name="agent" value="'+escAttr(p.agent)+'"></div>'+
+    '<div class="field"><label class="field-label">'+STATUS_FIELD_LABEL+'</label><select class="select" name="status"><option value="">—</option>'+PLAYER_STATUSES.map(function(s){return '<option value="'+s+'"'+(s===p.status?" selected":"")+'>'+s+'</option>';}).join("")+'</select></div>'+
+    '<div class="field"><label class="field-label">Agent</label><input class="input" name="agent" value="'+escAttr(p.agent)+'"></div>'+
   '</div>';
-  html += '<div class="field"><label class="field-label">Photo URL <span class="opt">optional</span></label><input class="input" name="photo" value="'+escAttr(p.photo)+'" placeholder="https://…"></div>';
-  html += '<div class="field"><label class="field-label">Extra Observations <span class="opt">optional</span></label><textarea class="textarea" name="extraObservations">'+esc(p.extraObservations)+'</textarea></div>';
+  html += '<div class="field"><label class="field-label">Photo URL</label><input class="input" name="photo" value="'+escAttr(p.photo)+'" placeholder="https://…"></div>';
+  html += '<div class="field"><label class="field-label">Extra Observations</label><textarea class="textarea" name="extraObservations">'+esc(p.extraObservations)+'</textarea></div>';
   if(!isEdit){
-    html += '<div class="field"><label class="field-label">Evaluation Type <span class="opt">for the initial evaluation above</span></label><select class="select" name="evaluationType"><option value="Manual" selected>Manual</option>'+EVAL_TYPES.filter(function(t){return t!=="Manual";}).map(function(t){return '<option value="'+t+'">'+t+'</option>';}).join("")+'</select></div>';
+    html += '<div class="field"><label class="field-label">Evaluation Type</label><select class="select" name="evaluationType"><option value="Manual" selected>Manual</option>'+EVAL_TYPES.filter(function(t){return t!=="Manual";}).map(function(t){return '<option value="'+t+'">'+t+'</option>';}).join("")+'</select></div>';
   }
   html += '<div style="display:flex;gap:8px"><button class="btn btn-primary btn-block" type="submit">'+(isEdit?"Save Changes":"Save Player")+'</button>'+(isEdit?'<button type="button" class="btn" data-action="go-back">Cancel</button>':'')+'</div>';
   html += '</form></div>';
@@ -3501,6 +3583,32 @@ function pagePlayerForm(existingId){
         var keep = pos2ProfileSelect.value;
         pos2ProfileSelect.innerHTML = positionProfileOptionsFor(pos2Select.value,keep);
       });
+    }
+    // Add Player only: live-inject the auto sentence into Characteristics as attributes are picked
+    // (Edit Player, and the pitch-slot modal, both stay pure manual-only, per the rule elsewhere).
+    // Whatever the coach has already typed is preserved below it, exactly like the profile page's
+    // own General Characteristics does — spliceAutoText swaps out just the last-injected sentence.
+    if(!isEdit){
+      var charsEl = document.getElementById("pfCharacteristics");
+      var pfForm = charsEl ? charsEl.closest("form") : null;
+      if(charsEl && pfForm){
+        var lastAutoSentence = "";
+        var autoFields = ["height","estrutura","strength","maturation","agilityLevel","accelerationLevel","speedLevel","strengthLevel"];
+        var refreshAutoSentence = function(){
+          var v = {};
+          autoFields.forEach(function(name){
+            var fEl = pfForm.querySelector('[name="'+name+'"]');
+            v[name] = fEl ? fEl.value : "";
+          });
+          var sentence = buildAutoAttrSentence(v);
+          charsEl.value = spliceAutoText(charsEl.value,lastAutoSentence,sentence);
+          lastAutoSentence = sentence;
+        };
+        autoFields.forEach(function(name){
+          var fEl = pfForm.querySelector('[name="'+name+'"]');
+          if(fEl) fEl.addEventListener("change",refreshAutoSentence);
+        });
+      }
     }
   });
   return html;
@@ -3657,7 +3765,6 @@ FORM_HANDLERS["save-player"] = function(form){
 function pagePlayerDetail(id){
   var p = playerById(id);
   if(!p){ return '<div class="empty-state"><h3>Player not found</h3><a class="btn btn-primary" href="#/players">Back to Players Database</a></div>'; }
-  var age = ageFromPlayer(p);
   var club = clubById(p.clubId);
   var evals = playerEvaluations(p.id);
   var matches = playerMatchRows(p.id);
@@ -3684,14 +3791,14 @@ function pagePlayerDetail(id){
   // per-line attributes left here now, each its own left-aligned line in .profile-attr-lines.
   var maturationSelectHtml = '<select class="inline-select" data-action-select="set-player-maturation" data-id="'+p.id+'"><option value="">—</option>'+
     MATURATION_LEVELS.map(function(v){return '<option value="'+v+'"'+(v===p.maturation?" selected":"")+'>'+v+'</option>';}).join("")+'</select>';
-  // Height on the profile: an exact cm figure (typed via the inline-edit text) always wins for
-  // display (heightDisplay()), but this select lets you pick one of the standard categories
-  // instead — picking one clears heightExact so the category actually becomes visible.
-  var heightCategorySelectHtml = '<select class="inline-select" data-action-select="set-player-height-category" data-id="'+p.id+'" title="Pick a height category"><option value="">—</option>'+
-    HEIGHT_LEVELS.map(function(h){return '<option value="'+h+'"'+(h===p.height&&!p.heightExact?" selected":"")+'>'+h+'</option>';}).join("")+'</select>';
-  // All competitions this player has been evaluated in (per their evaluations) — shown below the
-  // club name, abbreviated to keep the side column compact.
+  // Height on the profile is a single field now (startInlineHeightEdit/renderHeightCombo below):
+  // typing a number sets an exact cm figure, or a category (Low/Medium/…/Very High) can be picked
+  // from the same combo's dropdown — whichever was entered last is what's stored and shown.
+  // Shown below the club name: the escalão/age-group (e.g. "U15") derived from whichever
+  // competitions this player has been evaluated in, rather than the competition name itself — the
+  // full names still show on hover via the title attribute.
   var evaluatedComps = playerEvaluatedCompetitions(p.id);
+  var evaluatedAgeGroups = Array.from(new Set(evaluatedComps.map(deriveAgeGroupFromCompetition).filter(Boolean)));
   html += '<div class="card card-pad"><div class="profile-head">'+
     '<div class="profile-photo-col">'+
       '<div class="profile-photo-btn" title="Click to change photo">'+avatarHtml(p,84)+
@@ -3700,23 +3807,25 @@ function pagePlayerDetail(id){
         '<input type="file" accept="image/*" data-photo-input="'+p.id+'" class="profile-photo-input-native" title="Click to change photo">'+
       '</div>'+
       '<div class="profile-pos-row profile-name-under-photo inline-edit" data-field="name" data-edit-key="player-name" data-raw="'+escAttr(p.name||"")+'" data-id="'+p.id+'" title="Click to rename">'+esc(p.name)+'</div>'+
-      '<div class="profile-club inline-edit" data-field="birthYear" data-edit-key="player-birthYear" data-raw="'+escAttr(byYear||"")+'" data-id="'+p.id+'" style="justify-content:center;margin-top:4px" title="Click to set birth year">'+(age!==null?esc(age)+' y.o.':(byYear?esc(byYear):'<span style="color:var(--text-faint);font-size:11px">+ birth year</span>'))+'</div>'+
+      '<div class="profile-club inline-edit" data-field="birthYear" data-edit-key="player-birthYear" data-raw="'+escAttr(byYear||"")+'" data-id="'+p.id+'" style="justify-content:center;margin-top:4px" title="Click to set birth year">'+(byYear?esc(byYear):'<span style="color:var(--text-faint);font-size:11px">+ birth year</span>')+'</div>'+
     '</div>'+
     '<div class="profile-info">'+
       '<div class="profile-pos-heading" style="position:relative">'+badgePos(p.firstPosition,true)+
         '<select class="ring-select-overlay" style="border-radius:8px" data-action-select="set-player-position" data-id="'+p.id+'" title="Click to change position"><option value="">–</option>'+POSITIONS.map(function(pos){return '<option value="'+pos+'"'+(pos===p.firstPosition?" selected":"")+'>'+pos+'</option>';}).join("")+'</select>'+
-        '<span class="profile-club" style="margin-left:6px">'+positionProfileSelectHtml+'</span>'+
+        (p.positionProfile?'<span class="profile-club" style="margin-left:6px">'+positionProfileSelectHtml+'</span>':'')+
       '</div>'+
-      '<div class="profile-pos-heading" style="position:relative;margin-top:6px">'+(p.secondPosition?badgePos(p.secondPosition,true):'<span class="badge badge-pos badge-pos-lg" style="opacity:.45">+ position 2</span>')+
+      (p.secondPosition?(
+      '<div class="profile-pos-heading" style="position:relative;margin-top:6px">'+badgePos(p.secondPosition,true)+
         '<select class="ring-select-overlay" style="border-radius:8px" data-action-select="set-player-position2" data-id="'+p.id+'" title="Click to change position 2"><option value="">–</option>'+POSITIONS.map(function(pos){return '<option value="'+pos+'"'+(pos===p.secondPosition?" selected":"")+'>'+pos+'</option>';}).join("")+'</select>'+
-        '<span class="profile-club" style="margin-left:6px">'+secondPositionProfileSelectHtml+'</span>'+
-      '</div>'+
+        (p.secondPositionProfile?'<span class="profile-club" style="margin-left:6px">'+secondPositionProfileSelectHtml+'</span>':'')+
+      '</div>') : '')+
       '<div class="profile-attr-lines">'+
         '<span class="profile-club"><b>Foot</b> '+footSelectHtml+'</span>'+
-        '<span class="profile-club"><b>Height</b> <span class="inline-edit" data-field="heightExact" data-edit-key="player-heightExact" data-raw="'+escAttr(p.heightExact||"")+'" data-id="'+p.id+'" title="Click to set an exact height in cm">'+(heightDisplay(p)?esc(heightDisplay(p)):"—")+'</span> '+heightCategorySelectHtml+'</span>'+
+        '<span class="profile-club"><b>Height</b> <span class="inline-edit" data-field="height" data-edit-key="player-height" data-raw="'+escAttr(p.heightExact||p.height||"")+'" data-id="'+p.id+'" title="Click to set a height — type an exact cm figure, or pick a category">'+(heightDisplay(p)?esc(heightDisplay(p)):"—")+'</span></span>'+
         '<span class="profile-club"><b>Maturation</b> '+maturationSelectHtml+'</span>'+
       '</div>'+
     '</div>'+
+    '<div class="profile-side-groups">'+
     '<div class="profile-side-stack profile-clubnat-stack profile-divider-left">'+
       '<div class="profile-side-item"><div class="profile-side-icon inline-edit" data-field="nationality" data-edit-key="player-nationality" data-raw="'+escAttr(p.nationality||"")+'" data-id="'+p.id+'" style="font-size:26px" title="Click to change nationality">'+(p.nationality?flagHtml(p.nationality):'<span style="color:var(--text-faint);font-size:11px">?</span>')+'</div><div class="profile-side-value">'+(p.nationality?esc(p.nationality):'<span style="color:var(--text-faint)">+ nat.</span>')+'</div>'+
         (p.nationality2?
@@ -3726,7 +3835,7 @@ function pagePlayerDetail(id){
       '</div>'+
       '<div class="profile-side-item"><div class="profile-side-icon">'+crestHtml(club,42)+'</div><div class="profile-side-value profile-club-select-value">'+clubSelectHtml+'</div>'+
         (club?'<div class="profile-club-country inline-edit" data-field="country" data-edit-key="club-country" data-raw="'+escAttr(club.country||"")+'" data-id="'+club.id+'">'+(club.country?esc(countryAbbrev(club.country)):'<span style="text-transform:none;font-weight:600">+ country</span>')+'</div>':'')+
-        (evaluatedComps.length?'<div class="profile-club-country" title="'+escAttr(evaluatedComps.join(", "))+'" style="margin-top:2px">'+esc(evaluatedComps.map(competitionAbbrev).join(" / "))+'</div>':'')+
+        (evaluatedAgeGroups.length?'<div class="profile-club-country" title="'+escAttr(evaluatedComps.join(", "))+'" style="margin-top:2px">'+esc(evaluatedAgeGroups.join(" / "))+'</div>':'')+
       '</div>'+
     '</div>'+
     '<div class="profile-side-stack profile-rating-stack profile-divider-left">'+
@@ -3742,6 +3851,7 @@ function pagePlayerDetail(id){
       '<div class="profile-side-item"><div class="profile-side-value inline-edit" data-field="agent" data-edit-key="player-agent" data-raw="'+escAttr(p.agent||"")+'" data-id="'+p.id+'">'+esc(p.agent||"—")+'</div><div class="profile-side-label">Agent</div></div>'+
     '</div>'+
     '<div class="profile-side-actions profile-divider-left" style="margin-left:auto"><button class="btn btn-icon" data-action="open-merge-player" data-id="'+p.id+'" title="Merge with another player (e.g. after a transfer)">'+ic("merge")+'</button><button class="btn btn-icon" data-action="edit-player" data-id="'+p.id+'" title="Edit profile">'+ic("edit")+'</button><button class="btn btn-icon btn-danger" data-action="delete-player" data-id="'+p.id+'" title="Delete">'+ic("trash")+'</button></div>'+
+    '</div>'+
   '</div></div>';
 
   // WHAT DO I THINK OF HIM — right after the header card.
@@ -3872,9 +3982,22 @@ INLINE_EDIT_HANDLERS["player-birthYear"] = function(el,val){
 // The profile's own inline height editor sets the EXACT cm override, not the category — the
 // category (Low/Medium/…/Very High) only ever comes from Edit Player in a match. Whenever
 // heightExact is set, it's what's shown; clearing it falls back to the category again.
-INLINE_EDIT_HANDLERS["player-heightExact"] = function(el,val){
+// Height's single combined field: a plain number is an exact cm figure; anything matching one of
+// the standard categories (case-insensitive) is the category instead; anything else (or blank)
+// clears both. Only the category feeds the auto sentence, same as before.
+INLINE_EDIT_HANDLERS["player-height"] = function(el,val){
   var p = playerById(el.dataset.id); if(!p) return;
-  p.heightExact = String(val||"").trim();
+  val = String(val||"").trim();
+  if(!val){
+    p.height = ""; p.heightExact = "";
+  } else if(/^\d+(\.\d+)?$/.test(val)){
+    p.heightExact = val; p.height = "";
+  } else {
+    var match = HEIGHT_LEVELS.find(function(h){return h.toLowerCase()===val.toLowerCase();});
+    if(match){ p.height = match; p.heightExact = ""; }
+    // else: not a recognized category and not a number — leave the previous value in place.
+  }
+  regeneratePlayerAutoSentence(p);
   p.updatedAt = nowISO(); persist({});
 };
 INLINE_EDIT_HANDLERS["player-agent"] = function(el,val){
@@ -3943,14 +4066,6 @@ function wirePlayerProfileSelects(){
       var p = playerById(sel.dataset.id); if(!p) return;
       p.secondPositionProfile = sel.value||"";
       if(p.secondPositionProfile) p.secondPositionProfileUpdatedAt = todayISO();
-      p.updatedAt = nowISO(); persist({});
-    });
-  });
-  document.querySelectorAll('[data-action-select="set-player-height-category"]').forEach(function(sel){
-    sel.addEventListener("change",function(){
-      var p = playerById(sel.dataset.id); if(!p) return;
-      p.height = sel.value||"";
-      if(p.height) p.heightExact = ""; // picking a category makes it the visible value again
       p.updatedAt = nowISO(); persist({});
     });
   });
@@ -4214,12 +4329,12 @@ function openEvaluationModal(playerId,matchId,matchPlayerId){
     html += '<div class="field"><label class="field-label">Type</label><div class="pillgroup" data-name="evaluationType" id="evalTypeGroup"><input type="hidden" name="evaluationType" value="Manual">'+EVAL_TYPES.map(function(t){return '<button type="button" class="pill-opt'+(t==="Manual"?" on":"")+'" data-value="'+t+'">'+t+'</button>';}).join("")+'</div></div>';
   }
   html += '<div class="form-grid"><div class="field"><label class="field-label">Date</label><input class="input" type="date" name="date" value="'+(isMatchEval?escAttr(m.date):todayISO())+'" '+(isMatchEval?"readonly":"")+'></div>'+
-    '<div class="field"><label class="field-label">Position Observed <span class="opt">optional</span></label><select class="select" name="position">'+positionOptions(mp?mp.position:p.firstPosition)+'</select></div></div>';
+    '<div class="field"><label class="field-label">Position Observed</label><select class="select" name="position">'+positionOptions(mp?mp.position:p.firstPosition)+'</select></div></div>';
   html += '<div class="form-grid">'+
-    '<div class="field"><label class="field-label">Performance <span class="opt">1–5</span></label><div class="pillgroup" data-name="performance"><input type="hidden" name="performance" value="">'+[1,2,3,4,5].map(function(n){return '<button type="button" class="pill-opt" data-value="'+n+'">'+n+'</button>';}).join("")+'</div></div>'+
-    '<div class="field"><label class="field-label">Potential <span class="opt">A–E</span></label><div class="pillgroup" data-name="potential"><input type="hidden" name="potential" value="">'+GRADE_LETTERS.map(function(g){return '<button type="button" class="pill-opt" data-value="'+g+'">'+g+'</button>';}).join("")+'</div></div>'+
+    '<div class="field"><label class="field-label">Performance</label><div class="pillgroup" data-name="performance"><input type="hidden" name="performance" value="">'+[1,2,3,4,5].map(function(n){return '<button type="button" class="pill-opt" data-value="'+n+'">'+n+'</button>';}).join("")+'</div></div>'+
+    '<div class="field"><label class="field-label">Potential</label><div class="pillgroup" data-name="potential"><input type="hidden" name="potential" value="">'+GRADE_LETTERS.map(function(g){return '<button type="button" class="pill-opt" data-value="'+g+'">'+g+'</button>';}).join("")+'</div></div>'+
   '</div>';
-  html += '<div class="field"><label class="field-label">Characteristics <span class="opt">'+(isMatchEval?"observed this match":"")+'</span></label><textarea class="textarea" name="characteristics" placeholder="'+(isMatchEval?"What stood out about their profile in this game…":"General characteristics…")+'">'+(mp?esc(mp.matchCharacteristics||""):"")+'</textarea></div>';
+  html += '<div class="field"><label class="field-label">Characteristics</label><textarea class="textarea" name="characteristics" placeholder="'+(isMatchEval?"What stood out about their profile in this game…":"General characteristics…")+'">'+(mp?esc(mp.matchCharacteristics||""):"")+'</textarea></div>';
   html += '<div class="field"><label class="field-label">Observations</label><textarea class="textarea" name="observations" placeholder="Detailed observations and reasoning…"></textarea></div>';
   html += '<div class="field"><label class="field-label">Recommendation</label><select class="select" name="recommendation"><option value="">—</option>'+RECOMMENDATIONS.map(function(r){return '<option value="'+r+'">'+r+'</option>';}).join("")+'</select></div>';
   html += '<button class="btn btn-primary btn-block" type="submit">Save Evaluation</button>';
@@ -4255,7 +4370,7 @@ function openEvalMatchIntroModal(playerId,evaluationType){
   '</div>';
   html += '<div class="field"><label class="field-label">'+esc(p?p.name:"Player")+' plays for</label><div class="pillgroup" data-name="side"><input type="hidden" name="side" value="home"><button type="button" class="pill-opt on" data-value="home">Home</button><button type="button" class="pill-opt" data-value="away">Away</button></div></div>';
   html += '<div class="field"><label class="field-label">Date</label><input class="input" type="date" name="date" value="'+escAttr(todayISO())+'" required></div>';
-  html += '<div class="field"><label class="field-label">Competition <span class="opt">optional</span></label>'+renderCompetitionCombo("evalMatch_comp_combo","competition","","Search or add competition…")+'</div>';
+  html += '<div class="field"><label class="field-label">Competition</label>'+renderCompetitionCombo("evalMatch_comp_combo","competition","","Search or add competition…")+'</div>';
   html += '<button class="btn btn-primary btn-block" type="submit">Add Match &amp; Continue</button>';
   html += '</form></div>';
   openModal(html);
@@ -4482,7 +4597,7 @@ function openAddToAgendaModal(fixtureId){
   html += '<div style="font-size:12.5px;color:var(--text-muted);margin:2px 0 14px">'+esc(fx.team1)+' v '+esc(fx.team2)+' · '+fmtDate(fx.date)+(fx.time?' · '+esc(fx.time):'')+'</div>';
   html += '<form data-form="add-fixture-agenda-modal" class="stack" data-fixture-id="'+fx.id+'">';
   html += '<div class="field"><label class="field-label">How will you watch it?</label><div class="pillgroup" data-name="observationMode" id="afa_obsmode_group"><input type="hidden" name="observationMode" value="LIVE">'+OBS_MODES.map(function(o){return '<button type="button" class="pill-opt'+(o==="LIVE"?" on":"")+'" data-value="'+o+'">'+o+'</button>';}).join("")+'</div></div>';
-  html += '<div class="field" id="afa_watchdate_field" style="display:none"><label class="field-label">Day I\'ll Watch It <span class="opt">optional — if different from the match date</span></label><input class="input" type="date" name="watchDate"><div class="field-hint">The match keeps its real date, but this is when it will show on your Agenda.</div></div>';
+  html += '<div class="field" id="afa_watchdate_field" style="display:none"><label class="field-label">Day I\'ll Watch It</label><input class="input" type="date" name="watchDate"><div class="field-hint">The match keeps its real date, but this is when it will show on your Agenda.</div></div>';
   html += '<button class="btn btn-primary btn-block" type="submit">'+ic("plus")+' Add to Agenda</button>';
   html += '</form></div>';
   openModal(html);
@@ -4666,18 +4781,21 @@ function fixtureRow(fx,opts){
     var crest = opts.showCrests ? '<span class="cal-fixture-crest">'+crestHtml({name:name},16)+'</span>' : '';
     return crest+esc(name)+(onWatch?' '+starIcon(onWatch===2):'');
   }
+  // A result, once on file, REPLACES the "v" separator between the two team names (rather than
+  // showing separately near the Add to Agenda button) — so a played match reads "Team A 2 - 1 Team
+  // B" instead of "Team A v Team B" plus a score sitting off to the side.
+  var vOrScore = scoreLabel ? '<span class="mono" style="font-weight:800">'+esc(scoreLabel)+'</span>' : '<span style="color:var(--text-faint);font-weight:400">v</span>';
   return '<div class="roster-row" style="align-items:flex-start">'+
     timeCell+
     '<div class="roster-name-wrap">'+
-      '<div class="roster-name">'+teamLabel(fx.team1)+' <span style="color:var(--text-faint);font-weight:400">v</span> '+teamLabel(fx.team2)+'</div>'+
+      '<div class="roster-name">'+teamLabel(fx.team1)+' '+vOrScore+' '+teamLabel(fx.team2)+'</div>'+
       (fx.venue?'<div class="roster-chars">'+esc(fx.venue)+'</div>':'')+
     '</div>'+
-    (scoreLabel?'<div class="mono" style="flex:0 0 auto;font-weight:800;font-size:13.5px;padding-top:2px">'+esc(scoreLabel)+'</div>':'')+
     (added?
       '<button class="btn btn-sm btn-mode-'+esc(addedMatch?(addedMatch.observationMode||"LIVE"):"LIVE")+'" style="flex:0 0 auto" data-action="remove-fixture-agenda" data-match-id="'+esc(fx.matchId)+'" title="Remove from Agenda">'+ic("check")+' '+
         esc(addedMatch?(addedMatch.observationMode||"LIVE"):"LIVE")+' · '+esc(addedMatch?fmtDateShort(agendaDateOf(addedMatch)):fmtDateShort(fx.date))+
       '</button>' :
-      '<button class="btn btn-sm btn-primary" style="flex:0 0 auto" data-action="add-fixture-agenda" data-fixture-id="'+fx.id+'">'+ic("plus")+' Add to Agenda</button>'
+      '<button class="btn btn-sm btn-primary" style="flex:0 0 auto" data-action="add-fixture-agenda" data-fixture-id="'+fx.id+'" title="Add to Agenda">'+ic("plus")+'<span class="lbl-desktop"> Add to Agenda</span></button>'
     )+
   '</div>';
 }
@@ -4723,7 +4841,7 @@ function openAddTaskModal(dateISO){
   html += '<form data-form="add-agenda-task-modal" class="stack">';
   html += '<div class="field"><label class="field-label">Task</label><input class="input" name="text" placeholder="What do you need to do?" required autofocus></div>';
   html += '<div class="form-grid"><div class="field"><label class="field-label">Due Date</label><input class="input" type="date" name="dueDate" value="'+escAttr(dateISO||"")+'"></div>'+
-    '<div class="field"><label class="field-label">Time <span class="opt">optional</span></label><input class="input" type="time" name="dueTime"></div></div>';
+    '<div class="field"><label class="field-label">Time</label><input class="input" type="time" name="dueTime"></div></div>';
   html += '<button class="btn btn-primary btn-block" type="submit">Add Task</button>';
   html += '</form></div>';
   openModal(html);
@@ -4989,7 +5107,7 @@ function openEditTaskModal(taskId){
   html += '<form data-form="edit-agenda-task" data-id="'+t.id+'" class="stack">';
   html += '<div class="field"><label class="field-label">Task</label><input class="input" name="text" value="'+escAttr(t.text)+'" placeholder="What do you need to do?" required autofocus></div>';
   html += '<div class="form-grid"><div class="field"><label class="field-label">Due Date</label><input class="input" type="date" name="dueDate" value="'+escAttr(t.dueDate||"")+'"></div>'+
-    '<div class="field"><label class="field-label">Time <span class="opt">optional</span></label><input class="input" type="time" name="dueTime" value="'+escAttr(t.dueTime||"")+'"></div></div>';
+    '<div class="field"><label class="field-label">Time</label><input class="input" type="time" name="dueTime" value="'+escAttr(t.dueTime||"")+'"></div></div>';
   html += '<div style="display:flex;gap:8px"><button class="btn btn-primary btn-block" type="submit">Save Changes</button><button type="button" class="btn" data-action="cancel-edit-task" data-id="'+t.id+'">Cancel</button></div>';
   html += '</form></div>';
   openModal(html);
@@ -5025,19 +5143,19 @@ function pageMatchForm(existingId){
   '</div>';
   html += '<div class="form-grid">'+
     '<div class="field"><label class="field-label">Date</label><input class="input" type="date" name="date" value="'+escAttr(m.date)+'" required></div>'+
-    '<div class="field"><label class="field-label">Time <span class="opt">optional</span></label><input class="input" type="time" name="time" value="'+escAttr(m.time)+'"></div>'+
+    '<div class="field"><label class="field-label">Time</label><input class="input" type="time" name="time" value="'+escAttr(m.time)+'"></div>'+
   '</div>';
-  html += '<div class="field"><label class="field-label">Location <span class="opt">optional</span></label><input class="input" name="venue" value="'+escAttr(m.venue||"")+'" placeholder="e.g. Prince Faisal bin Fahd Stadium"></div>';
+  html += '<div class="field"><label class="field-label">Location</label><input class="input" name="venue" value="'+escAttr(m.venue||"")+'" placeholder="e.g. Prince Faisal bin Fahd Stadium"></div>';
   html += '<div class="form-grid">'+
-    '<div class="field"><label class="field-label">Competition <span class="opt">optional</span></label>'+renderCompetitionCombo("mf_comp_combo","competition",m.competition,"Search or add competition…")+'</div>'+
-    '<div class="field"><label class="field-label">Matchday <span class="opt">optional</span></label><input class="input" name="matchday" value="'+escAttr(m.matchday)+'" placeholder="e.g. Matchday 12"></div>'+
+    '<div class="field"><label class="field-label">Competition</label>'+renderCompetitionCombo("mf_comp_combo","competition",m.competition,"Search or add competition…")+'</div>'+
+    '<div class="field"><label class="field-label">Matchday</label><input class="input" name="matchday" value="'+escAttr(m.matchday)+'" placeholder="e.g. Matchday 12"></div>'+
   '</div>';
-  html += '<div class="field"><label class="field-label">Competition Country <span class="opt">optional — shown as an abbreviation in Matches Database</span></label><input class="input" name="competitionCountry" list="countryList" value="'+escAttr(m.competition?(DB.competitionCountries[m.competition]||""):"")+'" placeholder="e.g. Saudi Arabia"></div>'+countryDatalist();
+  html += '<div class="field"><label class="field-label">Competition Country</label><input class="input" name="competitionCountry" list="countryList" value="'+escAttr(m.competition?(DB.competitionCountries[m.competition]||""):"")+'" placeholder="e.g. Saudi Arabia"></div>'+countryDatalist();
   html += '<div class="field"><label class="field-label">Observation Mode</label><div class="pillgroup" data-name="observationMode" id="mf_obsmode_group"><input type="hidden" name="observationMode" value="'+escAttr(m.observationMode)+'">'+OBS_MODES.map(function(o){return '<button type="button" class="pill-opt'+(o===m.observationMode?" on":"")+'" data-value="'+o+'">'+o+'</button>';}).join("")+'</div></div>';
-  html += '<div class="field" id="mf_watchdate_field" style="'+(m.observationMode==="VIDEO"?"":"display:none")+'"><label class="field-label">Day I\'ll Watch It <span class="opt">optional — if different from the match date</span></label><input class="input" type="date" name="watchDate" value="'+escAttr(m.watchDate||"")+'"><div class="field-hint">The match keeps its real date, but this is when it will show on your Agenda.</div></div>';
+  html += '<div class="field" id="mf_watchdate_field" style="'+(m.observationMode==="VIDEO"?"":"display:none")+'"><label class="field-label">Day I\'ll Watch It</label><input class="input" type="date" name="watchDate" value="'+escAttr(m.watchDate||"")+'"><div class="field-hint">The match keeps its real date, but this is when it will show on your Agenda.</div></div>';
   html += '<div class="field"><label class="field-label">Match Status</label><div class="pillgroup" data-name="status"><input type="hidden" name="status" value="'+escAttr(m.status)+'">'+MATCH_STATUSES.map(function(s){return '<button type="button" class="pill-opt'+(s===m.status?" on":"")+'" data-value="'+s+'">'+s+'</button>';}).join("")+'</div></div>';
-  html += '<div class="form-grid"><div class="field"><label class="field-label">Home Score <span class="opt">optional — final result</span></label><input class="input" type="number" min="0" name="homeScore" value="'+escAttr(m.homeScore||"")+'" placeholder="e.g. 2"></div>'+
-    '<div class="field"><label class="field-label">Away Score <span class="opt">optional — final result</span></label><input class="input" type="number" min="0" name="awayScore" value="'+escAttr(m.awayScore||"")+'" placeholder="e.g. 1"></div></div>';
+  html += '<div class="form-grid"><div class="field"><label class="field-label">Home Score</label><input class="input" type="number" min="0" name="homeScore" value="'+escAttr(m.homeScore||"")+'" placeholder="e.g. 2"></div>'+
+    '<div class="field"><label class="field-label">Away Score</label><input class="input" type="number" min="0" name="awayScore" value="'+escAttr(m.awayScore||"")+'" placeholder="e.g. 1"></div></div>';
   html += '<div style="display:flex;gap:8px"><button class="btn btn-primary btn-block" type="submit">'+(isEdit?"Save Changes":"Create Match & Add Lineups")+'</button>'+(isEdit?'<button type="button" class="btn" data-action="go-back">Cancel</button>':'')+'</div>';
   html += '</form></div>';
   onAfterRender(function(){
@@ -5474,9 +5592,30 @@ function applyInterestFlag(mp,want){
 ACTIONS["toggle-interest"] = function(el){
   var mp = byId(DB.matchPlayers,el.dataset.id);
   if(!mp) return;
-  applyInterestFlag(mp,!mp.playerOfInterest);
+  var want = !mp.playerOfInterest;
+  applyInterestFlag(mp,want);
+  var toast = want ? "Marked as Player of Interest" : "Removed from Players of Interest";
+  if(!want){
+    // Un-starring: if this was the only record this player had anywhere (same check used when
+    // removing a lineup entry), they come out of the Players Database entirely rather than just
+    // losing the star — otherwise just this match's own evaluation of them (if any) goes.
+    var playerId = mp.playerId, matchId = mp.matchId, mpId = mp.id;
+    if(playerId && !playerHasOtherRecords(playerId,mpId,matchId)){
+      DB.players = DB.players.filter(function(x){return x.id!==playerId;});
+      DB.matchPlayers = DB.matchPlayers.filter(function(x){return x.id!==mpId;});
+      DB.evaluations = DB.evaluations.filter(function(x){return !(x.playerId===playerId && x.matchId===matchId);});
+      toast = "Removed from Players of Interest — no other records for this player, so it was deleted too";
+    } else if(playerId){
+      var hadEval = DB.evaluations.some(function(x){return x.playerId===playerId && x.matchId===matchId;});
+      DB.evaluations = DB.evaluations.filter(function(x){return !(x.playerId===playerId && x.matchId===matchId);});
+      if(hadEval){
+        updatePlayerCurrentRatings(playerId);
+        toast = "Removed from Players of Interest — this match's evaluation was deleted too";
+      }
+    }
+  }
   if(el.hasAttribute("data-close-modal")) closeModal();
-  persist({toast: mp.playerOfInterest ? "Marked as Player of Interest" : "Removed from Players of Interest"});
+  persist({toast:toast});
 };
 // Reorders this match's Players of Interest by preference (dir -1 = move up/liked more, +1 = move
 // down/liked less), swapping ranks with the adjacent entry.
@@ -5594,7 +5733,7 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
     // this form doesn't wipe it. Sub Minute itself has moved to right after Notes (see below).
     html += '<input type="hidden" name="replacedMpId" value="'+escAttr(mp&&mp.replacedPlayerId||"")+'">';
   }
-  // Number+Name: stacked on desktop (.namenum-row), side by side only on a narrow/iPhone screen.
+  // Number+Name share a line (.namenum-row) on both desktop and mobile.
   if(isEdit){
     html += '<div class="namenum-row"><div class="field"><label class="field-label">Number</label><input class="input" type="number" min="1" max="99" name="shirtNumber" value="'+escAttr(mp?mp.shirtNumber||"":"")+'" placeholder="#" autofocus></div>';
   } else {
@@ -5616,7 +5755,7 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
       '<div class="combo-list" id="pitchSlotEditName_list" hidden></div>'+
     '</div></div>';
   } else {
-    html += '<div class="field"><label class="field-label">Name <span class="opt">optional, "???" if unsure</span></label><div class="combo" data-combo-root="pitchSlotName">'+
+    html += '<div class="field"><label class="field-label">Name</label><div class="combo" data-combo-root="pitchSlotName">'+
       '<input type="hidden" name="playerId" id="pitchSlotName_hidden">'+
       '<input class="input" name="name" id="pitchSlotName_text" placeholder="Player name" autocomplete="off">'+
       '<div class="combo-list" id="pitchSlotName_list" hidden></div>'+
@@ -5626,14 +5765,15 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
   var pos1Val = mp?mp.position:slot.pos;
   var pos2Val = mp?mp.position2||"":"";
   // Position 1 + its Profile share a line, Position 2 + its Profile share the line below — kept in
-  // sync with the standalone Add/Edit Player form, which lays these out the same way.
-  html += '<div class="form-grid">'+
+  // sync with the standalone Add/Edit Player form, which lays these out the same way. Position gets
+  // a narrower fixed share so the (usually longer) Profile select gets more room.
+  html += '<div class="form-grid" style="grid-template-columns:0.7fr 1.5fr">'+
     '<div class="field"><label class="field-label">Position 1</label><select class="select" name="position" id="pitchSlotPos1">'+positionOptionsAbbrev(pos1Val)+'</select></div>'+
-    '<div class="field"><label class="field-label"><span class="lbl-desktop">Position 1 - Profile</span><span class="lbl-mobile">POS 1 - PROF</span> <span class="opt">opt.</span></label><select class="select" name="positionProfile" id="pitchSlotPosProfile">'+positionProfileOptionsFor(pos1Val,p?p.positionProfile||"":"")+'</select></div>'+
+    '<div class="field"><label class="field-label">Position 1 - Profile</label><select class="select" name="positionProfile" id="pitchSlotPosProfile">'+positionProfileOptionsFor(pos1Val,p?p.positionProfile||"":"")+'</select></div>'+
   '</div>';
-  html += '<div class="form-grid">'+
+  html += '<div class="form-grid" style="grid-template-columns:0.7fr 1.5fr">'+
     '<div class="field"><label class="field-label">Position 2</label><select class="select" name="position2" id="pitchSlotPos2">'+positionOptionsAbbrev(pos2Val)+'</select></div>'+
-    '<div class="field"><label class="field-label"><span class="lbl-desktop">Position 2 - Profile</span><span class="lbl-mobile">POS 2 - PROF</span> <span class="opt">opt.</span></label><select class="select" name="secondPositionProfile" id="pitchSlotPos2Profile">'+positionProfileOptionsFor(pos2Val,p?p.secondPositionProfile||"":"")+'</select></div>'+
+    '<div class="field"><label class="field-label">Position 2 - Profile</label><select class="select" name="secondPositionProfile" id="pitchSlotPos2Profile">'+positionProfileOptionsFor(pos2Val,p?p.secondPositionProfile||"":"")+'</select></div>'+
   '</div>';
   // Pure manual text only, right after the position/profile fields — the auto-generated Portuguese
   // sentence never shows up here, for either a brand-new evaluation or an edit of an existing one.
@@ -5644,32 +5784,32 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
   // here so it doesn't show.
   var evRawChars = ev ? (ev.characteristics||"") : (mp?mp.matchCharacteristics||"":"");
   var evManualChars = spliceAutoText(evRawChars,mp?(mp.autoCharacteristics||""):"","");
-  html += '<div class="field"><label class="field-label">Characteristics <span class="opt">optional — what stood out in this match</span></label><textarea class="textarea" name="characteristics" id="pitchSlotCharacteristics" placeholder="What stands out about their profile…">'+esc(evManualChars)+'</textarea></div>';
+  html += '<div class="field"><label class="field-label">Characteristics</label><textarea class="textarea" name="characteristics" id="pitchSlotCharacteristics" placeholder="What stands out about their profile…">'+esc(evManualChars)+'</textarea></div>';
   html += '<div class="form-grid" style="grid-template-columns:1fr 1fr" id="pitchSlotFootHeightRow">'+
     // Foot's pill labels abbreviate to R/L/B on mobile ONLY here, so Foot+Height still fit on one
     // line next to each other — everywhere else Foot keeps its full-word labels.
-    '<div class="field"><label class="field-label">Foot <span class="opt">optional</span></label><div class="pillgroup" data-name="foot"><input type="hidden" name="preferredFoot" id="pitchSlotFoot" value="'+escAttr(p?p.preferredFoot||"":"")+'">'+FEET.map(function(ft){return '<button type="button" class="pill-opt'+(p&&ft===p.preferredFoot?" on":"")+'" data-value="'+ft+'"><span class="lbl-desktop">'+ft+'</span><span class="lbl-mobile">'+ft.charAt(0)+'</span></button>';}).join("")+'</div></div>'+
-    '<div class="field"><label class="field-label">Height <span class="opt">optional</span></label><select class="select" name="height" id="pitchSlotHeight"><option value="">—</option>'+HEIGHT_LEVELS.map(function(h){return '<option value="'+h+'"'+(p&&p.height===h?" selected":"")+'>'+h+'</option>';}).join("")+'</select></div>'+
+    '<div class="field"><label class="field-label">Foot</label><div class="pillgroup" data-name="foot"><input type="hidden" name="preferredFoot" id="pitchSlotFoot" value="'+escAttr(p?p.preferredFoot||"":"")+'">'+FEET.map(function(ft){return '<button type="button" class="pill-opt'+(p&&ft===p.preferredFoot?" on":"")+'" data-value="'+ft+'"><span class="lbl-desktop">'+ft+'</span><span class="lbl-mobile">'+ft.charAt(0)+'</span></button>';}).join("")+'</div></div>'+
+    '<div class="field"><label class="field-label">Height</label><select class="select" name="height" id="pitchSlotHeight"><option value="">—</option>'+HEIGHT_LEVELS.map(function(h){return '<option value="'+h+'"'+(p&&p.height===h?" selected":"")+'>'+h+'</option>';}).join("")+'</select></div>'+
   '</div>';
-  html += '<div class="form-grid">'+
-    '<div class="field"><label class="field-label">Structure <span class="opt">optional</span></label><select class="select" name="estrutura" id="pitchSlotEstrutura"><option value="">—</option>'+ESTRUTURA_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.estrutura===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
-    '<div class="field"><label class="field-label">Athletic <span class="opt">optional</span></label><select class="select" name="strength" id="pitchSlotStrength">'+athleticOptionsHtml(p&&p.strength)+'</select></div>'+
+  html += '<div class="form-grid" style="grid-template-columns:1fr 1fr">'+
+    '<div class="field"><label class="field-label">Structure</label><select class="select" name="estrutura" id="pitchSlotEstrutura"><option value="">—</option>'+ESTRUTURA_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.estrutura===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
+    '<div class="field"><label class="field-label">Athletic</label><select class="select" name="strength" id="pitchSlotStrength">'+athleticOptionsHtml(p&&p.strength)+'</select></div>'+
   '</div>';
   html += '<div class="form-grid" style="grid-template-columns:1fr 1fr 1fr">'+
-    '<div class="field"><label class="field-label">Agility <span class="opt">1–5, opt.</span></label><select class="select" name="agilityLevel" id="pitchSlotAgility">'+speedNumOptionsHtml(p?p.agilityLevel:"")+'</select></div>'+
-    '<div class="field"><label class="field-label"><span class="lbl-desktop">Acceleration</span><span class="lbl-mobile">Accelera</span> <span class="opt">1–5, opt.</span></label><select class="select" name="accelerationLevel" id="pitchSlotAcceleration">'+speedNumOptionsHtml(p?p.accelerationLevel:"")+'</select></div>'+
-    '<div class="field"><label class="field-label">Pace <span class="opt">1–5, opt.</span></label><select class="select" name="speedLevel" id="pitchSlotSpeed">'+speedNumOptionsHtml(p?p.speedLevel:"")+'</select></div>'+
+    '<div class="field"><label class="field-label">Agility</label><select class="select" name="agilityLevel" id="pitchSlotAgility">'+speedNumOptionsHtml(p?p.agilityLevel:"")+'</select></div>'+
+    '<div class="field"><label class="field-label"><span class="lbl-desktop">Acceleration</span><span class="lbl-mobile">Accelera</span></label><select class="select" name="accelerationLevel" id="pitchSlotAcceleration">'+speedNumOptionsHtml(p?p.accelerationLevel:"")+'</select></div>'+
+    '<div class="field"><label class="field-label">Pace</label><select class="select" name="speedLevel" id="pitchSlotSpeed">'+speedNumOptionsHtml(p?p.speedLevel:"")+'</select></div>'+
   '</div>';
   html += '<div class="strength-maturation-row">'+
-    '<div class="field"><label class="field-label">Strength <span class="opt">1–5, opt.</span></label><select class="select" name="strengthLevel" id="pitchSlotStrengthLevel">'+speedNumOptionsHtml(p?p.strengthLevel:"")+'</select></div>'+
-    '<div class="field"><label class="field-label">Maturation <span class="opt">optional</span></label><select class="select" name="maturation" id="pitchSlotMaturation"><option value="">—</option>'+MATURATION_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.maturation===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
+    '<div class="field"><label class="field-label">Strength</label><select class="select" name="strengthLevel" id="pitchSlotStrengthLevel">'+speedNumOptionsHtml(p?p.strengthLevel:"")+'</select></div>'+
+    '<div class="field"><label class="field-label">Maturation</label><select class="select" name="maturation" id="pitchSlotMaturation"><option value="">—</option>'+MATURATION_LEVELS.map(function(v){return '<option value="'+v+'"'+(p&&p.maturation===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
   '</div>';
-  html += '<div class="field"><label class="field-label">Performance <span class="opt">1–5, optional</span></label><div class="pillgroup" data-name="performance"><input type="hidden" name="performance" value="'+escAttr(ev?ev.performance||"":"")+'">'+[1,2,3,4,5].map(function(n){return '<button type="button" class="pill-opt'+(ev&&String(n)===String(ev.performance)?" on":"")+'" data-value="'+n+'">'+n+'</button>';}).join("")+'</div></div>';
-  html += '<div class="field"><label class="field-label">Potential <span class="opt">A–E, optional</span></label><div class="pillgroup" data-name="potential"><input type="hidden" name="potential" value="'+escAttr(ev?ev.potential||"":"")+'">'+GRADE_LETTERS.map(function(g){return '<button type="button" class="pill-opt'+(ev&&g===normalizeGrade(ev.potential)?" on":"")+'" data-value="'+g+'">'+g+'</button>';}).join("")+'</div></div>';
-  html += '<div class="field"><label class="field-label">Match Level <span class="opt">optional</span></label><div class="pillgroup" data-name="matchLevel"><input type="hidden" name="matchLevel" value="'+escAttr(ev?ev.matchLevel||"":"")+'">'+MATCH_LEVELS.map(function(m){return '<button type="button" class="pill-opt'+(ev&&m===ev.matchLevel?" on":"")+'" data-value="'+m+'">'+m+'</button>';}).join("")+'</div></div>';
-  html += '<div class="field"><label class="field-label">Birth Year <span class="opt">optional</span></label><input class="input" name="birthYear" type="number" min="1970" max="'+(new Date().getFullYear())+'" placeholder="e.g. 2005" value="'+escAttr(p?p.birthYear||"":"")+'"></div>';
-  html += '<div class="field"><label class="field-label">Nationality <span class="opt">optional</span></label>'+renderCountryCombo("pitchSlotNat","nationality",p?p.nationality||"":"","Search nationality…")+'</div>';
-  html += '<div class="field"><label class="field-label">Notes <span class="opt">optional</span></label><textarea class="textarea" name="notes" placeholder="Any notes about this player…">'+esc(mp?mp.interestNote||"":"")+'</textarea></div>';
+  html += '<div class="field"><label class="field-label">Performance</label><div class="pillgroup" data-name="performance"><input type="hidden" name="performance" value="'+escAttr(ev?ev.performance||"":"")+'">'+[1,2,3,4,5].map(function(n){return '<button type="button" class="pill-opt'+(ev&&String(n)===String(ev.performance)?" on":"")+'" data-value="'+n+'">'+n+'</button>';}).join("")+'</div></div>';
+  html += '<div class="field"><label class="field-label">Potential</label><div class="pillgroup" data-name="potential"><input type="hidden" name="potential" value="'+escAttr(ev?ev.potential||"":"")+'">'+GRADE_LETTERS.map(function(g){return '<button type="button" class="pill-opt'+(ev&&g===normalizeGrade(ev.potential)?" on":"")+'" data-value="'+g+'">'+g+'</button>';}).join("")+'</div></div>';
+  html += '<div class="field"><label class="field-label">Match Level</label><div class="pillgroup" data-name="matchLevel"><input type="hidden" name="matchLevel" value="'+escAttr(ev?ev.matchLevel||"":"")+'">'+MATCH_LEVELS.map(function(m){return '<button type="button" class="pill-opt'+(ev&&m===ev.matchLevel?" on":"")+'" data-value="'+m+'">'+m+'</button>';}).join("")+'</div></div>';
+  html += '<div class="field"><label class="field-label">Birth Year</label><input class="input" name="birthYear" type="number" min="1970" max="'+(new Date().getFullYear())+'" placeholder="e.g. 2005" value="'+escAttr(p?p.birthYear||"":"")+'"></div>';
+  html += '<div class="field"><label class="field-label">Nationality</label>'+renderCountryCombo("pitchSlotNat","nationality",p?p.nationality||"":"","Search nationality…")+'</div>';
+  html += '<div class="field"><label class="field-label">Notes</label><textarea class="textarea" name="notes" placeholder="Any notes about this player…">'+esc(mp?mp.interestNote||"":"")+'</textarea></div>';
   // Short "#12 Name (POS)" label for another lineup entry — used to show who's on the other end of
   // a substitution next to the minute itself.
   function subPartnerLabel(otherMp){
@@ -5682,7 +5822,7 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
     // up front by the "Add Substitute" mini-modal); editable here too, in case it needs correcting.
     var replacedMp = mp.replacedPlayerId ? byId(DB.matchPlayers,mp.replacedPlayerId) : null;
     var replacedLabel = subPartnerLabel(replacedMp);
-    html += '<div class="field"><label class="field-label">Sub Minute <span class="opt">optional</span></label><input class="input" type="number" min="0" max="130" name="subMinute" value="'+escAttr(mp.subMinute)+'" placeholder="e.g. 63">'+
+    html += '<div class="field"><label class="field-label">Sub Minute</label><input class="input" type="number" min="0" max="130" name="subMinute" value="'+escAttr(mp.subMinute)+'" placeholder="e.g. 63">'+
       (replacedLabel?'<div style="font-size:11.5px;color:var(--text-muted);margin-top:5px">&lt;- '+esc(replacedLabel)+'</div>':"")+
     '</div>';
   }
@@ -5738,14 +5878,14 @@ function openAddSubstituteIntroModal(matchId,clubId,slotIndex){
   var onPitch = onPitchPlayers(matchId,clubId,null);
   var html = '<div class="modal-pad"><div class="modal-head"><div class="modal-title">Add Substitute</div><button class="icon-btn" data-close-modal>'+ic("close")+'</button></div>';
   html += '<form data-form="add-substitute-intro" class="stack" data-match-id="'+matchId+'" data-club-id="'+clubId+'" data-slot="'+slotIndex+'">';
-  html += '<div class="field"><label class="field-label">Substituted For <span class="opt">optional — might not be the same slot</span></label><select class="select" name="replacedMpId"><option value="">—</option>'+
+  html += '<div class="field"><label class="field-label">Substituted For</label><select class="select" name="replacedMpId"><option value="">—</option>'+
     onPitch.map(function(x){
       var xp = playerById(x.playerId);
       var label = (x.shirtNumber?"#"+x.shirtNumber+" ":"")+shortPlayerName(xp?xp.name:"")+(x.position?" ("+x.position+")":"");
       return '<option value="'+x.id+'">'+esc(label)+'</option>';
     }).join("")+
   '</select></div>';
-  html += '<div class="field"><label class="field-label">Sub Minute <span class="opt">optional</span></label><input class="input" type="number" min="0" max="130" name="subMinute" placeholder="e.g. 63" autofocus></div>';
+  html += '<div class="field"><label class="field-label">Sub Minute</label><input class="input" type="number" min="0" max="130" name="subMinute" placeholder="e.g. 63" autofocus></div>';
   html += '<button class="btn btn-primary btn-block" type="submit">Continue</button>';
   html += '</form></div>';
   openModal(html);
