@@ -507,8 +507,10 @@ details.acc summary .count-chip{background:var(--surface-3);color:var(--text-mut
    regardless of source order (equal single-class specificity was letting that one win before). */
 .profile-side-stack.profile-clubnat-stack,.profile-side-stack.profile-rating-stack,.profile-side-stack.profile-assess-stack{flex-direction:row;}
 /* Nationality+Club and Performance+Potential specifically were sitting too close together at the
-   default .profile-side-stack row gap — widen just those two (Assessment+Agent wasn't flagged). */
-.profile-side-stack.profile-clubnat-stack,.profile-side-stack.profile-rating-stack{gap:24px;}
+   default .profile-side-stack row gap — widen just those two (Assessment+Agent wasn't flagged).
+   Nationality+Club got a further request to be spaced out a bit more than that first widening. */
+.profile-side-stack.profile-clubnat-stack{gap:34px;}
+.profile-side-stack.profile-rating-stack{gap:24px;}
 .profile-club{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-muted);font-weight:600;max-width:260px;overflow-wrap:break-word;}
 .profile-club b{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-faint);font-weight:700;}
 .profile-club-country{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-faint);font-weight:700;margin-top:3px;text-align:center;}
