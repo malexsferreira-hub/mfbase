@@ -995,6 +995,7 @@ async function loadInitialData(){
   seed.playerNotes = seed.playerNotes || [];
   seed.fixtures = seed.fixtures || [];
   seed.agendaTasks = seed.agendaTasks || [];
+  seed.interestedTeams = seed.interestedTeams || [];
   // dashboardNote replaced the earlier per-item quickNotes list with a single freeform
   // scratchpad; fold over any quickNotes text so nothing typed there is lost.
   if(seed.dashboardNote===undefined || seed.dashboardNote===null){
@@ -1182,6 +1183,15 @@ function performanceColor(v){
   return "var(--rate-1)";
 }
 function ratingColor(v){ return performanceColor(v); }
+// Performance is now an average across every evaluated match (see updatePlayerCurrentRatings), so
+// it's almost always a decimal — shown to 1 decimal place, but trimmed to a plain whole number
+// when the average happens to land exactly on one (e.g. "4" instead of "4.0").
+function fmtRatingNum(value){
+  if(value===null||value===undefined||value==="") return "–";
+  var n = Math.round(parseFloat(value)*10)/10;
+  if(isNaN(n)) return "–";
+  return (n%1===0) ? String(n) : n.toFixed(1);
+}
 function ratingRing(value,size){
   size=size||46;
   var r=(size-8)/2, c=2*Math.PI*r;
@@ -1192,7 +1202,7 @@ function ratingRing(value,size){
   return '<div class="rating-ring" style="width:'+size+'px;height:'+size+'px;">'+
     '<svg width="'+size+'" height="'+size+'"><circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="var(--surface-3)" stroke-width="4"/>'+
     '<circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="4" stroke-linecap="round" stroke-dasharray="'+dash+' '+c+'"/></svg>'+
-    '<div class="rating-ring-num" style="font-size:'+(size*0.30)+'px;color:'+color+'">'+((value===null||value===undefined||value==="")?"–":Number(value).toFixed(0)) +'</div></div>';
+    '<div class="rating-ring-num" style="font-size:'+(size*0.30)+'px;color:'+color+'">'+fmtRatingNum(value)+'</div></div>';
 }
 function gradeRing(value,size){
   size=size||46;
@@ -1566,7 +1576,13 @@ function updatePlayerCurrentRatings(playerId){
   if(!p) return;
   var evs=playerEvaluations(playerId);
   if(evs.length){
-    if(evs[0].performance!==null && evs[0].performance!==undefined && evs[0].performance!=="") p.currentPerformance=evs[0].performance;
+    // Performance is the AVERAGE across every evaluation that recorded one — not just the most
+    // recent — so a single great or poor match doesn't single-handedly define the player; being an
+    // average, it's rounded to 1 decimal place (see fmtRatingNum) rather than a whole number.
+    // Potential and Match Level stay "latest wins": a live read of the scout's current ceiling/level
+    // call, not something that makes sense to average over time.
+    var perfVals = evs.map(function(e){return e.performance;}).filter(function(v){return v!==null && v!==undefined && v!=="";}).map(Number).filter(function(n){return !isNaN(n);});
+    p.currentPerformance = perfVals.length ? Math.round((perfVals.reduce(function(a,b){return a+b;},0)/perfVals.length)*10)/10 : "";
     if(evs[0].potential!==null && evs[0].potential!==undefined && evs[0].potential!=="") p.currentPotential=evs[0].potential;
     if(evs[0].matchLevel!==null && evs[0].matchLevel!==undefined && evs[0].matchLevel!=="") p.currentMatchLevel=evs[0].matchLevel;
   }
@@ -2750,26 +2766,70 @@ function openClubCreateModal(name,onCreate){
 /* ============================================================
    PLAYER COMBOBOX (lineup identification + dedupe)
    ============================================================ */
+// Most recent match (by date) this player has ANY lineup entry for — regardless of whether a
+// formal evaluation (a grade) was ever created for it. Used as a fallback below so a bare/unnamed
+// player who's only ever had a note or characteristics jotted down (no Performance/Potential/Match
+// Level, so no evaluation row exists yet — see upsertMatchEvaluation) still surfaces which
+// age-group team that was, instead of the suggestion showing no context at all.
+function lastPlayerMatchAppearance(playerId){
+  var rows = DB.matchPlayers.filter(function(mp){return mp.playerId===playerId;}).map(function(mp){
+    return {mp:mp, m:matchById(mp.matchId)};
+  }).filter(function(r){return r.m;});
+  if(!rows.length) return null;
+  rows.sort(function(a,b){return (b.m.date||"").localeCompare(a.m.date||"");});
+  return rows[0];
+}
 function playerComboPreview(p){
   var lastComp = lastPlayerCompetition(p.id);
+  // lastPlayerCompetition only looks at formal Match evaluations — fall back to the age group of
+  // this player's most recent lineup appearance (whatever notes were made there) when no
+  // evaluation has ever been saved for them, so the team/escalão they were seen in still shows up
+  // for a player of interest without a name or a grade.
+  var contextLabel = lastComp;
+  if(!contextLabel){
+    var lastAppearance = lastPlayerMatchAppearance(p.id);
+    if(lastAppearance){ contextLabel = matchAgeGroup(lastAppearance.m) || lastAppearance.m.competition || ""; }
+  }
   return '<div class="combo-item" data-player-id="'+p.id+'">'+avatarHtml(p,30)+
-    '<div><div class="combo-item-name">'+esc(p.name)+'</div><div class="combo-item-sub">'+(p.firstPosition?esc(p.firstPosition)+" · ":"")+esc(clubName(p.clubId)||"No club")+(p.nationality?" · "+esc(p.nationality):"")+(dobDisplay(p)!=="—"?" · "+esc(dobDisplay(p)):"")+(lastComp?" · "+esc(lastComp):"")+'</div></div></div>';
+    '<div><div class="combo-item-name">'+esc(p.name)+'</div><div class="combo-item-sub">'+(p.firstPosition?esc(p.firstPosition)+" · ":"")+esc(clubName(p.clubId)||"No club")+(p.nationality?" · "+esc(p.nationality):"")+(dobDisplay(p)!=="—"?" · "+esc(dobDisplay(p)):"")+(contextLabel?" · "+esc(contextLabel):"")+'</div></div></div>';
 }
 // Picking an existing player from the "Add Player" combo (pitch-slot modal) fills in whatever
-// base info the profile already has — number, birth year, nationality, height, preferred foot —
-// so it's identified right away; the coach only needs to add this match's observations. Never
-// overwrites something already typed into the form, and each match's own performance/potential/
-// characteristics are left alone since those are specific to this appearance, not the player.
+// base info the profile already has — number, birth year, nationality, height, preferred foot,
+// Position 1/Position 1 - Profile, Athletic — so it's identified right away; the coach only needs
+// to add this match's observations. Never overwrites something already typed into the form, and
+// each match's own performance/potential/characteristics are left alone since those are specific
+// to this appearance, not the player. Every field here mirrors whatever the player's profile
+// already carries (from Add Player or an earlier match), so a brand-new player with nothing on
+// file yet still leaves every field blank for this match, same as before. Position 2 is the one
+// exception — see the note further down — it's left blank even for a known player.
 function prefillKnownPlayerBrief(nameField,p){
   var form = nameField.closest("form");
   if(!form) return;
   function fillIfEmpty(el,val){ if(el && !el.value && val) el.value = val; }
   fillIfEmpty(form.querySelector('input[name="shirtNumber"]'), lastKnownShirtNumber(p.id));
   fillIfEmpty(form.querySelector('input[name="birthYear"]'), p.birthYear);
-  // height/positionProfile/estrutura/maturation/levels are <select>s — '[name=...]' (not
-  // 'input[name=...]') matches either an <input> or a <select>.
+  // height/positionProfile/strength(Athletic)/estrutura/maturation/levels are <select>s —
+  // '[name=...]' (not 'input[name=...]') matches either an <input> or a <select>.
+  // Position 2 is deliberately NOT prefilled here (unlike Position 1): the pitch-slot save handler
+  // applies position2, when present, as an explicit observation that takes priority over the
+  // auto-derived-from-Position-1-difference logic (applyObservedPosition runs for position, then
+  // again for position2 with the same date, and the second call wins by design when the coach
+  // genuinely set it for this match). A stale prefilled position2 from an earlier match would
+  // therefore silently override a correctly-derived new Second Position for this one — so Position
+  // 2 stays blank unless the coach sets it themselves for this specific match.
   fillIfEmpty(form.querySelector('[name="height"]'), p.height);
-  fillIfEmpty(form.querySelector('[name="positionProfile"]'), p.positionProfile);
+  fillIfEmpty(form.querySelector('[name="position"]'), p.firstPosition);
+  // Position 1 - Profile's own <option> list depends on whichever position is currently in that
+  // slot's select, so a profile value can't just be assigned; the option list itself has to be
+  // rebuilt for the position now in effect before it can include it. Only rebuilds when the
+  // profile field is still empty and there's a value to fill (never overwrites something typed in).
+  function fillPositionProfile(posSelector,profileSelector,profileVal){
+    var posEl = form.querySelector(posSelector), profileEl = form.querySelector(profileSelector);
+    if(!posEl || !profileEl || profileEl.value || !profileVal) return;
+    profileEl.innerHTML = positionProfileOptionsFor(posEl.value,profileVal);
+  }
+  fillPositionProfile('[name="position"]','[name="positionProfile"]', p.positionProfile);
+  fillIfEmpty(form.querySelector('[name="strength"]'), p.strength);
   fillIfEmpty(form.querySelector('[name="estrutura"]'), p.estrutura);
   fillIfEmpty(form.querySelector('[name="maturation"]'), p.maturation);
   // Agility/Acceleration/Pace are now plain 1-5 numbers — speedLevelToNum also accepts an old
@@ -2997,7 +3057,14 @@ function pageDashboard(){
   // No "Recent Evaluations" panel anymore — that space now lets Players of Interest show more
   // rows, sorted with the most recently-evaluated player first.
   var interestPlayers = DB.players.filter(function(p){return DB.matchPlayers.some(function(mp){return mp.playerId===p.id && mp.playerOfInterest;});});
+  // Best Performance (1 worst – 5 best) and Potential (E worst – A best, with B+/C+ ranking above
+  // their plain letter) float to the top; most-recently-evaluated first is kept only as the
+  // tie-breaker for players who match on both scores (or have neither set).
   interestPlayers.sort(function(a,b){
+    var perfA = Number(a.currentPerformance)||0, perfB = Number(b.currentPerformance)||0;
+    if(perfB!==perfA) return perfB-perfA;
+    var potA = GRADE_RANK[normalizeGrade(a.currentPotential)]||0, potB = GRADE_RANK[normalizeGrade(b.currentPotential)]||0;
+    if(potB!==potA) return potB-potA;
     var evA = playerEvaluations(a.id), evB = playerEvaluations(b.id);
     var dA = evA.length ? (evA[0].date||"") : "";
     var dB = evB.length ? (evB[0].date||"") : "";
@@ -3124,27 +3191,45 @@ function dashDayAgendaPanel(){
     if(ad!==bd) return ad-bd;
     return (a.dueTime||"99:99").localeCompare(b.dueTime||"99:99");
   });
-  var itemsHtml = "";
+  // Matches and tasks used to render as two separate blocks (all matches, then all tasks), which
+  // buried timed tasks under every match of the day regardless of time. They're now merged into one
+  // list and ranked: LIVE/TV matches always float to the top (whatever their time); then anything
+  // else with a time, earliest first; then anything with no time; done tasks sink to the very end.
+  var agendaItems = [];
   ms.forEach(function(m){
     var chipClass = "cal-chip-mode-"+(m.observationMode||"LIVE");
     var showTime = m.time && m.observationMode!=="VIDEO";
+    var isLiveOrTv = m.observationMode==="LIVE" || m.observationMode==="TV" || !m.observationMode;
     var ag = matchAgeGroup(m);
     // Mobile shows the age group (escalão); desktop shows the competition instead — same toggle
     // mechanism as the .dash-match-agegroup/.dash-match-competition pair used elsewhere.
     var ageBadge = ag ? '<span class="badge dash-agenda-agegroup" style="flex:0 0 auto;background:var(--surface-3);color:var(--text-muted);font-size:10px;padding:2px 6px">'+esc(ag)+'</span>' : '';
     var compBadge = m.competition ? '<span class="badge dash-agenda-competition" style="flex:0 0 auto;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--surface-3);color:var(--text-muted);font-size:10px;padding:2px 6px" title="'+escAttr(m.competition)+'">'+esc(m.competition)+'</span>' : '';
-    itemsHtml += '<div class="dash-agenda-item" data-action="open-match-preview" data-id="'+m.id+'" style="cursor:pointer">'+
-      '<span class="cal-chip '+chipClass+'" style="flex:0 0 auto">'+(showTime?esc(m.time)+' ':'')+esc(m.observationMode||"LIVE")+'</span>'+
-      ageBadge+compBadge+
-      '<span style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(clubName(m.homeClubId))+' v '+esc(clubName(m.awayClubId))+'</span>'+
-    '</div>';
+    agendaItems.push({
+      rank: isLiveOrTv ? 0 : (showTime ? 1 : 2),
+      time: showTime ? m.time : "",
+      html: '<div class="dash-agenda-item" data-action="open-match-preview" data-id="'+m.id+'" style="cursor:pointer">'+
+        '<span class="cal-chip '+chipClass+'" style="flex:0 0 auto">'+(showTime?esc(m.time)+' ':'')+esc(m.observationMode||"LIVE")+'</span>'+
+        ageBadge+compBadge+
+        '<span style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(clubName(m.homeClubId))+' v '+esc(clubName(m.awayClubId))+'</span>'+
+      '</div>'
+    });
   });
   ts.forEach(function(t){
-    itemsHtml += '<div class="dash-agenda-item" data-action="open-task-preview" data-id="'+t.id+'" style="cursor:pointer">'+
-      '<span class="cal-chip cal-chip-task'+(t.done?" done":"")+'" style="flex:0 0 auto">'+(t.dueTime?esc(t.dueTime):"Task")+'</span>'+
-      '<span style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+(t.done?"text-decoration:line-through;color:var(--text-faint)":"")+'">'+esc(t.text)+'</span>'+
-    '</div>';
+    agendaItems.push({
+      rank: t.done ? 3 : (t.dueTime ? 1 : 2),
+      time: t.dueTime||"",
+      html: '<div class="dash-agenda-item" data-action="open-task-preview" data-id="'+t.id+'" style="cursor:pointer">'+
+        '<span class="cal-chip cal-chip-task'+(t.done?" done":"")+'" style="flex:0 0 auto">'+(t.dueTime?esc(t.dueTime):"Task")+'</span>'+
+        '<span style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+(t.done?"text-decoration:line-through;color:var(--text-faint)":"")+'">'+esc(t.text)+'</span>'+
+      '</div>'
+    });
   });
+  agendaItems.sort(function(a,b){
+    if(a.rank!==b.rank) return a.rank-b.rank;
+    return (a.time||"99:99").localeCompare(b.time||"99:99");
+  });
+  var itemsHtml = agendaItems.map(function(it){return it.html;}).join("");
   if(!itemsHtml) itemsHtml = '<div class="dash-agenda-empty">Nothing.</div>';
   var nav = '<div class="dash-day-nav">'+
     '<button type="button" class="icon-btn" data-action="dash-agenda-day-prev" title="Previous day"'+(DASH_AGENDA_DAY_OFFSET<=-1?" disabled":"")+'><span style="display:inline-block;transform:rotate(180deg)">'+ic("chev")+'</span></button>'+
@@ -3271,11 +3356,60 @@ function upcomingFixturesForTeam(name,ageGroup){
     return normName(fx.team1)===nn || normName(fx.team2)===nn;
   }).sort(function(a,b){ return (a.date+(a.time||"")).localeCompare(b.date+(b.time||"")); });
 }
+// "Interested Teams": a small, purely manual list — separate from teamsToWatch()'s auto-derived
+// SAFF universe — for clubs the scout enjoyed watching and wants flagged as worth watching again,
+// with a free-text note per entry. Always shown at the top of Teams - Watch, even when the
+// auto-derived list below it is empty.
+function interestedTeamsPanel(){
+  var rows = (DB.interestedTeams||[]).map(function(it){
+    var c = it.clubId ? clubById(it.clubId) : null;
+    var name = c ? c.name : (it.clubName||"Unknown club");
+    return '<div class="roster-row" style="justify-content:flex-start;align-items:flex-start;gap:10px">'+
+      crestHtml(c||{name:name},26)+
+      '<div style="min-width:0;flex:1;padding-top:2px">'+
+        '<div class="roster-name" style="margin-bottom:4px">'+esc(name)+'</div>'+
+        '<textarea class="textarea" rows="2" style="font-size:12px" data-autosave="interested-team-notes" data-id="'+it.id+'" data-initial="'+escAttr(it.notes||"")+'" placeholder="Why it caught your eye…">'+esc(it.notes||"")+'</textarea>'+
+      '</div>'+
+      '<button type="button" class="icon-btn" style="flex:0 0 auto" data-action="remove-interested-team" data-id="'+it.id+'" title="Remove">'+ic("trash")+'</button>'+
+    '</div>';
+  }).join("");
+  var addRow = '<div class="roster-row" style="justify-content:flex-start;align-items:center;gap:8px">'+
+    '<div style="flex:1;min-width:0">'+renderClubCombo("interestedTeamAdd","interestedTeamAddClub","","Search or create a club to add…")+'</div>'+
+    '<button type="button" class="btn btn-sm btn-primary" style="flex:0 0 auto" data-action="add-interested-team">'+ic("plus")+' Add</button>'+
+  '</div>';
+  var body = addRow + (rows || emptyRow("No teams flagged yet — add one above to keep track of teams worth watching again."));
+  onAfterRender(function(){ wireClubCombo("interestedTeamAdd"); });
+  return dashPanel("Interested Teams", body);
+}
+ACTIONS["add-interested-team"] = function(){
+  var hidden = document.getElementById("interestedTeamAdd_hidden");
+  var text = document.getElementById("interestedTeamAdd_text");
+  var clubId = hidden ? hidden.value : "";
+  var typedName = text ? text.value.trim() : "";
+  if(!clubId && !typedName) return;
+  DB.interestedTeams = DB.interestedTeams || [];
+  if(clubId && DB.interestedTeams.some(function(it){return it.clubId===clubId;})){
+    persist({toast:"Already on your Interested Teams list"});
+    return;
+  }
+  DB.interestedTeams.push({id:uid("int"),clubId:clubId||"",clubName:clubId?"":typedName,notes:"",createdAt:nowISO(),updatedAt:nowISO()});
+  persist({toast:"Added to Interested Teams"});
+};
+ACTIONS["remove-interested-team"] = function(el){
+  DB.interestedTeams = (DB.interestedTeams||[]).filter(function(x){return x.id!==el.dataset.id;});
+  persist({toast:"Removed from Interested Teams"});
+};
+AUTOSAVE_HANDLERS["interested-team-notes"] = function(el){
+  var it = byId(DB.interestedTeams||[],el.dataset.id); if(!it) return;
+  it.notes = el.value; it.updatedAt = nowISO();
+  persist({});
+};
 function pageTeamsWatch(){
   var list = teamsToWatch();
   var html = '<div class="stack">';
   html += '<div class="section-head"><div><div class="eyebrow">Scouting</div><h1 style="font-size:24px">Teams - Watch</h1></div></div>';
   html += '<div style="font-size:12.5px;color:var(--text-muted);margin-top:-6px">Every U15-U21 SAFF team not fully watched in the last 2 months (or never watched, or only partially watched) — teams already on your Agenda are left out.</div>';
+  html += interestedTeamsPanel();
   if(!list.length){
     html += '<div class="card card-pad">'+emptyRow("Nothing here — every team on the SAFF calendar is either recently watched or already on your Agenda.")+'</div>';
     html += '</div>';
@@ -3462,7 +3596,7 @@ function pagePlayers(){
         '<td class="mono">'+esc(footAbbrev(p.preferredFoot))+'</td>'+
         '<td><div style="display:flex;align-items:center;justify-content:center;gap:6px">'+crestHtml(clubById(p.clubId),16)+(p.clubId?esc(clubName(p.clubId)):'<span style="color:var(--text-faint)">Free Agent</span>')+'</div></td>'+
         '<td>'+(r.topComp?'<span class="badge" style="background:var(--surface-3);color:var(--text-muted)">'+esc(r.topComp)+'</span>':'<span style="color:var(--text-faint)">—</span>')+'</td>'+
-        '<td class="num">'+(p.currentPerformance?'<span style="font-weight:700;color:'+performanceColor(p.currentPerformance)+'">'+Number(p.currentPerformance).toFixed(0)+'</span>':'<span style="color:var(--text-faint)">—</span>')+'</td>'+
+        '<td class="num">'+(p.currentPerformance?'<span style="font-weight:700;color:'+performanceColor(p.currentPerformance)+'">'+fmtRatingNum(p.currentPerformance)+'</span>':'<span style="color:var(--text-faint)">—</span>')+'</td>'+
         '<td class="num">'+(p.currentPotential?gradeBadge(p.currentPotential):'<span style="color:var(--text-faint)">—</span>')+'</td>'+
         '<td class="mono" style="font-size:12px">'+(r.last?fmtDateShort(r.last):"—")+'</td>'+
         '<td><button class="icon-btn" data-action="delete-player" data-id="'+p.id+'" title="Delete player">'+ic("trash")+'</button></td>'+
@@ -3887,12 +4021,6 @@ function pagePlayerDetail(id){
     evalParamBlock("techTactical",p)+evalParamBlock("physical",p)+evalParamBlock("psychological",p)+
   '</div>';
 
-  if(evals.length>=2){
-    html += '<div class="card card-pad"><div class="section-title" style="margin-bottom:10px">Rating Evolution</div><div class="spark-wrap">'+
-      sparkBlock("Performance",evals)+sparkBlock("Potential",evals)+
-    '</div></div>';
-  }
-
   html += '<div class="card card-pad"><div class="section-head"><div class="section-title">Extra Observations</div><span class="autosaved-tick" id="tick-extra">'+ic("check")+' Saved</span></div>'+
     '<textarea class="textarea" data-autosave="player-extra" data-id="'+p.id+'" data-initial="'+escAttr(p.extraObservations||"")+'" placeholder="Anything else worth remembering about this player.">'+esc(p.extraObservations||"")+'</textarea>'+
   '</div>';
@@ -3943,8 +4071,10 @@ function matchPlayerPositionForEval(e){
   var mp = DB.matchPlayers.find(function(x){return x.matchId===e.matchId && x.playerId===e.playerId;});
   return mp ? mp.position : "";
 }
-function kv(label,val){
-  return '<div class="kv-item"><div class="kv-label">'+esc(label)+'</div><div class="kv-val">'+esc(val)+'</div></div>';
+// `highlight` marks a value that changed relative to the player's previous evaluation (see
+// openEvalDetailModal) — shown in gold/yellow instead of the usual text color, to catch the eye.
+function kv(label,val,highlight){
+  return '<div class="kv-item"><div class="kv-label">'+esc(label)+'</div><div class="kv-val"'+(highlight?' style="color:var(--gold)"':'')+'>'+esc(val)+'</div></div>';
 }
 function ratingCard(label,field,p){
   var v = p[field];
@@ -3957,33 +4087,6 @@ function ratingCard(label,field,p){
     '<div><div class="eyebrow">'+label+'</div><div style="font-family:var(--font-display);font-weight:800;font-size:26px;color:'+color+'">'+big+suffix+'</div></div>'+
   '</div>';
 }
-function sparkBlock(label,evals){
-  var isGrade = (label==="Potential");
-  var series = evals.slice().reverse().map(function(e){return {date:e.date, v: label==="Performance"?e.performance:e.potential};}).filter(function(x){return x.v!==""&&x.v!==null&&x.v!==undefined;});
-  if(series.length<2) return '<div class="spark-block"><div class="eyebrow">'+label+'</div><div style="color:var(--text-faint);font-size:12px;padding:10px 0">Not enough data yet</div></div>';
-  var w=260,h=54,pad=6;
-  var vals = series.map(function(s){return isGrade ? (GRADE_RANK[normalizeGrade(s.v)]||0) : parseFloat(s.v);});
-  var min = Math.min.apply(null,vals), max = Math.max.apply(null,vals);
-  if(min===max){ min-=1; max+=1; }
-  var pts = series.map(function(s,i){
-    var x = pad + (i/(series.length-1))*(w-pad*2);
-    var val = isGrade ? (GRADE_RANK[normalizeGrade(s.v)]||0) : parseFloat(s.v);
-    var y = h-pad - ((val-min)/(max-min))*(h-pad*2);
-    return [x,y];
-  });
-  var path = pts.map(function(pt,i){return (i===0?"M":"L")+pt[0].toFixed(1)+","+pt[1].toFixed(1);}).join(" ");
-  var last = pts[pts.length-1];
-  var color = label==="Performance" ? "var(--accent)" : "var(--gold)";
-  var areaPath = path+" L"+last[0].toFixed(1)+","+(h-pad)+" L"+pts[0][0].toFixed(1)+","+(h-pad)+" Z";
-  var lastLabel = isGrade ? normalizeGrade(series[series.length-1].v) : vals[vals.length-1].toFixed(0);
-  return '<div class="spark-block"><div class="eyebrow">'+label+'</div>'+
-    '<svg width="100%" height="'+h+'" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" style="overflow:visible;margin-top:4px">'+
-    '<path d="'+areaPath+'" fill="'+color+'" opacity="0.12" stroke="none"/>'+
-    '<path d="'+path+'" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+
-    '<circle cx="'+last[0].toFixed(1)+'" cy="'+last[1].toFixed(1)+'" r="3" fill="'+color+'"/>'+
-    '</svg><div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--text-faint);margin-top:2px"><span>'+fmtDateShort(series[0].date)+'</span><span class="mono" style="color:'+color+';font-weight:600">'+lastLabel+'</span></div></div>';
-}
-
 ACTIONS["edit-player"] = function(el){ navigate("#/players/"+encodeURIComponent(el.dataset.id)+"/edit"); };
 
 INLINE_EDIT_HANDLERS["player-name"] = function(el,val){
@@ -4291,10 +4394,23 @@ function openEvalDetailModal(evalId,matchId,playerId,mpId){
   if(!e){
     html += '<div class="field-hint" style="margin-bottom:12px">No formal evaluation was recorded for this appearance yet.</div>';
   } else {
+    // Highlight (in gold, instead of the usual text color) any parameter whose value changed
+    // relative to this player's previous evaluation in time, so a shift stands out at a glance.
+    // No highlight at all when there's no earlier evaluation to compare against.
+    var allPlayerEvs = playerEvaluations(playerId);
+    var thisEvIdx = allPlayerEvs.findIndex(function(x){return x.id===e.id;});
+    var prevEval = (thisEvIdx>=0 && thisEvIdx+1<allPlayerEvs.length) ? allPlayerEvs[thisEvIdx+1] : null;
+    function evalFieldChanged(field){
+      if(!prevEval) return false;
+      var a = e[field], b = prevEval[field];
+      a = (a===null||a===undefined)?"":String(a);
+      b = (b===null||b===undefined)?"":String(b);
+      return a!==b;
+    }
     html += '<div class="kv-grid" style="margin-bottom:12px">'+
-      kv("Performance",e.performance?Number(e.performance).toFixed(0)+" / 5":"—")+
-      kv("Potential",normalizeGrade(e.potential)||"—")+
-      kv("Match Level",e.matchLevel||"—")+
+      kv("Performance",e.performance?Number(e.performance).toFixed(0)+" / 5":"—",evalFieldChanged("performance"))+
+      kv("Potential",normalizeGrade(e.potential)||"—",evalFieldChanged("potential"))+
+      kv("Match Level",e.matchLevel||"—",evalFieldChanged("matchLevel"))+
     '</div>';
     // This match's own snapshot of the physical/attribute parameters (independent of the player's
     // current profile value) — only shown when at least one was actually recorded here, so an older
@@ -4303,15 +4419,15 @@ function openEvalDetailModal(evalId,matchId,playerId,mpId){
     if(hasAttrSnapshot){
       html += '<div class="field-hint" style="margin-bottom:6px">Recorded in this match</div>';
       html += '<div class="kv-grid" style="margin-bottom:12px">'+
-        kv("Foot",e.preferredFoot||"—")+
-        kv("Height",e.height||"—")+
-        kv("Structure",e.estrutura||"—")+
-        kv("Athletic",e.strength||"—")+
-        kv("Strength",e.strengthLevel||"—")+
-        kv("Maturation",e.maturation||"—")+
-        kv("Agility",e.agilityLevel||"—")+
-        kv("Acceleration",e.accelerationLevel||"—")+
-        kv("Pace",e.speedLevel||"—")+
+        kv("Foot",e.preferredFoot||"—",evalFieldChanged("preferredFoot"))+
+        kv("Height",e.height||"—",evalFieldChanged("height"))+
+        kv("Structure",e.estrutura||"—",evalFieldChanged("estrutura"))+
+        kv("Athletic",e.strength||"—",evalFieldChanged("strength"))+
+        kv("Strength",e.strengthLevel||"—",evalFieldChanged("strengthLevel"))+
+        kv("Maturation",e.maturation||"—",evalFieldChanged("maturation"))+
+        kv("Agility",e.agilityLevel||"—",evalFieldChanged("agilityLevel"))+
+        kv("Acceleration",e.accelerationLevel||"—",evalFieldChanged("accelerationLevel"))+
+        kv("Pace",e.speedLevel||"—",evalFieldChanged("speedLevel"))+
       '</div>';
     }
     var evChars = evalCharacteristicsDisplay(playerId,e);
@@ -5640,22 +5756,17 @@ ACTIONS["toggle-interest"] = function(el){
   applyInterestFlag(mp,want);
   var toast = want ? "Marked as Player of Interest" : "Removed from Players of Interest";
   if(!want){
-    // Un-starring: if this was the only record this player had anywhere (same check used when
-    // removing a lineup entry), they come out of the Players Database entirely rather than just
-    // losing the star — otherwise just this match's own evaluation of them (if any) goes.
+    // Un-starring only ever changes the Player of Interest flag itself — this match's own lineup
+    // entry, evaluation and notes are NEVER touched (a mistaken star, once undone, must leave every
+    // annotation exactly as it was). If the player has no other record anywhere (same check used
+    // when removing a lineup entry), they simply go back to "pending interest" — hidden from the
+    // Players Database, same as any other lineup player who was never marked POI — instead of being
+    // deleted outright.
     var playerId = mp.playerId, matchId = mp.matchId, mpId = mp.id;
     if(playerId && !playerHasOtherRecords(playerId,mpId,matchId)){
-      DB.players = DB.players.filter(function(x){return x.id!==playerId;});
-      DB.matchPlayers = DB.matchPlayers.filter(function(x){return x.id!==mpId;});
-      DB.evaluations = DB.evaluations.filter(function(x){return !(x.playerId===playerId && x.matchId===matchId);});
-      toast = "Removed from Players of Interest — no other records for this player, so it was deleted too";
-    } else if(playerId){
-      var hadEval = DB.evaluations.some(function(x){return x.playerId===playerId && x.matchId===matchId;});
-      DB.evaluations = DB.evaluations.filter(function(x){return !(x.playerId===playerId && x.matchId===matchId);});
-      if(hadEval){
-        updatePlayerCurrentRatings(playerId);
-        toast = "Removed from Players of Interest — this match's evaluation was deleted too";
-      }
+      var p = playerById(playerId);
+      if(p){ p.pendingInterest = true; p.updatedAt = nowISO(); }
+      toast = "Removed from Players of Interest — no other record, so it's hidden from the Players Database again (this match's info is kept)";
     }
   }
   if(el.hasAttribute("data-close-modal")) closeModal();
