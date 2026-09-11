@@ -2818,11 +2818,24 @@ function prefillKnownPlayerBrief(nameField,p){
   // therefore silently override a correctly-derived new Second Position for this one — so Position
   // 2 stays blank unless the coach sets it themselves for this specific match.
   fillIfEmpty(form.querySelector('[name="height"]'), p.height);
-  fillIfEmpty(form.querySelector('[name="position"]'), p.firstPosition);
+  // Position 1's <select> is never actually "empty" the way an <input> is — it always starts
+  // pre-selected with whichever position the clicked pitch-slot implies (see pos1Val in
+  // openPitchSlotModal), so fillIfEmpty would silently do nothing here almost every time. It
+  // carries its own starting value in data-slot-default (set at render time); "untouched" means
+  // the select still holds that exact value, which is the signal to replace it with the player's
+  // own known position — the coach can still change it afterwards if this match's observation is
+  // genuinely different, same as with any other prefilled field.
+  var posEl = form.querySelector('[name="position"]');
+  if(posEl && p.firstPosition){
+    var slotDefault = posEl.dataset.slotDefault!==undefined ? posEl.dataset.slotDefault : "";
+    if(posEl.value===slotDefault) posEl.value = p.firstPosition;
+  }
   // Position 1 - Profile's own <option> list depends on whichever position is currently in that
   // slot's select, so a profile value can't just be assigned; the option list itself has to be
-  // rebuilt for the position now in effect before it can include it. Only rebuilds when the
-  // profile field is still empty and there's a value to fill (never overwrites something typed in).
+  // rebuilt for the position now in effect before it can include it (using Position 1's value AFTER
+  // the override above, so it's rebuilt against the player's own position, not the slot's default).
+  // Only rebuilds when the profile field is still empty and there's a value to fill (never
+  // overwrites something typed in).
   function fillPositionProfile(posSelector,profileSelector,profileVal){
     var posEl = form.querySelector(posSelector), profileEl = form.querySelector(profileSelector);
     if(!posEl || !profileEl || profileEl.value || !profileVal) return;
@@ -3057,14 +3070,14 @@ function pageDashboard(){
   // No "Recent Evaluations" panel anymore — that space now lets Players of Interest show more
   // rows, sorted with the most recently-evaluated player first.
   var interestPlayers = DB.players.filter(function(p){return DB.matchPlayers.some(function(mp){return mp.playerId===p.id && mp.playerOfInterest;});});
-  // Best Performance (1 worst – 5 best) and Potential (E worst – A best, with B+/C+ ranking above
-  // their plain letter) float to the top; most-recently-evaluated first is kept only as the
-  // tie-breaker for players who match on both scores (or have neither set).
+  // Best Potential (A best, then B+, B, C+, C, D, E worst — GRADE_RANK) floats to the top; best
+  // Performance (1 worst – 5 best) is the tie-breaker, then most-recently-evaluated first for
+  // players who match on both scores (or have neither set).
   interestPlayers.sort(function(a,b){
-    var perfA = Number(a.currentPerformance)||0, perfB = Number(b.currentPerformance)||0;
-    if(perfB!==perfA) return perfB-perfA;
     var potA = GRADE_RANK[normalizeGrade(a.currentPotential)]||0, potB = GRADE_RANK[normalizeGrade(b.currentPotential)]||0;
     if(potB!==potA) return potB-potA;
+    var perfA = Number(a.currentPerformance)||0, perfB = Number(b.currentPerformance)||0;
+    if(perfB!==perfA) return perfB-perfA;
     var evA = playerEvaluations(a.id), evB = playerEvaluations(b.id);
     var dA = evA.length ? (evA[0].date||"") : "";
     var dB = evB.length ? (evB[0].date||"") : "";
@@ -5007,6 +5020,33 @@ function agendaDateOf(m){ return (m.observationMode==="VIDEO" && m.watchDate) ? 
 // LIVE and TV matches are happening now/soon, so they surface ahead of VIDEO ones regardless of
 // date; within that priority group, still order chronologically.
 function agendaSortPriority(m){ return (m.observationMode==="LIVE"||m.observationMode==="TV") ? 0 : 1; }
+// Shared same-day ranking for a match or task, used everywhere a single day's matches and tasks
+// need to appear in ONE ranked list instead of "all matches, then all tasks": LIVE/TV matches
+// always float to the top (whatever their time); anything else with a time comes next, earliest
+// first; anything with no time after that; a completed task sinks to the very end. Originally only
+// the Dashboard mini-agenda did this (dashDayAgendaPanel) — now shared so the full Agenda page's
+// month-grid cells and day-detail view apply the exact same rule to tasks with a time set.
+function dayAgendaRank(kind,obj){
+  if(kind==="match"){
+    var isLiveOrTv = obj.observationMode==="LIVE"||obj.observationMode==="TV"||!obj.observationMode;
+    var showTime = obj.time && obj.observationMode!=="VIDEO";
+    return isLiveOrTv ? 0 : (showTime ? 1 : 2);
+  }
+  return obj.done ? 3 : (obj.dueTime ? 1 : 2);
+}
+function dayAgendaTime(kind,obj){
+  if(kind==="match") return (obj.time && obj.observationMode!=="VIDEO") ? obj.time : "";
+  return obj.dueTime||"";
+}
+function mergeDayAgendaItems(matches,tasks){
+  var items = matches.map(function(m){return {kind:"match",obj:m};}).concat(tasks.map(function(t){return {kind:"task",obj:t};}));
+  items.forEach(function(it){ it.rank = dayAgendaRank(it.kind,it.obj); it.time = dayAgendaTime(it.kind,it.obj); });
+  items.sort(function(a,b){
+    if(a.rank!==b.rank) return a.rank-b.rank;
+    return (a.time||"99:99").localeCompare(b.time||"99:99");
+  });
+  return items;
+}
 function pageAgenda(){
   var scheduled = DB.matches.filter(function(m){return m.fromCalendar;}).sort(function(a,b){
     var pa = agendaSortPriority(a), pb = agendaSortPriority(b);
@@ -5049,20 +5089,21 @@ function pageAgenda(){
       } else {
         html += '<div class="cal-cell-date">'+dayNum+'</div>';
       }
-      var shown = 0;
-      info.matches.forEach(function(m){
-        if(shown>=CAL_CELL_CAP) return;
-        var watched = m.status==="Watched"||m.status==="Partially Watched";
-        var chipModeClass = watched ? "cal-chip-match-watched" : "cal-chip-mode-"+(m.observationMode||"LIVE");
-        // Final results aren't shown on the Agenda — they belong on the Calendar page instead.
-        var showChipTime = m.time && m.observationMode!=="VIDEO";
-        html += '<div class="cal-chip '+chipModeClass+'" data-action="open-match-preview" data-id="'+m.id+'" title="'+escAttr(clubName(m.homeClubId)+' v '+clubName(m.awayClubId))+'">'+(showChipTime?esc(m.time)+' ':'')+esc(clubName(m.homeClubId))+' v '+esc(clubName(m.awayClubId))+'</div>';
-        shown++;
-      });
-      info.tasks.forEach(function(t){
-        if(shown>=CAL_CELL_CAP) return;
-        html += '<div class="cal-chip cal-chip-task'+(t.done?" done":"")+'" data-action="open-task-preview" data-id="'+t.id+'" title="'+escAttr(t.text)+'">'+(t.dueTime?esc(t.dueTime)+' ':'')+esc(t.text)+'</div>';
-        shown++;
+      // Merged and ranked the same way as everywhere else on the Agenda (dayAgendaRank): LIVE/TV
+      // matches first, then anything with a time (earliest first — a timed task included), then
+      // anything untimed, done tasks last — instead of always showing every match before any task.
+      mergeDayAgendaItems(info.matches,info.tasks).slice(0,CAL_CELL_CAP).forEach(function(it){
+        if(it.kind==="match"){
+          var m = it.obj;
+          var watched = m.status==="Watched"||m.status==="Partially Watched";
+          var chipModeClass = watched ? "cal-chip-match-watched" : "cal-chip-mode-"+(m.observationMode||"LIVE");
+          // Final results aren't shown on the Agenda — they belong on the Calendar page instead.
+          var showChipTime = m.time && m.observationMode!=="VIDEO";
+          html += '<div class="cal-chip '+chipModeClass+'" data-action="open-match-preview" data-id="'+m.id+'" title="'+escAttr(clubName(m.homeClubId)+' v '+clubName(m.awayClubId))+'">'+(showChipTime?esc(m.time)+' ':'')+esc(clubName(m.homeClubId))+' v '+esc(clubName(m.awayClubId))+'</div>';
+        } else {
+          var t = it.obj;
+          html += '<div class="cal-chip cal-chip-task'+(t.done?" done":"")+'" data-action="open-task-preview" data-id="'+t.id+'" title="'+escAttr(t.text)+'">'+(t.dueTime?esc(t.dueTime)+' ':'')+esc(t.text)+'</div>';
+        }
       });
       if(totalItems>CAL_CELL_CAP){
         html += '<button type="button" class="cal-cell-more" data-action="open-agenda-day" data-date="'+cell.date+'">+'+(totalItems-CAL_CELL_CAP)+' more</button>';
@@ -5179,18 +5220,18 @@ function openAgendaDayModal(dateISO){
     var d = (a.date||"").localeCompare(b.date||"");
     return d!==0 ? d : (a.time||"").localeCompare(b.time||"");
   });
-  var ts = DB.agendaTasks.filter(function(t){return t.dueDate===dateISO;}).sort(function(a,b){
-    var ad=a.done?1:0, bd=b.done?1:0;
-    if(ad!==bd) return ad-bd;
-    return (a.dueTime||"99:99").localeCompare(b.dueTime||"99:99");
-  });
+  var ts = DB.agendaTasks.filter(function(t){return t.dueDate===dateISO;});
   var html = '<div class="modal-pad"><div class="modal-head"><div class="modal-title">'+esc(fmtDate(dateISO))+'</div><button class="icon-btn" data-close-modal>'+ic("close")+'</button></div>';
   if(!ms.length && !ts.length){
     html += emptyRow("Nothing scheduled for this day yet.");
   } else {
-    if(ms.length){
-      html += '<div class="roster-group-label">Matches</div>';
-      ms.forEach(function(m){
+    // One merged, ranked list instead of a "Matches" group then a "Tasks" group — same rule as the
+    // Dashboard mini-agenda and the month grid (dayAgendaRank/mergeDayAgendaItems): LIVE/TV matches
+    // top, then anything with a time (earliest first, a timed task included), then anything
+    // untimed, done tasks last.
+    mergeDayAgendaItems(ms,ts).forEach(function(it){
+      if(it.kind==="match"){
+        var m = it.obj;
         var watched = m.status==="Watched"||m.status==="Partially Watched";
         var chipModeClass = watched ? "cal-chip-match-watched" : "cal-chip-mode-"+(m.observationMode||"LIVE");
         var showChipTime = m.time && m.observationMode!=="VIDEO";
@@ -5199,17 +5240,14 @@ function openAgendaDayModal(dateISO){
           '<div class="roster-name-wrap"><div class="roster-name">'+esc(clubName(m.homeClubId))+' <span style="color:var(--text-faint);font-weight:400">v</span> '+esc(clubName(m.awayClubId))+'</div><div class="roster-chars">'+esc(m.competition||"")+'</div></div>'+
           '<div class="mono" style="flex:0 0 auto;font-size:11.5px;color:var(--text-muted);padding-top:2px">'+esc(fmtDateShort(m.date))+'</div>'+
         '</div>';
-      });
-    }
-    if(ts.length){
-      html += '<div class="roster-group-label">Tasks</div>';
-      ts.forEach(function(t){
+      } else {
+        var t = it.obj;
         html += '<div class="roster-row" data-action="open-task-preview" data-id="'+t.id+'" style="cursor:pointer">'+
           '<span class="cal-chip cal-chip-task'+(t.done?" done":"")+'" style="flex:0 0 auto;cursor:pointer">'+(t.dueTime?esc(t.dueTime):"Task")+'</span>'+
           '<div class="roster-name-wrap"><div class="roster-name" style="'+(t.done?"text-decoration:line-through;color:var(--text-faint)":"")+'">'+esc(t.text)+'</div></div>'+
         '</div>';
-      });
-    }
+      }
+    });
   }
   html += '<button type="button" class="btn btn-block" style="margin-top:12px" data-action="open-add-task" data-date="'+dateISO+'">'+ic("plus")+' Add Task for This Day</button>';
   html += '</div>';
@@ -5937,8 +5975,13 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
   // Position 1 + its Profile share a line, Position 2 + its Profile share the line below — kept in
   // sync with the standalone Add/Edit Player form, which lays these out the same way. Position gets
   // a narrower fixed share so the (usually longer) Profile select gets more room.
+  // data-slot-default records this select's own starting value (the slot's own inferred position,
+  // same for a new entry or one still holding whatever it was originally saved as) — used by
+  // prefillKnownPlayerBrief to tell "still whatever the slot/entry defaulted to" apart from "the
+  // coach already set this deliberately", so picking a known player from a combo can safely
+  // replace an untouched default with their known position without ever overwriting a real choice.
   html += '<div class="form-grid" style="grid-template-columns:0.7fr 1.5fr">'+
-    '<div class="field"><label class="field-label">Position 1</label><select class="select" name="position" id="pitchSlotPos1">'+positionOptionsAbbrev(pos1Val)+'</select></div>'+
+    '<div class="field"><label class="field-label">Position 1</label><select class="select" name="position" id="pitchSlotPos1" data-slot-default="'+escAttr(slot.pos||"")+'">'+positionOptionsAbbrev(pos1Val)+'</select></div>'+
     '<div class="field"><label class="field-label">Position 1 - Profile</label><select class="select" name="positionProfile" id="pitchSlotPosProfile">'+positionProfileOptionsFor(pos1Val,p?p.positionProfile||"":"")+'</select></div>'+
   '</div>';
   html += '<div class="form-grid" style="grid-template-columns:0.7fr 1.5fr">'+
