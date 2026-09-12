@@ -1588,6 +1588,42 @@ function updatePlayerCurrentRatings(playerId){
   }
   p.updatedAt=nowISO();
 }
+// The 9 attribute fields each match's own evaluation can snapshot (see upsertMatchEvaluation) and
+// that the player's own profile tracks as "whichever dated observation is most recent" (see
+// applyPitchSlotField) — General Characteristics' auto sentence is built from 8 of these.
+var EVAL_SNAPSHOT_ATTR_FIELDS = ["preferredFoot","height","estrutura","strength","maturation","agilityLevel","accelerationLevel","speedLevel","strengthLevel"];
+// Deleting an evaluation must not leave the player's profile (and its auto Portuguese sentence)
+// frozen on whatever that evaluation last recorded — e.g. delete today's evaluation and the
+// sentence has to fall back to reflect yesterday's, exactly as if today's had never been entered.
+// `deletedEval` is the evaluation object as it stood right before removal (still needed for its
+// own field values/date). For each attribute, only reverts it if this deleted evaluation was
+// actually the CURRENTLY-recorded source for that field (its value and date match what's on the
+// player right now) — a field whose current value came from somewhere else (a later match, or a
+// direct Add/Edit Player correction) is never touched, so a manual fix is never silently undone by
+// deleting an unrelated older evaluation. Call this AFTER removing the evaluation from DB.evaluations
+// (playerEvaluations(playerId) must reflect the remaining ones) but pass the evaluation as it was
+// before that removal.
+function revertPlayerAttributesAfterEvalDelete(playerId,deletedEval){
+  var p = playerById(playerId);
+  if(!p || !deletedEval) return;
+  var remaining = playerEvaluations(playerId); // sorted most-recent-first by date
+  var changed = false;
+  EVAL_SNAPSHOT_ATTR_FIELDS.forEach(function(field){
+    var delVal = deletedEval[field];
+    if(delVal===undefined || delVal===null || delVal==="") return; // this evaluation never set it
+    var dateField = field+"UpdatedAt";
+    if(String(p[field])!==String(delVal) || p[dateField]!==deletedEval.date) return; // wasn't the current source
+    var nextVal = "", nextDate = "";
+    for(var i=0;i<remaining.length;i++){
+      var e = remaining[i];
+      if(e[field]!==undefined && e[field]!==null && e[field]!==""){ nextVal=e[field]; nextDate=e.date||""; break; }
+    }
+    p[field] = nextVal;
+    p[dateField] = nextVal ? nextDate : "";
+    changed = true;
+  });
+  if(changed){ regeneratePlayerAutoSentence(p); p.updatedAt = nowISO(); }
+}
 // Height tracks the most recently *dated* observation, not just the most recently entered one —
 // so going back to fill in an older match afterwards never overwrites what a newer match already
 // established (a young player's height can shift month to month). `dateField` remembers the
@@ -4476,6 +4512,7 @@ ACTIONS["delete-evaluation"] = function(el){
     "Delete Evaluation",
     function(){
       DB.evaluations = DB.evaluations.filter(function(x){return x.id!==evalId;});
+      revertPlayerAttributesAfterEvalDelete(playerId,ev);
       updatePlayerCurrentRatings(playerId);
       persist({toast:"Evaluation deleted", redirectHash:"#/players/"+encodeURIComponent(playerId)});
     }
@@ -5777,7 +5814,8 @@ function lineupTeamCard(m,club,clubId){
 // on the false->true transition, so re-saving an already-interested player (e.g. just editing
 // their notes) doesn't keep bumping the interest date.
 function applyInterestFlag(mp,want){
-  if(want && !mp.playerOfInterest){
+  var wasInterest = mp.playerOfInterest;
+  if(want && !wasInterest){
     mp.interestDate = todayISO(); mp.interestScoutId = DB.currentScoutId;
     var promoted = playerById(mp.playerId);
     if(promoted && promoted.pendingInterest) promoted.pendingInterest = false;
@@ -5786,6 +5824,22 @@ function applyInterestFlag(mp,want){
     mp.interestRank = siblingRanks.length ? Math.max.apply(null,siblingRanks)+1 : 1;
   }
   mp.playerOfInterest = want;
+  if(wasInterest && !want){
+    // Un-starring only ever changes the Player of Interest flag itself — this match's own lineup
+    // entry, evaluation and notes are NEVER touched (a mistaken star, once undone, must leave every
+    // annotation exactly as it was). If the player has no other record anywhere (same check used
+    // when removing a lineup entry), they go back to "pending interest" — hidden from the Players
+    // Database again, same as any other lineup player who was never marked POI — instead of being
+    // deleted outright. Lives here (not in the star-button action alone) so it also fires when a
+    // coach un-stars by unchecking "Player of Interest" in the pitch-slot Edit Player modal — that
+    // path used to call this function directly and skip the check entirely, leaving an
+    // otherwise-empty profile visible in the Players Database.
+    var playerId = mp.playerId, matchId = mp.matchId, mpId = mp.id;
+    if(playerId && !playerHasOtherRecords(playerId,mpId,matchId)){
+      var p = playerById(playerId);
+      if(p){ p.pendingInterest = true; p.updatedAt = nowISO(); }
+    }
+  }
 }
 ACTIONS["toggle-interest"] = function(el){
   var mp = byId(DB.matchPlayers,el.dataset.id);
@@ -5794,18 +5848,8 @@ ACTIONS["toggle-interest"] = function(el){
   applyInterestFlag(mp,want);
   var toast = want ? "Marked as Player of Interest" : "Removed from Players of Interest";
   if(!want){
-    // Un-starring only ever changes the Player of Interest flag itself — this match's own lineup
-    // entry, evaluation and notes are NEVER touched (a mistaken star, once undone, must leave every
-    // annotation exactly as it was). If the player has no other record anywhere (same check used
-    // when removing a lineup entry), they simply go back to "pending interest" — hidden from the
-    // Players Database, same as any other lineup player who was never marked POI — instead of being
-    // deleted outright.
-    var playerId = mp.playerId, matchId = mp.matchId, mpId = mp.id;
-    if(playerId && !playerHasOtherRecords(playerId,mpId,matchId)){
-      var p = playerById(playerId);
-      if(p){ p.pendingInterest = true; p.updatedAt = nowISO(); }
-      toast = "Removed from Players of Interest — no other record, so it's hidden from the Players Database again (this match's info is kept)";
-    }
+    var p = mp.playerId ? playerById(mp.playerId) : null;
+    if(p && p.pendingInterest) toast = "Removed from Players of Interest — no other record, so it's hidden from the Players Database again (this match's info is kept)";
   }
   if(el.hasAttribute("data-close-modal")) closeModal();
   persist({toast:toast});
@@ -5862,10 +5906,13 @@ ACTIONS["remove-lineup-entry"] = function(el){
     toast = "Removed from lineup — no other records for this player, so it was deleted too";
   } else if(playerId){
     // The player has other records elsewhere, so they stay — but this match's own evaluation of
-    // them (if any) is tied to a lineup entry that no longer exists, so it goes with it.
-    var hadEval = DB.evaluations.some(function(x){return x.playerId===playerId && x.matchId===matchId;});
+    // them (if any) is tied to a lineup entry that no longer exists, so it goes with it. Same as
+    // deleting that evaluation directly: revert any attribute (and the auto sentence) it was still
+    // the current source of back to whatever the next most recent remaining evaluation recorded.
+    var removedEvals = DB.evaluations.filter(function(x){return x.playerId===playerId && x.matchId===matchId;});
     DB.evaluations = DB.evaluations.filter(function(x){return !(x.playerId===playerId && x.matchId===matchId);});
-    if(hadEval){
+    if(removedEvals.length){
+      removedEvals.forEach(function(re){ revertPlayerAttributesAfterEvalDelete(playerId,re); });
       updatePlayerCurrentRatings(playerId);
       toast = "Removed from lineup — this match's evaluation was deleted too";
     }
