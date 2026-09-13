@@ -3413,12 +3413,10 @@ function interestedTeamsPanel(){
   var rows = (DB.interestedTeams||[]).map(function(it){
     var c = it.clubId ? clubById(it.clubId) : null;
     var name = c ? c.name : (it.clubName||"Unknown club");
-    return '<div class="roster-row" style="justify-content:flex-start;align-items:flex-start;gap:10px">'+
+    return '<div class="roster-row" style="justify-content:flex-start;align-items:center;gap:10px">'+
       crestHtml(c||{name:name},26)+
-      '<div style="min-width:0;flex:1;padding-top:2px">'+
-        '<div class="roster-name" style="margin-bottom:4px">'+esc(name)+'</div>'+
-        '<textarea class="textarea" rows="1" style="font-size:12px;min-height:36px" data-autosave="interested-team-notes" data-id="'+it.id+'" data-initial="'+escAttr(it.notes||"")+'" placeholder="Why it caught your eye…">'+esc(it.notes||"")+'</textarea>'+
-      '</div>'+
+      '<div class="roster-name" style="flex:0 0 auto;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+escAttr(name)+'">'+esc(name)+'</div>'+
+      '<textarea class="textarea" rows="1" style="font-size:12px;min-height:32px;flex:1;min-width:0" data-autosave="interested-team-notes" data-id="'+it.id+'" data-initial="'+escAttr(it.notes||"")+'" placeholder="Why it caught your eye…">'+esc(it.notes||"")+'</textarea>'+
       '<button type="button" class="icon-btn" style="flex:0 0 auto" data-action="remove-interested-team" data-id="'+it.id+'" title="Remove">'+ic("trash")+'</button>'+
     '</div>';
   }).join("");
