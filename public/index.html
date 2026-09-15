@@ -1530,10 +1530,14 @@ function playerLastObserved(playerId){
 function playerObservationCount(playerId){
   return DB.matchPlayers.filter(function(mp){return mp.playerId===playerId;}).length + DB.evaluations.filter(function(e){return e.playerId===playerId && e.evaluationType==="Manual";}).length;
 }
-// Shirt number isn't stored on the player profile itself (it can vary match to match), but the
-// most recent match they were logged in is a useful default when adding them to a new one.
-function lastKnownShirtNumber(playerId){
+// Shirt number isn't stored on the player profile itself (it can vary match to match, and a
+// player who plays up/down an age group can wear a completely different number there than in
+// their usual escalão) — so the most recent match they were logged in is only a safe default when
+// it was in the SAME escalão as the one they're being added to now. Pass the target match's
+// escalão to scope it that way; omit it only when there's genuinely no escalão to compare against.
+function lastKnownShirtNumber(playerId,ageGroup){
   var rows = playerMatchRows(playerId).filter(function(r){return r.mp.shirtNumber;});
+  if(ageGroup) rows = rows.filter(function(r){return matchAgeGroup(r.match)===ageGroup;});
   return rows.length ? rows[0].mp.shirtNumber : "";
 }
 // Every player who has ever worn a given shirt number in any match — used to surface a suggestion
@@ -2838,11 +2842,11 @@ function playerComboPreview(p){
 // already carries (from Add Player or an earlier match), so a brand-new player with nothing on
 // file yet still leaves every field blank for this match, same as before. Position 2 is the one
 // exception — see the note further down — it's left blank even for a known player.
-function prefillKnownPlayerBrief(nameField,p){
+function prefillKnownPlayerBrief(nameField,p,ageGroup){
   var form = nameField.closest("form");
   if(!form) return;
   function fillIfEmpty(el,val){ if(el && !el.value && val) el.value = val; }
-  fillIfEmpty(form.querySelector('input[name="shirtNumber"]'), lastKnownShirtNumber(p.id));
+  fillIfEmpty(form.querySelector('input[name="shirtNumber"]'), lastKnownShirtNumber(p.id,ageGroup));
   fillIfEmpty(form.querySelector('input[name="birthYear"]'), p.birthYear);
   // height/positionProfile/strength(Athletic)/estrutura/maturation/levels are <select>s —
   // '[name=...]' (not 'input[name=...]') matches either an <input> or a <select>.
@@ -2924,7 +2928,7 @@ function wirePlayerCombo(id,opts){
     if(item){
       var p = playerById(item.dataset.playerId);
       hidden.value = p.id; text.value = p.name; list.hidden = true;
-      prefillKnownPlayerBrief(text,p);
+      prefillKnownPlayerBrief(text,p,opts.ageGroup);
     }
   });
   document.addEventListener("click",function(e){
@@ -2934,7 +2938,7 @@ function wirePlayerCombo(id,opts){
 // Same idea as wirePlayerCombo, but keyed off a shirt number instead of a name — for when the
 // coach knows the number a player has worn before but not their name yet. Picking a suggestion
 // fills in the name-combo fields (hidden playerId + visible name) plus the usual base-info prefill.
-function wireShirtNumberCombo(numId,nameId,clubId){
+function wireShirtNumberCombo(numId,nameId,clubId,ageGroup){
   var text = document.getElementById(numId+"_text");
   var list = document.getElementById(numId+"_list");
   if(!text||!list) return;
@@ -2958,7 +2962,7 @@ function wireShirtNumberCombo(numId,nameId,clubId){
       if(nameText) nameText.value = p.name;
       var nameList = document.getElementById(nameId+"_list");
       if(nameList) nameList.hidden = true;
-      prefillKnownPlayerBrief(text,p);
+      prefillKnownPlayerBrief(text,p,ageGroup);
     }
   });
   document.addEventListener("click",function(e){
@@ -5792,7 +5796,7 @@ function autoFillKnownLineup(m,clubId){
       if(isStarter){ occupiedStarterSlots[slotIndex]=true; starterCount++; }
       DB.matchPlayers.push({
         id:uid("mp"), matchId:m.id, playerId:p.id, clubId:clubId,
-        shirtNumber:"", position:p.firstPosition, position2:p.secondPosition||"", slotIndex:slotIndex,
+        shirtNumber:lastKnownShirtNumber(p.id,ageGroup), position:p.firstPosition, position2:p.secondPosition||"", slotIndex:slotIndex,
         lineupStatus:isStarter?"Starting XI":"Substitute", matchCharacteristics:"",
         playerOfInterest:false, interestNote:"", interestPriority:"",
         replacedPlayerId:"", subMinute:"", createdAt:nowISO()
@@ -6226,9 +6230,12 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
   html += '</form></div>';
   openModal(html);
   // Suggestions are scoped to this lineup's own club (any age group within it) — narrower and
-  // easier to pick from than the whole database.
-  if(!isEdit){ wirePlayerCombo("pitchSlotName",{clubId:clubId}); wireShirtNumberCombo("pitchSlotNumber","pitchSlotName",clubId); }
-  else if(p){ wirePlayerCombo("pitchSlotEditName",{excludeId:p.id,emptyMessage:"No match"}); }
+  // easier to pick from than the whole database. The shirt-number prefill, though, IS scoped to
+  // this match's own escalão — a player can wear a different number up/down an age group, so only
+  // a same-escalão past number is trusted as a default here.
+  var slotAgeGroup = mForSlot ? matchAgeGroup(mForSlot) : "";
+  if(!isEdit){ wirePlayerCombo("pitchSlotName",{clubId:clubId,ageGroup:slotAgeGroup}); wireShirtNumberCombo("pitchSlotNumber","pitchSlotName",clubId,slotAgeGroup); }
+  else if(p){ wirePlayerCombo("pitchSlotEditName",{excludeId:p.id,emptyMessage:"No match",ageGroup:slotAgeGroup}); }
   wireCountryCombo("pitchSlotNat");
   // Position Profile's option list depends on Position 1 — refresh it live as Position 1 changes,
   // trying to keep whatever was already selected if it still applies to the new group.
@@ -6319,6 +6326,18 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
   // mpForBrief: the lineup entry this observation is being recorded against.
   function applyBrief(playerId,mpForBrief){
     var pl = playerById(playerId);
+    // Snapshot the player's attribute values exactly as they stood BEFORE this save. These fields
+    // auto-prefill from the player's own profile whenever there's no evaluation for this match yet
+    // (attrPrefill, in openPitchSlotModal) — e.g. reopening an auto-added lineup entry, or picking
+    // an already-known player — so their form fields already show a value even though the scout
+    // typed nothing. Comparing against this baseline further down is what tells "actually recorded
+    // something new this match" apart from "just showing what was already on file"; only the former
+    // should ever create/trigger a Match evaluation on its own.
+    var origAttrs = pl ? {
+      preferredFoot:pl.preferredFoot||"", height:pl.height||"", estrutura:pl.estrutura||"",
+      strength:pl.strength||"", maturation:pl.maturation||"", agilityLevel:pl.agilityLevel||"",
+      accelerationLevel:pl.accelerationLevel||"", speedLevel:pl.speedLevel||"", strengthLevel:pl.strengthLevel||""
+    } : null;
     if(pl){
       // fill-if-missing for birth year/nationality: don't clobber info the player profile already
       // has. Preferred Foot, Height, Estrutura, Maturation and the 3 Níveis are different — they
@@ -6356,7 +6375,14 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
     // its own snapshot of exactly what was recorded here, independent of that, so a later change on
     // the profile (or in a different match) never rewrites what THIS match observed — letting the
     // evaluation history show the real evolution match to match.
-    var hasAttrSnapshot = preferredFoot||height||estrutura||strength||maturation||agilityLevel||accelerationLevel||speedLevel||strengthLevel;
+    // Only counts as "recorded this match" when it differs from the pre-save baseline (origAttrs) —
+    // a field that merely carried over its already-on-file value (auto-prefilled, untouched) must
+    // never by itself fabricate a Match evaluation.
+    var hasAttrSnapshot = origAttrs ? (
+      preferredFoot!==origAttrs.preferredFoot || height!==origAttrs.height || estrutura!==origAttrs.estrutura ||
+      strength!==origAttrs.strength || maturation!==origAttrs.maturation || agilityLevel!==origAttrs.agilityLevel ||
+      accelerationLevel!==origAttrs.accelerationLevel || speedLevel!==origAttrs.speedLevel || strengthLevel!==origAttrs.strengthLevel
+    ) : !!(preferredFoot||height||estrutura||strength||maturation||agilityLevel||accelerationLevel||speedLevel||strengthLevel);
     // If this match already has its own evaluation record, always sync it (even down to blank) —
     // otherwise clearing a field back out (e.g. deleting Characteristics text and saving) would
     // leave the old value frozen in the evaluation, silently reappearing next time it's opened.
