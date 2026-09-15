@@ -5552,6 +5552,7 @@ var INTEREST_PRIORITIES = ["High","Medium","Low"];
 function pageMatchDetail(id){
   var m = matchById(id);
   if(!m){ return '<div class="empty-state"><h3>Match not found</h3><a class="btn btn-primary" href="#/matches">Back to Matches Database</a></div>'; }
+  ensureAutoLineup(m);
   var home = clubById(m.homeClubId), away = clubById(m.awayClubId);
   var poi = matchPlayersOfInterest(m.id);
 
@@ -5695,6 +5696,117 @@ function formationKeyFor(m,clubId){
   return (key && FORMATIONS[key]) ? key : "4-3-3";
 }
 function formationFor(m,clubId){ return FORMATIONS[formationKeyFor(m,clubId)]; }
+// ---- Automatic lineup pre-fill from known players -------------------------------------------
+// When a match's own detail page is opened, each side (home/away) whose escalão we can determine
+// gets its still-EMPTY pitch slots pre-filled with players already on file for that club at that
+// same age group — exactly as if the coach had picked them from the name combo himself: no
+// evaluation is recorded and no attribute gets snapshotted for this match (that only ever happens
+// when something is actually typed/selected for THIS match and saved), it is purely a normal
+// lineup entry that already knows who that player is — reopening it still shows all of their known
+// info, same as any other known-player pick. Runs (and persists) at most ONCE per match+club — a
+// flag on the match remembers this, so manually removing an auto-added player afterwards is
+// permanent; it is never silently re-added.
+var STRIKER_POS_ALIASES = ["ST","CF","SS"];
+var CB_POS_ALIASES = ["CB","RCB","LCB"];
+function evaluatedAgeGroupsFor(playerId){
+  return Array.from(new Set(playerEvaluatedCompetitions(playerId).map(deriveAgeGroupFromCompetition).filter(Boolean)));
+}
+function slotPosMatchesPlayerPos(slotPos,playerPos){
+  if(!slotPos || !playerPos) return false;
+  if(slotPos===playerPos) return true;
+  if(slotPos==="CB" && CB_POS_ALIASES.indexOf(playerPos)>=0) return true;
+  if(STRIKER_POS_ALIASES.indexOf(slotPos)>=0 && STRIKER_POS_ALIASES.indexOf(playerPos)>=0) return true;
+  return false;
+}
+// A wide role with no slot of its own in a given formation falls back to the nearest adjacent
+// slot that DOES exist — an auxiliary wide midfielder plays as a winger when there's no MK slot
+// for them, a wing-back plays as a fullback when the formation isn't back-3 — one direction only
+// (a real LW/LB never falls back the other way onto LM/LWB).
+var WIDE_FALLBACK_ALIASES = {LM:"LW", RM:"RW", LWB:"LB", RWB:"RB"};
+// Which pitch slot(s) a known player's own Position 1 maps onto for a given formation — in
+// left-to-right order when more than one slot of that type exists (e.g. the two CB slots in
+// 4-3-3). Special case, exactly as requested: 4-3-3 has no AM slot, so a registered AM goes into
+// the right-side CM slot for pitch PLACEMENT only — Position 1 stays AM everywhere else (Edit
+// Player, the player's own profile); this only decides where the jersey sits on this one diagram.
+function targetSlotIndicesForPosition(formationKey,slots,playerPos){
+  if(formationKey==="4-3-3" && playerPos==="AM"){
+    var cmIdx = [];
+    slots.forEach(function(s,i){ if(s.pos==="CM") cmIdx.push(i); });
+    if(!cmIdx.length) return [];
+    cmIdx.sort(function(a,b){ return slots[b].x-slots[a].x; });
+    return [cmIdx[0]];
+  }
+  function slotsFor(pos){
+    var idxs = [];
+    slots.forEach(function(s,i){ if(slotPosMatchesPlayerPos(s.pos,pos)) idxs.push(i); });
+    idxs.sort(function(a,b){ return slots[a].x-slots[b].x; });
+    return idxs;
+  }
+  var idxs = slotsFor(playerPos);
+  if(!idxs.length && WIDE_FALLBACK_ALIASES[playerPos]) idxs = slotsFor(WIDE_FALLBACK_ALIASES[playerPos]);
+  return idxs;
+}
+function autoFillKnownLineup(m,clubId){
+  if(!m || !clubId) return false;
+  m.lineupAutoFilled = m.lineupAutoFilled || {};
+  if(m.lineupAutoFilled[clubId]) return false;
+  m.lineupAutoFilled[clubId] = true; // once-only per match+club, even if nothing ends up matching
+  var ageGroup = matchAgeGroup(m);
+  if(!ageGroup) return false; // no reliable escalão to match against — skip rather than guess
+  var formationKey = formationKeyFor(m,clubId);
+  var slots = FORMATIONS[formationKey];
+  var already = matchLineup(m.id,clubId);
+  var alreadyPlayerIds = {}, occupiedStarterSlots = {};
+  already.forEach(function(mp){
+    alreadyPlayerIds[mp.playerId] = true;
+    if(mp.lineupStatus!=="Substitute" && typeof mp.slotIndex==="number") occupiedStarterSlots[mp.slotIndex]=true;
+  });
+  // Candidate pool: players on file for this club (visible in the Players Database — a starred
+  // Player of Interest with no other record doesn't count) who have actually been evaluated before
+  // at this same escalão.
+  var candidates = visiblePlayers().filter(function(p){
+    return p.clubId===clubId && p.firstPosition && !alreadyPlayerIds[p.id] && evaluatedAgeGroupsFor(p.id).indexOf(ageGroup)>=0;
+  });
+  if(!candidates.length) return false;
+  var groups = {};
+  candidates.forEach(function(p){
+    var idxs = targetSlotIndicesForPosition(formationKey,slots,p.firstPosition);
+    if(!idxs.length) return; // no matching slot in this formation — skip rather than force a guess
+    var key = idxs.join(",");
+    (groups[key] = groups[key]||{slotIdxs:idxs,players:[]}).players.push(p);
+  });
+  var added = 0;
+  Object.keys(groups).forEach(function(key){
+    var g = groups[key];
+    // Best Potential (A best … E worst — GRADE_RANK) becomes the starter; the rest queue up as
+    // substitutes on the same slot, best-to-worst.
+    g.players.sort(function(a,b){
+      return (GRADE_RANK[normalizeGrade(b.currentPotential)]||0)-(GRADE_RANK[normalizeGrade(a.currentPotential)]||0);
+    });
+    var openSlots = g.slotIdxs.filter(function(i){ return !occupiedStarterSlots[i]; });
+    var subAnchor = openSlots.length ? openSlots[0] : g.slotIdxs[0];
+    var starterCount = 0;
+    g.players.forEach(function(p){
+      var isStarter = starterCount < openSlots.length;
+      var slotIndex = isStarter ? openSlots[starterCount] : subAnchor;
+      if(isStarter){ occupiedStarterSlots[slotIndex]=true; starterCount++; }
+      DB.matchPlayers.push({
+        id:uid("mp"), matchId:m.id, playerId:p.id, clubId:clubId,
+        shirtNumber:"", position:p.firstPosition, position2:p.secondPosition||"", slotIndex:slotIndex,
+        lineupStatus:isStarter?"Starting XI":"Substitute", matchCharacteristics:"",
+        playerOfInterest:false, interestNote:"", interestPriority:"",
+        replacedPlayerId:"", subMinute:"", createdAt:nowISO()
+      });
+      added++;
+    });
+  });
+  return added>0;
+}
+function ensureAutoLineup(m){
+  var a = autoFillKnownLineup(m,m.homeClubId);
+  var b = autoFillKnownLineup(m,m.awayClubId);
+  if(a||b){ saveLocalFallback(); queueServerSave(); }
+}
 // Does this lineup entry carry any information beyond number/position/name — characteristics,
 // a note, or a graded match evaluation? Shown as a small asterisk on the jersey (any player,
 // not just Players of Interest) so it's obvious at a glance who already has notes worth reading.
