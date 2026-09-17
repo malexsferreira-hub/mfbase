@@ -3323,6 +3323,15 @@ function ageGroupSortKey(ag){
   if(m) return parseInt(m[1],10);
   return 9999; // no discernible number (or no age group at all) -> sort last
 }
+// Ranks a team's watch status for sorting on Teams - Watch / Calendar: never watched sorts first
+// (needs a look the most), then only partially watched, then watched fully but only once ever,
+// then watched fully 2+ times but just gone stale (already has real coverage, least urgent).
+function teamsWatchStatusRank(g){
+  if(!g.lastWatched) return 0;
+  if(g.lastWatchedStatus==="Partially Watched") return 1;
+  if(g.onlyWatchedOnce) return 2;
+  return 3;
+}
 // Ranks a competition's tier within its age group so Premier League teams sort above League
 // Div.1 teams (and Div.2 below Div.1, etc.) — a competition without an explicit division number
 // (Premier League itself, or a one-tier league like the U-21 Jawwy Elite League) ranks top (0).
@@ -3400,6 +3409,8 @@ function teamsToWatch(){
     var ka=ageGroupSortKey(a.ageGroup), kb=ageGroupSortKey(b.ageGroup);
     if(ka!==kb) return ka-kb;
     if(a.ageGroup!==b.ageGroup) return (a.ageGroup||"").localeCompare(b.ageGroup||"");
+    var sa=teamsWatchStatusRank(a), sb=teamsWatchStatusRank(b);
+    if(sa!==sb) return sa-sb; // never watched, then partially watched, then watched only once, then stale
     if(a.tierRank!==b.tierRank) return a.tierRank-b.tierRank; // Premier League above League Div.1
     return a.name.localeCompare(b.name); // alphabetical within the same tier
   });
@@ -3493,7 +3504,8 @@ function pageTeamsWatch(){
   order.forEach(function(key){
     var rows = byGroup[key].map(function(g){
       var rowKey = normName(g.name)+"|"+g.ageGroup;
-      var sub = g.lastWatched ? "Last watched "+fmtDateShort(g.lastWatched)+(g.lastWatchedOpponent?" vs "+esc(g.lastWatchedOpponent):"")+" ("+(g.lastWatchedStatus||"Watched")+")"+(g.onlyWatchedOnce?" (only 1 match watched)":"") : "Never watched";
+      var statusSuffix = g.onlyWatchedOnce ? " (only 1 match watched)" : " ("+(g.lastWatchedStatus||"Watched")+")";
+      var sub = g.lastWatched ? "Last watched "+fmtDateShort(g.lastWatched)+(g.lastWatchedOpponent?" vs "+esc(g.lastWatchedOpponent):"")+statusSuffix : "Never watched";
       var nameLine = esc(g.name)+(g.competition?' <span style="color:var(--text-faint);font-weight:400">· '+esc(g.competition)+'</span>':'');
       var expanded = !!TEAMS_WATCH_EXPANDED[rowKey];
       var fixtures = expanded ? upcomingFixturesForTeam(g.name,g.ageGroup) : [];
