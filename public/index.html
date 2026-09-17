@@ -3351,7 +3351,7 @@ function teamsToWatch(){
   // normalized-name + age-group key, so status lines up with the fixture universe above. Also
   // seeds the universe for a tracked team+age-group the SAFF sync hasn't (yet) surfaced a fixture
   // for, so nothing already being tracked ever silently drops off the list.
-  var status = {}; // same key -> {lastWatched, lastWatchedStatus, hasUpcoming}
+  var status = {}; // same key -> {lastWatched, lastWatchedStatus, hasUpcoming, fullWatchCount}
   DB.matches.forEach(function(m){
     var ag = matchAgeGroup(m);
     if(!allowed[ag]) return;
@@ -3362,8 +3362,12 @@ function teamsToWatch(){
       if(!universe[key]) universe[key] = {name:name, ageGroup:ag, competitions:{}};
       if(m.competition) universe[key].competitions[m.competition] = true;
       var s = status[key];
-      if(!s){ s = {lastWatched:null, lastWatchedStatus:null, lastWatchedOpponent:null, hasUpcoming:false}; status[key]=s; }
+      if(!s){ s = {lastWatched:null, lastWatchedStatus:null, lastWatchedOpponent:null, hasUpcoming:false, fullWatchCount:0}; status[key]=s; }
       if(m.status==="To Watch"||m.status==="Scheduled") s.hasUpcoming = true;
+      // Counts every fully "Watched" match ever logged for this team+age group (not just the most
+      // recent) — used below to flag a team that's only ever been properly seen once, which still
+      // isn't enough coverage on its own even if that one watch was recent.
+      if(m.status==="Watched") s.fullWatchCount++;
       if((m.status==="Watched"||m.status==="Partially Watched") && m.date && (!s.lastWatched||m.date>s.lastWatched)){
         s.lastWatched = m.date; s.lastWatchedStatus = m.status;
         s.lastWatchedOpponent = clubName(clubId===m.homeClubId ? m.awayClubId : m.homeClubId);
@@ -3377,16 +3381,21 @@ function teamsToWatch(){
   // double asterisk (needs a full watch, but already partially seen recently) instead of a single
   // one (not seen at all recently).
   var list = Object.keys(universe).map(function(key){
-    var u = universe[key], s = status[key]||{lastWatched:null,lastWatchedStatus:null,lastWatchedOpponent:null,hasUpcoming:false};
+    var u = universe[key], s = status[key]||{lastWatched:null,lastWatchedStatus:null,lastWatchedOpponent:null,hasUpcoming:false,fullWatchCount:0};
     var compNames = Object.keys(u.competitions).sort();
     var competition = compNames.join(", ");
     var tierRank = compNames.length ? Math.min.apply(null,compNames.map(competitionTierRank)) : 0;
-    return {name:u.name, ageGroup:u.ageGroup, competition:competition, tierRank:tierRank, lastWatched:s.lastWatched, lastWatchedStatus:s.lastWatchedStatus, lastWatchedOpponent:s.lastWatchedOpponent, hasUpcoming:s.hasUpcoming, recentPartial: !!(s.lastWatchedStatus==="Partially Watched" && s.lastWatched && s.lastWatched>=cutoff)};
+    // A team whose most recent relevant match was only Partially Watched is already caught by that
+    // rule below regardless of count, so "only watched once" here specifically means: exactly one
+    // full Watched match ever, and nothing partial more recent than it to override that reading.
+    var onlyWatchedOnce = s.fullWatchCount===1 && s.lastWatchedStatus==="Watched";
+    return {name:u.name, ageGroup:u.ageGroup, competition:competition, tierRank:tierRank, lastWatched:s.lastWatched, lastWatchedStatus:s.lastWatchedStatus, lastWatchedOpponent:s.lastWatchedOpponent, hasUpcoming:s.hasUpcoming, recentPartial: !!(s.lastWatchedStatus==="Partially Watched" && s.lastWatched && s.lastWatched>=cutoff), onlyWatchedOnce:onlyWatchedOnce};
   }).filter(function(g){
     if(g.hasUpcoming) return false;
     if(!g.lastWatched) return true; // never watched at all
     if(g.lastWatchedStatus==="Partially Watched") return true; // only partially seen -> still needs a proper watch
-    return g.lastWatched<cutoff; // fully watched, but more than 2 months ago
+    if(g.onlyWatchedOnce) return true; // seen fully, but only once ever -> still not enough coverage
+    return g.lastWatched<cutoff; // fully watched (2+ times), but more than 2 months ago
   });
   list.sort(function(a,b){
     var ka=ageGroupSortKey(a.ageGroup), kb=ageGroupSortKey(b.ageGroup);
@@ -3469,7 +3478,7 @@ function pageTeamsWatch(){
   var list = teamsToWatch();
   var html = '<div class="stack">';
   html += '<div class="section-head"><div><div class="eyebrow">Scouting</div><h1 style="font-size:24px">Teams - Watch</h1></div></div>';
-  html += '<div style="font-size:12.5px;color:var(--text-muted);margin-top:-6px">Every U15-U21 SAFF team not fully watched in the last 2 months (or never watched, or only partially watched) — teams already on your Agenda are left out.</div>';
+  html += '<div style="font-size:12.5px;color:var(--text-muted);margin-top:-6px">Every U15-U21 SAFF team not fully watched in the last 2 months (or never watched, only partially watched, or only watched once ever) — teams already on your Agenda are left out.</div>';
   html += interestedTeamsPanel();
   if(!list.length){
     html += '<div class="card card-pad">'+emptyRow("Nothing here — every team on the SAFF calendar is either recently watched or already on your Agenda.")+'</div>';
@@ -3485,7 +3494,7 @@ function pageTeamsWatch(){
   order.forEach(function(key){
     var rows = byGroup[key].map(function(g){
       var rowKey = normName(g.name)+"|"+g.ageGroup;
-      var sub = g.lastWatched ? "Last watched "+fmtDateShort(g.lastWatched)+(g.lastWatchedOpponent?" vs "+esc(g.lastWatchedOpponent):"")+" ("+(g.lastWatchedStatus||"Watched")+")" : "Never watched";
+      var sub = g.lastWatched ? "Last watched "+fmtDateShort(g.lastWatched)+(g.lastWatchedOpponent?" vs "+esc(g.lastWatchedOpponent):"")+" ("+(g.lastWatchedStatus||"Watched")+")"+(g.onlyWatchedOnce?" (only 1 match watched)":"") : "Never watched";
       var nameLine = esc(g.name)+(g.competition?' <span style="color:var(--text-faint);font-weight:400">· '+esc(g.competition)+'</span>':'');
       var expanded = !!TEAMS_WATCH_EXPANDED[rowKey];
       var fixtures = expanded ? upcomingFixturesForTeam(g.name,g.ageGroup) : [];
