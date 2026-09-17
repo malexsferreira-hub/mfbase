@@ -3376,10 +3376,7 @@ function teamsToWatch(){
   });
   // A team whose most recent relevant match was only "Partially Watched" is treated as not yet
   // properly seen — it stays on this list regardless of how recent that partial look was (unlike a
-  // full "Watched" match, which exempts the team for 2 months). `recentPartial` flags the case
-  // where that partial watch happened within the last 2 months, so the Calendar can mark it with a
-  // double asterisk (needs a full watch, but already partially seen recently) instead of a single
-  // one (not seen at all recently).
+  // full "Watched" match, which exempts the team for 2 months).
   var list = Object.keys(universe).map(function(key){
     var u = universe[key], s = status[key]||{lastWatched:null,lastWatchedStatus:null,lastWatchedOpponent:null,hasUpcoming:false,fullWatchCount:0};
     var compNames = Object.keys(u.competitions).sort();
@@ -3388,8 +3385,10 @@ function teamsToWatch(){
     // A team whose most recent relevant match was only Partially Watched is already caught by that
     // rule below regardless of count, so "only watched once" here specifically means: exactly one
     // full Watched match ever, and nothing partial more recent than it to override that reading.
+    // This is the one that earns the double-asterisk in Calendar/Teams-Watch — a single full watch
+    // still isn't enough coverage, even if it was recent.
     var onlyWatchedOnce = s.fullWatchCount===1 && s.lastWatchedStatus==="Watched";
-    return {name:u.name, ageGroup:u.ageGroup, competition:competition, tierRank:tierRank, lastWatched:s.lastWatched, lastWatchedStatus:s.lastWatchedStatus, lastWatchedOpponent:s.lastWatchedOpponent, hasUpcoming:s.hasUpcoming, recentPartial: !!(s.lastWatchedStatus==="Partially Watched" && s.lastWatched && s.lastWatched>=cutoff), onlyWatchedOnce:onlyWatchedOnce};
+    return {name:u.name, ageGroup:u.ageGroup, competition:competition, tierRank:tierRank, lastWatched:s.lastWatched, lastWatchedStatus:s.lastWatchedStatus, lastWatchedOpponent:s.lastWatchedOpponent, hasUpcoming:s.hasUpcoming, onlyWatchedOnce:onlyWatchedOnce};
   }).filter(function(g){
     if(g.hasUpcoming) return false;
     if(!g.lastWatched) return true; // never watched at all
@@ -4917,15 +4916,16 @@ function pageCalendar(){
   // Same "not watched in 2+ months (or never), and not already on the Agenda" set as Teams -
   // Watch, keyed the same way (normalized name + age group) so a fixture's team can be checked
   // against it directly.
-  // Value is 2 (double asterisk) for a team only partially watched within the last 2 months, 1
-  // (single asterisk) for every other team on the list (never watched, or not watched in 2+ months).
+  // Value is 2 (double asterisk) for a team only ever watched once (fully) — still needs more
+  // coverage even if that watch was recent — and 1 (single asterisk) for every other team on the
+  // list: never watched, only partially watched, or not watched in 2+ months.
   var watchIndex = {};
-  teamsToWatch().forEach(function(g){ watchIndex[normName(g.name)+"|"+g.ageGroup] = g.recentPartial ? 2 : 1; });
+  teamsToWatch().forEach(function(g){ watchIndex[normName(g.name)+"|"+g.ageGroup] = g.onlyWatchedOnce ? 2 : 1; });
 
   var html = '<div class="stack">';
   html += '<div class="section-head"><div><div class="eyebrow">'+DB.fixtures.length+' fixtures · '+addedCount+' in Agenda</div><h1 style="font-size:22px">Calendar</h1></div></div>';
-  html += '<div style="font-size:12px;color:var(--text-muted);margin-top:-8px">'+starIcon()+' marks a team not watched at all in the last 2 months (or never) — see Teams - Watch.</div>';
-  html += '<div style="font-size:12px;color:var(--text-muted)">'+starIcon(true)+' marks a team only partially watched in the last 2 months — still needs a full watch.</div>';
+  html += '<div style="font-size:12px;color:var(--text-muted);margin-top:-8px">'+starIcon()+' marks a team not watched at all in the last 2 months (or never), or only partially watched — see Teams - Watch.</div>';
+  html += '<div style="font-size:12px;color:var(--text-muted)">'+starIcon(true)+' marks a team only ever watched once (fully) — one look still isn\'t enough coverage.</div>';
   html += '<div class="filterbar">';
   html += '<div class="combo" data-combo-root="cf_q" style="width:200px"><input class="input" style="width:200px;min-height:36px;border-radius:99px" id="cf_q" placeholder="Search teams, competition…" value="'+escAttr(f.q)+'" autocomplete="off"><div class="combo-list" id="cf_q_sugg" hidden></div></div>';
   html += '<select id="cf_competition"><option value="">All Competitions</option>'+allCompetitions.map(function(c){return '<option value="'+esc(c)+'"'+(c===f.competition?" selected":"")+'>'+esc(c)+'</option>';}).join("")+'</select>';
@@ -4978,9 +4978,9 @@ function pageCalendar(){
   });
   return html;
 }
-// A double asterisk marks a team already partially watched within the last 2 months (still needs
-// a full watch); a single asterisk marks every other case on the watch list (never watched, or not
-// watched at all in 2+ months).
+// A double asterisk marks a team only ever watched once (fully) — still not enough coverage, even
+// if that watch was recent; a single asterisk marks every other case on the watch list (never
+// watched, only partially watched, or not watched at all in 2+ months).
 function starIcon(doubled){
   return '<span style="color:var(--accent);font-weight:800">'+(doubled?"**":"*")+'</span>';
 }
@@ -4999,8 +4999,9 @@ function fixtureRow(fx,opts){
     '<div class="mono" style="width:80px;flex:0 0 auto;font-size:11.5px;color:var(--text-muted);padding-top:2px;line-height:1.5">'+esc(fmtDateShort(fx.date))+'<br>'+esc(fx.time||"—")+'</div>' :
     '<div class="mono" style="width:46px;flex:0 0 auto;font-size:12.5px;color:var(--text-muted);padding-top:2px">'+esc(fx.time||"—")+'</div>';
   // Calendar passes a watchIndex (same set as Teams - Watch) so a team not otherwise on the Agenda
-  // gets a * next to its name (never watched, or not watched at all in 2+ months) — or a ** if it
-  // was only partially watched within the last 2 months (still needs a full watch).
+  // gets a * next to its name (never watched, only partially watched, or not watched at all in 2+
+  // months) — or a ** if it's only ever been watched once (fully), which still isn't enough
+  // coverage on its own even if that watch was recent.
   var fxAgeGroup = opts.watchIndex ? deriveAgeGroupFromCompetition(fx.competition) : null;
   function teamLabel(name){
     var onWatch = opts.watchIndex && opts.watchIndex[normName(name)+"|"+fxAgeGroup];
