@@ -3369,21 +3369,26 @@ function teamsToWatch(){
       if(!universe[key]) universe[key] = {name:name, ageGroup:ag, competitions:{}};
       if(m.competition) universe[key].competitions[m.competition] = true;
       var s = status[key];
-      if(!s){ s = {lastWatched:null, lastWatchedStatus:null, lastWatchedOpponent:null, recentCount:0, recentStatus:null}; status[key]=s; }
+      if(!s){ s = {lastWatched:null, lastWatchedStatus:null, lastWatchedOpponent:null, recentCount:0, recentStatus:null, recentDate:null, recentOpponent:null}; status[key]=s; }
       // Counts as coverage for this team+age group: a Watched or Partially Watched match only
       // counts once its date falls in the trailing 2 months (today minus 2 months, through today)
       // — that's genuine watch history, dated. A "To Watch"/"Scheduled" match counts REGARDLESS of
       // its date, past or future — it's already on the Agenda, so it counts as coverage-in-progress
       // whether it's overdue or still ahead, right alongside an overdue one ("1 last 2 months - to
-      // watch" covers both). A Cancelled match never counts. recentStatus remembers the counted
-      // match's own status so the "1 last 2 months" label can say which it is; it's only ever read
-      // when recentCount ends up at exactly 1, so it's fine that a 2nd counted match (which would
+      // watch" covers both). A Cancelled match never counts. recentStatus/recentDate/recentOpponent
+      // remember that counted match's own status/date/opponent so the "1 last 2 months" label can
+      // say which it is and, for a still-pending one, show its own date and opponent (there's no
+      // "Last watched" date for a match that hasn't been watched yet). Only ever read when
+      // recentCount ends up at exactly 1, so it's fine that a 2nd counted match (which would
       // exclude the team anyway) overwrites it. This is a live, rolling count: it's recomputed from
       // DB.matches on every call, so adding, removing, or rescheduling a match immediately changes
       // whether a team qualifies here.
       var countsNow = m.status==="To Watch"||m.status==="Scheduled";
       var countsInWindow = (m.status==="Watched"||m.status==="Partially Watched") && m.date && m.date>=cutoff && m.date<=today;
-      if(m.status!=="Cancelled" && (countsNow||countsInWindow)){ s.recentCount++; s.recentStatus = m.status; }
+      if(m.status!=="Cancelled" && (countsNow||countsInWindow)){
+        s.recentCount++; s.recentStatus = m.status; s.recentDate = m.date;
+        s.recentOpponent = clubName(clubId===m.homeClubId ? m.awayClubId : m.homeClubId);
+      }
       if((m.status==="Watched"||m.status==="Partially Watched") && m.date && (!s.lastWatched||m.date>s.lastWatched)){
         s.lastWatched = m.date; s.lastWatchedStatus = m.status;
         s.lastWatchedOpponent = clubName(clubId===m.homeClubId ? m.awayClubId : m.homeClubId);
@@ -3397,11 +3402,11 @@ function teamsToWatch(){
   // "To Watch"/"Scheduled" match on the Agenda at all (any date, overdue or still ahead) — a
   // Cancelled match never counts.
   var list = Object.keys(universe).map(function(key){
-    var u = universe[key], s = status[key]||{lastWatched:null,lastWatchedStatus:null,lastWatchedOpponent:null,recentCount:0,recentStatus:null};
+    var u = universe[key], s = status[key]||{lastWatched:null,lastWatchedStatus:null,lastWatchedOpponent:null,recentCount:0,recentStatus:null,recentDate:null,recentOpponent:null};
     var compNames = Object.keys(u.competitions).sort();
     var competition = compNames.join(", ");
     var tierRank = compNames.length ? Math.min.apply(null,compNames.map(competitionTierRank)) : 0;
-    return {name:u.name, ageGroup:u.ageGroup, competition:competition, tierRank:tierRank, lastWatched:s.lastWatched, lastWatchedStatus:s.lastWatchedStatus, lastWatchedOpponent:s.lastWatchedOpponent, recentCount:s.recentCount, recentStatus:s.recentStatus};
+    return {name:u.name, ageGroup:u.ageGroup, competition:competition, tierRank:tierRank, lastWatched:s.lastWatched, lastWatchedStatus:s.lastWatchedStatus, lastWatchedOpponent:s.lastWatchedOpponent, recentCount:s.recentCount, recentStatus:s.recentStatus, recentDate:s.recentDate, recentOpponent:s.recentOpponent};
   }).filter(function(g){
     return g.recentCount<2; // fewer than 2 matches logged in the trailing 2 months for this escalão
   });
@@ -3514,7 +3519,24 @@ function pageTeamsWatch(){
          g.recentStatus==="Watched" ? "1 last 2 months - watched" :
          "1 last 2 months - to watch");
       var coverageSuffix = " ("+windowLabel+")";
-      var sub = g.lastWatched ? "Last watched "+fmtDateShort(g.lastWatched)+(g.lastWatchedOpponent?" vs "+esc(g.lastWatchedOpponent):"")+" ("+(g.lastWatchedStatus||"Watched")+")"+coverageSuffix : windowLabel;
+      var isPendingOnly = g.recentCount===1 && (g.recentStatus==="To Watch"||g.recentStatus==="Scheduled");
+      var sub;
+      if(isPendingOnly){
+        // The counted match hasn't actually been watched yet, so there's no "Last watched" date to
+        // show — instead lead with "To Watch" (in place of "Last watched") then that pending
+        // match's own date + opponent: "To Watch <date> vs <opponent> (1 last 2 months - to watch)".
+        var dateOppLine = (g.recentDate?fmtDateShort(g.recentDate):"")+(g.recentOpponent?" vs "+esc(g.recentOpponent):"");
+        sub = dateOppLine ? "To Watch "+dateOppLine+coverageSuffix : windowLabel;
+      } else {
+        // When the in-window match IS the all-time last-watched one (recentCount===1 and it was
+        // actually Watched/Partially Watched), coverageSuffix already names its status ("-
+        // watched"/"- partially") — showing "(Watched)"/"(Partially Watched)" right before that
+        // would just repeat it, so it's dropped. It's kept only for a "0 last 2 months" team with
+        // an older Last-watched date, where it's the sole source of that status information.
+        var statusRedundant = g.recentCount===1 && (g.recentStatus==="Watched"||g.recentStatus==="Partially Watched");
+        var statusParen = statusRedundant ? "" : " ("+(g.lastWatchedStatus||"Watched")+")";
+        sub = g.lastWatched ? "Last watched "+fmtDateShort(g.lastWatched)+(g.lastWatchedOpponent?" vs "+esc(g.lastWatchedOpponent):"")+statusParen+coverageSuffix : windowLabel;
+      }
       var nameLine = esc(g.name)+(g.competition?' <span style="color:var(--text-faint);font-weight:400">· '+esc(g.competition)+'</span>':'');
       var expanded = !!TEAMS_WATCH_EXPANDED[rowKey];
       var fixtures = expanded ? upcomingFixturesForTeam(g.name,g.ageGroup) : [];
