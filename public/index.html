@@ -4925,8 +4925,15 @@ function competitionTierRank(name){
   if(m) return parseInt(m[1],10);
   return 999;
 }
+// National-team fixtures (e.g. "U16 NT Friendlies") carry no club escalão, and on the Calendar
+// they should always list ahead of every club competition that day, regardless of age or tier.
+function isNationalTeamCompetition(name){
+  return /national|\bnt\b/i.test(String(name||""));
+}
 function compareCompetitionOrder(a,b){
   a = a||""; b = b||"";
+  var natA = isNationalTeamCompetition(a), natB = isNationalTeamCompetition(b);
+  if(natA!==natB) return natA ? -1 : 1;
   var ageA = competitionAgeRank(a), ageB = competitionAgeRank(b);
   if(ageA!==ageB) return ageB-ageA;
   var tierA = competitionTierRank(a), tierB = competitionTierRank(b);
@@ -4955,6 +4962,15 @@ function pageCalendar(){
   });
 
   var allCompetitions = Array.from(new Set(DB.fixtures.map(function(fx){return fx.competition;}).filter(Boolean))).sort();
+  // The Jawwy League (U-21) starts with "J", so a plain alphabetical sort would wrongly put it
+  // first — move it to sit right after the U-18 Premier League entry instead, since it's
+  // effectively the next tier up once a player ages out of U-18.
+  var jawwyIdx = allCompetitions.findIndex(function(c){ return /jawwy/i.test(c); });
+  if(jawwyIdx>=0){
+    var jawwyComp = allCompetitions.splice(jawwyIdx,1)[0];
+    var u18PremierIdx = allCompetitions.findIndex(function(c){ return /u-?\s*18/i.test(c) && /premier|elite/i.test(c); });
+    allCompetitions.splice(u18PremierIdx>=0 ? u18PremierIdx+1 : allCompetitions.length, 0, jawwyComp);
+  }
   var addedCount = DB.fixtures.filter(function(fx){return !!fx.matchId;}).length;
   // Same set as Teams - Watch (fewer than 2 matches logged, any status but Cancelled, in the
   // trailing 2 months for that escalão, and not already on the Agenda), keyed the same way
