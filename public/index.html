@@ -3360,6 +3360,7 @@ function teamsToWatch(){
   var today = todayISO();
   var status = {}; // same key -> {lastWatched, lastWatchedStatus, recentCount, recentStatus}
   DB.matches.forEach(function(m){
+    if(/national|\bnt\b/i.test(m.competition||"")) return; // national-team friendlies, not domestic club teams
     var ag = matchAgeGroup(m);
     if(!allowed[ag]) return;
     [m.homeClubId,m.awayClubId].forEach(function(clubId){
@@ -5061,11 +5062,16 @@ function fixtureRow(fx,opts){
   // gets a * next to its name if it has 0 matches logged in the trailing 2 months for this same
   // escalão ("0 last 2 months"), or a ** if it has exactly 1 ("1 last 2 months").
   var fxAgeGroup = opts.watchIndex ? deriveAgeGroupFromCompetition(fx.competition) : null;
+  var isNtFixture = isNationalTeamCompetition(fx.competition);
   function teamLabel(name){
     var onWatch = opts.watchIndex && opts.watchIndex[normName(name)+"|"+fxAgeGroup];
     // Crests are opt-in (Calendar only, desktop only via CSS) so Teams - Watch's fixtures panel
-    // is unaffected.
-    var crest = opts.showCrests ? '<span class="cal-fixture-crest">'+crestHtml({name:name},16)+'</span>' : '';
+    // is unaffected. A national-team fixture's "team" is a country, not a club, so it gets that
+    // country's flag instead of a club crest (falling back to the usual initials circle for a
+    // country name with no flag on file, same as an unrecognized club).
+    var symbol = isNtFixture ? flagForNationality(name) : "";
+    var crestInner = symbol ? '<span class="flag-emoji" style="font-size:16px" title="'+escAttr(name)+'">'+symbol+'</span>' : crestHtml({name:name},16);
+    var crest = opts.showCrests ? '<span class="cal-fixture-crest">'+crestInner+'</span>' : '';
     return crest+esc(name)+(onWatch?' '+starIcon(onWatch===2):'');
   }
   // A result, once on file, REPLACES the "v" separator between the two team names (rather than
