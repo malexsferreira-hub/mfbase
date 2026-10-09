@@ -338,8 +338,13 @@ td.num,th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric
 .field-checkbox input[type="checkbox"]{width:17px;height:17px;accent-color:var(--gold);cursor:pointer;flex:0 0 auto;}
 .field-checkbox svg{width:15px;height:15px;color:var(--gold);flex:0 0 auto;}
 .pillgroup{display:flex;gap:6px;flex-wrap:wrap;}
-.pill-opt{padding:8px 14px;border-radius:99px;border:1px solid var(--border);background:var(--surface);font-weight:600;font-size:12.5px;cursor:pointer;min-height:38px;}
+.pill-opt{padding:8px 14px;border-radius:99px;border:1px solid var(--border);background:var(--surface);font-weight:600;font-size:12.5px;cursor:pointer;min-height:38px;position:relative;}
 .pill-opt.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+/* Purely a reference mark — "this is what they graded as last time" — shown on an unselected pill
+   next to an auto-filled lineup entry with no evaluation of its own yet for this match. Never
+   changes the pill's own selected/filled state, which still only follows a real click. */
+.pill-opt-ref-mark{position:absolute;top:-4px;right:-3px;font-size:12px;font-weight:800;color:var(--accent);line-height:1;pointer-events:none;}
+.pill-opt.on .pill-opt-ref-mark{color:#fff;}
 .field-hint{font-size:11.5px;color:var(--text-faint);}
 .save-inline{display:none;margin-top:6px;}
 .save-inline.show{display:inline-flex;}
@@ -1717,6 +1722,18 @@ function firstMatchEvaluation(playerId){
     return (a.createdAt||"").localeCompare(b.createdAt||"");
   });
   return matchEvals[0];
+}
+// The player's most recent "Match" evaluation elsewhere, by that OTHER match's own date (not
+// creation order) — excludes the match passed in. Used only to show a reference asterisk on the
+// Performance/Potential pill matching their last graded value for an auto-filled lineup entry that
+// has no evaluation of its own here yet; never used to pre-select or save anything.
+function lastMatchEvaluationElsewhere(playerId,excludeMatchId){
+  var rows = DB.evaluations.filter(function(e){
+    return e.playerId===playerId && e.evaluationType==="Match" && e.matchId && e.matchId!==excludeMatchId;
+  }).map(function(e){ return {ev:e, match:matchById(e.matchId)}; }).filter(function(r){return !!r.match;});
+  if(!rows.length) return null;
+  rows.sort(function(a,b){ return (b.match.date||"").localeCompare(a.match.date||""); });
+  return rows[0].ev;
 }
 // The player's earliest-dated evaluation of ANY type (Match or Manual/standalone) — ties broken by
 // creation order. Unlike firstMatchEvaluation above (used only for the General-Characteristics sync
@@ -5837,6 +5854,16 @@ function targetSlotIndicesForPosition(formationKey,slots,playerPos){
     idxs.sort(function(a,b){ return slots[a].x-slots[b].x; });
     return idxs;
   }
+  // Centre-back side rule: a player tagged LCB always targets the single left-most CB-type slot —
+  // and a 2nd LCB queues up as a substitute on that SAME left slot, never spilling onto the right
+  // side — while a player tagged plain CB or RCB always targets the single right-most CB-type slot
+  // the same way. Returning just one slot index (instead of every CB-type slot) is what makes the
+  // two groups land, and queue their own substitutes, on opposite sides below in autoFillKnownLineup.
+  if(CB_POS_ALIASES.indexOf(playerPos)>=0){
+    var cbIdxs = slotsFor("CB");
+    if(!cbIdxs.length) return [];
+    return [ playerPos==="LCB" ? cbIdxs[0] : cbIdxs[cbIdxs.length-1] ];
+  }
   var idxs = slotsFor(playerPos);
   if(idxs.length) return idxs;
   var chain = SIDE_FALLBACK_CHAIN[playerPos];
@@ -6194,6 +6221,13 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
   var p = mp ? playerById(mp.playerId) : null;
   var isEdit = !!mp;
   var ev = mp ? DB.evaluations.find(function(e){return e.playerId===mp.playerId && e.matchId===matchId && e.evaluationType==="Match";}) : null;
+  // Reference-only: for ANY known lineup entry with no evaluation of its own here yet — whether
+  // the auto-fill feature added them or the coach picked them by hand, in a brand-new match or one
+  // that's been sitting on the Agenda for a while — look up the player's last graded
+  // Performance/Potential elsewhere and show it as a small asterisk on the matching pill further
+  // down, purely informational (see pill-opt-ref-mark). Performance/Potential themselves stay
+  // blank here exactly as before; this never pre-selects or saves anything.
+  var refEval = (!ev && p) ? lastMatchEvaluationElsewhere(p.id,matchId) : null;
   // These 8 fields pre-fill from THIS match's own already-recorded snapshot (ev.height, etc.) when
   // one exists — not the player's current profile value, which may have moved on since (a later
   // match, or a direct profile edit) — so reopening this match's own entry and hitting Save again
@@ -6298,8 +6332,14 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
     '<div class="field"><label class="field-label">Strength</label><select class="select" name="strengthLevel" id="pitchSlotStrengthLevel">'+speedNumOptionsHtml(pfStrengthLevel)+'</select></div>'+
     '<div class="field"><label class="field-label">Maturation</label><select class="select" name="maturation" id="pitchSlotMaturation"><option value="">—</option>'+MATURATION_LEVELS.map(function(v){return '<option value="'+v+'"'+(pfMaturation===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
   '</div>';
-  html += '<div class="field"><label class="field-label">Performance</label><div class="pillgroup" data-name="performance"><input type="hidden" name="performance" value="'+escAttr(ev?ev.performance||"":"")+'">'+[1,2,3,4,5].map(function(n){return '<button type="button" class="pill-opt'+(ev&&String(n)===String(ev.performance)?" on":"")+'" data-value="'+n+'">'+n+'</button>';}).join("")+'</div></div>';
-  html += '<div class="field"><label class="field-label">Potential</label><div class="pillgroup" data-name="potential"><input type="hidden" name="potential" value="'+escAttr(ev?ev.potential||"":"")+'">'+GRADE_LETTERS.map(function(g){return '<button type="button" class="pill-opt'+(ev&&g===normalizeGrade(ev.potential)?" on":"")+'" data-value="'+g+'">'+g+'</button>';}).join("")+'</div></div>';
+  html += '<div class="field"><label class="field-label">Performance</label><div class="pillgroup" data-name="performance"><input type="hidden" name="performance" value="'+escAttr(ev?ev.performance||"":"")+'">'+[1,2,3,4,5].map(function(n){
+    var refMark = (refEval && String(n)===String(refEval.performance)) ? '<span class="pill-opt-ref-mark" title="Last evaluated: '+esc(String(n))+'">*</span>' : '';
+    return '<button type="button" class="pill-opt'+(ev&&String(n)===String(ev.performance)?" on":"")+'" data-value="'+n+'">'+n+refMark+'</button>';
+  }).join("")+'</div></div>';
+  html += '<div class="field"><label class="field-label">Potential</label><div class="pillgroup" data-name="potential"><input type="hidden" name="potential" value="'+escAttr(ev?ev.potential||"":"")+'">'+GRADE_LETTERS.map(function(g){
+    var refMark = (refEval && g===normalizeGrade(refEval.potential)) ? '<span class="pill-opt-ref-mark" title="Last evaluated: '+esc(g)+'">*</span>' : '';
+    return '<button type="button" class="pill-opt'+(ev&&g===normalizeGrade(ev.potential)?" on":"")+'" data-value="'+g+'">'+g+refMark+'</button>';
+  }).join("")+'</div></div>';
   html += '<div class="field"><label class="field-label">Match Level</label><div class="pillgroup" data-name="matchLevel"><input type="hidden" name="matchLevel" value="'+escAttr(ev?ev.matchLevel||"":"")+'">'+MATCH_LEVELS.map(function(m){return '<button type="button" class="pill-opt'+(ev&&m===ev.matchLevel?" on":"")+'" data-value="'+m+'">'+m+'</button>';}).join("")+'</div></div>';
   html += '<div class="field"><label class="field-label">Birth Year</label><input class="input" name="birthYear" type="number" min="1970" max="'+(new Date().getFullYear())+'" placeholder="e.g. 2005" value="'+escAttr(p?p.birthYear||"":"")+'"></div>';
   html += '<div class="field"><label class="field-label">Nationality</label>'+renderCountryCombo("pitchSlotNat","nationality",p?p.nationality||"":"","Search nationality…")+'</div>';
