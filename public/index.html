@@ -6221,13 +6221,15 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
   var p = mp ? playerById(mp.playerId) : null;
   var isEdit = !!mp;
   var ev = mp ? DB.evaluations.find(function(e){return e.playerId===mp.playerId && e.matchId===matchId && e.evaluationType==="Match";}) : null;
-  // Reference-only: for ANY known lineup entry with no evaluation of its own here yet — whether
-  // the auto-fill feature added them or the coach picked them by hand, in a brand-new match or one
-  // that's been sitting on the Agenda for a while — look up the player's last graded
+  // Reference-only: for ANY known lineup entry — whether the auto-fill feature added them or the
+  // coach picked them by hand, in a brand-new match or one that's been sitting on the Agenda for a
+  // while, already graded in THIS match or not yet — look up the player's last graded
   // Performance/Potential elsewhere and show it as a small asterisk on the matching pill further
-  // down, purely informational (see pill-opt-ref-mark). Performance/Potential themselves stay
-  // blank here exactly as before; this never pre-selects or saves anything.
-  var refEval = (!ev && p) ? lastMatchEvaluationElsewhere(p.id,matchId) : null;
+  // down, purely informational (see pill-opt-ref-mark). Stays visible even after this match's own
+  // Performance/Potential get filled in and saved, so the scout can still compare at a glance; it
+  // never pre-selects or saves anything, and the current match's own value always stays the one
+  // that's actually selected ("on"), asterisk or not.
+  var refEval = p ? lastMatchEvaluationElsewhere(p.id,matchId) : null;
   // These 8 fields pre-fill from THIS match's own already-recorded snapshot (ev.height, etc.) when
   // one exists — not the player's current profile value, which may have moved on since (a later
   // match, or a direct profile edit) — so reopening this match's own entry and hitting Save again
