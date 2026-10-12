@@ -6377,7 +6377,7 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
     html += '<button type="button" class="btn btn-danger btn-block" data-action="remove-lineup-entry" data-id="'+mp.id+'" data-close-modal style="margin-top:8px">'+ic("trash")+' Remove from Lineup</button>';
   }
   html += '</form></div>';
-  openModal(html);
+  openModal(html,{wide:true});
   // Suggestions are scoped to this lineup's own club (any age group within it) — narrower and
   // easier to pick from than the whole database. The shirt-number prefill, though, IS scoped to
   // this match's own escalão — a player can wear a different number up/down an age group, so only
