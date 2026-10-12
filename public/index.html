@@ -6263,7 +6263,12 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
     // for when the coach knows the number but not the name yet.
     html += '<div class="namenum-row"><div class="field"><label class="field-label">Number</label><div class="combo" data-combo-root="pitchSlotNumber">'+
       '<input class="input" type="number" min="1" max="99" name="shirtNumber" id="pitchSlotNumber_text" value="" placeholder="#" autocomplete="off" autofocus>'+
-      '<div class="combo-list" id="pitchSlotNumber_list" hidden></div>'+
+      // The Number field itself is deliberately narrow (.namenum-row gives it 0.6fr vs Name's
+      // 1.6fr) — but its suggestion dropdown shows a full player card (name, position, club, age
+      // group), so it overrides the usual left:0/right:0 (which would match the narrow field) with
+      // a wider min-width, letting it overlay out over the Name field next to it rather than
+      // wrapping every name onto two lines.
+      '<div class="combo-list" id="pitchSlotNumber_list" style="right:auto;min-width:280px" hidden></div>'+
     '</div></div>';
   }
   if(isEdit){
