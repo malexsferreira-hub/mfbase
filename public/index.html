@@ -3392,6 +3392,11 @@ function teamsToWatch(){
     if(/national|\bnt\b/i.test(m.competition||"")) return; // national-team friendlies, not domestic club teams
     var ag = matchAgeGroup(m);
     if(!allowed[ag]) return;
+    // Whenever Al Ula (the scout's own club) is in this match, only Al Ula's own side ever counts
+    // as coverage from it — the rival is never credited as "seen" just for having faced Al Ula,
+    // since the scout's focus in that match is Al Ula, not them. A match between two other clubs
+    // (neither side Al Ula) is unaffected and counts for both sides as always.
+    var vsAlUla = isAlUlaClubName(clubName(m.homeClubId)) || isAlUlaClubName(clubName(m.awayClubId));
     [m.homeClubId,m.awayClubId].forEach(function(clubId){
       var name = clubName(clubId);
       if(!name) return;
@@ -3400,6 +3405,7 @@ function teamsToWatch(){
       if(m.competition) universe[key].competitions[m.competition] = true;
       var s = status[key];
       if(!s){ s = {lastWatched:null, lastWatchedStatus:null, lastWatchedOpponent:null, recentCount:0, recentStatus:null, recentDate:null, recentOpponent:null}; status[key]=s; }
+      if(vsAlUla && !isAlUlaClubName(name)) return; // this match's rival side gets no coverage credit
       // Counts as coverage for this team+age group: a Watched or Partially Watched match only
       // counts once its date falls in the trailing 2 months (today minus 2 months, through today)
       // — that's genuine watch history, dated. A "To Watch"/"Scheduled" match counts REGARDLESS of
@@ -4959,6 +4965,12 @@ function competitionTierRank(name){
 // they should always list ahead of every club competition that day, regardless of age or tier.
 function isNationalTeamCompetition(name){
   return /national|\bnt\b/i.test(String(name||""));
+}
+// Matches the scout's own club regardless of spacing/hyphenation/case ("AlUla", "Al Ula",
+// "Al-Ula", "AlUla SC" all match) — used by Teams - Watch so that facing Al Ula never counts as
+// having "seen" the opponent (see teamsToWatch below).
+function isAlUlaClubName(name){
+  return normName(name).replace(/\s+/g,"").indexOf("alula")>=0;
 }
 function compareCompetitionOrder(a,b){
   a = a||""; b = b||"";
