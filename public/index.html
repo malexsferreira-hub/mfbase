@@ -3457,14 +3457,13 @@ function teamsToWatch(){
   });
   return list;
 }
-// Every fixture still ahead (today or later) in the SAFF calendar involving this team, in this
-// same age group — regardless of whether it's already been turned into a tracked match, so the
-// "Add to Agenda" button (reused from the Calendar page) always reflects the real state.
-function upcomingFixturesForTeam(name,ageGroup){
+// Every fixture in the SAFF calendar involving this team, in this same age group — past or still
+// ahead — regardless of whether it's already been turned into a tracked match, so the
+// "Add to Agenda" button (reused from the Calendar page) always reflects the real state. Shows the
+// team's full match list on Teams - Watch, not just what's still to come.
+function fixturesForTeam(name,ageGroup){
   var nn = normName(name);
-  var today = todayISO();
   return (DB.fixtures||[]).filter(function(fx){
-    if(fx.date<today) return false;
     if(deriveAgeGroupFromCompetition(fx.competition)!==ageGroup) return false;
     return normName(fx.team1)===nn || normName(fx.team2)===nn;
   }).sort(function(a,b){ return (a.date+(a.time||"")).localeCompare(b.date+(b.time||"")); });
@@ -3575,8 +3574,8 @@ function pageTeamsWatch(){
       }
       var nameLine = esc(g.name)+(g.competition?' <span style="color:var(--text-faint);font-weight:400">· '+esc(g.competition)+'</span>':'');
       var expanded = !!TEAMS_WATCH_EXPANDED[rowKey];
-      var fixtures = expanded ? upcomingFixturesForTeam(g.name,g.ageGroup) : [];
-      var toggleLabel = expanded ? "Hide fixtures" : "Upcoming fixtures";
+      var fixtures = expanded ? fixturesForTeam(g.name,g.ageGroup) : [];
+      var toggleLabel = expanded ? "Hide matches" : "Matches";
       var rowHtml = '<div class="roster-row" style="justify-content:flex-start">'+crestHtml({name:g.name},26)+
         '<div style="min-width:0;flex:1"><div class="roster-name">'+nameLine+'</div><div class="roster-chars">'+esc(sub)+'</div></div>'+
         '<button type="button" class="btn btn-sm" style="flex:0 0 auto" data-action="teams-watch-toggle-fixtures" data-key="'+escAttr(rowKey)+'">'+toggleLabel+'</button>'+
@@ -3585,7 +3584,7 @@ function pageTeamsWatch(){
       if(expanded){
         fixturesHtml = '<div class="stack" style="padding:2px 0 8px 36px;gap:4px">'+
           (fixtures.length ? fixtures.map(function(fx){ return fixtureRow(fx,{showDate:true}); }).join("") :
-            '<div style="font-size:11.5px;color:var(--text-faint);padding:4px 0">No upcoming fixtures found in the SAFF calendar for this team.</div>')+
+            '<div style="font-size:11.5px;color:var(--text-faint);padding:4px 0">No matches found in the SAFF calendar for this team.</div>')+
         '</div>';
       }
       return rowHtml+fixturesHtml;
