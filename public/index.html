@@ -506,11 +506,13 @@ details.acc summary .count-chip{background:var(--surface-3);color:var(--text-mut
 /* Foot/Height/Maturation: each its own line, left-aligned within this shrink-wrapped block, which
    is itself centered (as a unit) under the position heading above it, via the parent's centering. */
 .profile-attr-lines{display:inline-flex;flex-direction:column;align-items:flex-start;gap:8px;margin-top:20px;}
-/* Nationality+Club, Performance+Potential, and Assessment+Agent each sit side by side rather than
-   stacked (the .profile-side-stack default) — every one of these ends up with exactly two items.
+/* Nationality+Club and Performance+Potential+Assessment each sit side by side rather than
+   stacked (the .profile-side-stack default). Agent now sits alone in its own
+   .profile-assess-stack block (past its own divider line) — row vs column makes no visual
+   difference for a single item, so that selector is left off the rule below.
    Doubled-up class selector so this reliably beats .profile-side-stack's own column rule below,
    regardless of source order (equal single-class specificity was letting that one win before). */
-.profile-side-stack.profile-clubnat-stack,.profile-side-stack.profile-rating-stack,.profile-side-stack.profile-assess-stack{flex-direction:row;}
+.profile-side-stack.profile-clubnat-stack,.profile-side-stack.profile-rating-stack{flex-direction:row;}
 /* Nationality+Club and Performance+Potential specifically were sitting too close together at the
    default .profile-side-stack row gap — widen just those two (Assessment+Agent wasn't flagged).
    Nationality+Club got a further request to be spaced out a bit more than that first widening. */
@@ -548,7 +550,7 @@ details.acc summary .count-chip{background:var(--surface-3);color:var(--text-mut
 .flag-emoji-lg{font-size:32px;line-height:1;}
 .profile-ring-editable{cursor:pointer;}
 .ring-select-overlay{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border-radius:50%;}
-/* Groups the 4 divider-bearing blocks (club/nat, performance/potential, assessment/agent, action
+/* Groups the 4 divider-bearing blocks (club/nat, performance/potential/assessment, agent, action
    icons) into their own non-wrapping row, so they always share one flex line together — letting
    them wrap away from the photo/info column as a whole is fine, but if they wrapped independently
    of each other (possible when they were direct children of .profile-head, whose own flex-wrap is
@@ -556,7 +558,7 @@ details.acc summary .count-chip{background:var(--surface-3);color:var(--text-mut
    subset landed on the same line, not all 4. */
 /* flex:1 gives this row the rest of .profile-head's width to grow into, so the action icons'
    own margin-left:auto (below) can actually reach the card's right margin instead of just
-   sitting flush against Assessment/Agent. */
+   sitting flush against Agent. */
 .profile-side-groups{display:flex;gap:18px;flex-wrap:nowrap;flex:1;}
 /* Stretched to the row's full height (rather than each block's own natural height) so all four
    divider lines along the header row come out the same length, regardless of how much content
@@ -4145,9 +4147,9 @@ function pagePlayerDetail(id){
       '<div class="profile-side-item"><div class="profile-side-icon profile-ring-editable">'+gradeRing(p.currentPotential,50)+
         '<select class="ring-select-overlay" data-action-select="set-player-potential" data-id="'+p.id+'" title="Click to set Potential"><option value="">–</option>'+GRADE_LETTERS.map(function(g){return '<option value="'+g+'"'+(g===normalizeGrade(p.currentPotential)?" selected":"")+'>'+g+'</option>';}).join("")+'</select>'+
       '</div><div class="profile-side-label">Potential</div></div>'+
+      '<div class="profile-side-item"><div class="profile-side-value">'+statusSelectHtml+'</div><div class="profile-side-label">'+STATUS_FIELD_LABEL+'</div></div>'+
     '</div>'+
     '<div class="profile-side-stack profile-assess-stack profile-divider-left">'+
-      '<div class="profile-side-item"><div class="profile-side-value">'+statusSelectHtml+'</div><div class="profile-side-label">'+STATUS_FIELD_LABEL+'</div></div>'+
       '<div class="profile-side-item"><div class="profile-side-value inline-edit" data-field="agent" data-edit-key="player-agent" data-raw="'+escAttr(p.agent||"")+'" data-id="'+p.id+'">'+esc(p.agent||"—")+'</div><div class="profile-side-label">Agent</div></div>'+
     '</div>'+
     '<div class="profile-side-actions profile-divider-left" style="margin-left:auto"><button class="btn btn-icon" data-action="open-merge-player" data-id="'+p.id+'" title="Merge with another player (e.g. after a transfer)">'+ic("merge")+'</button><button class="btn btn-icon" data-action="edit-player" data-id="'+p.id+'" title="Edit profile">'+ic("edit")+'</button><button class="btn btn-icon btn-danger" data-action="delete-player" data-id="'+p.id+'" title="Delete">'+ic("trash")+'</button></div>'+
