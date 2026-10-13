@@ -402,6 +402,15 @@ td.num,th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric
 .pitch-add-sub{width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.16);border:1.5px dashed rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;}
 .pitch-add-sub svg{width:11px;height:11px;}
 
+/* ---------- Shortlists pitch (one slot can hold a whole POOL of players, not just one+sub) ---------- */
+.shortlist-slot{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;z-index:2;max-width:112px;}
+.shortlist-slot-pos{font-size:10px;font-weight:800;letter-spacing:.05em;color:rgba(255,255,255,.85);text-shadow:0 1px 2px rgba(0,0,0,.6);}
+.shortlist-slot-chips{display:flex;flex-direction:column;align-items:center;gap:3px;max-height:150px;overflow-y:auto;}
+.shortlist-chip{background:rgba(0,0,0,.5);border-radius:99px;padding:2px 9px;cursor:pointer;max-width:108px;-webkit-tap-highlight-color:transparent;}
+.shortlist-chip-name{font-size:10px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;}
+.shortlist-slot-add{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.16);border:1.5px dashed rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;}
+.shortlist-slot-add svg{width:12px;height:12px;}
+
 /* ---------- agenda month-grid calendar ---------- */
 .cal-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;}
 .cal-nav-btn{background:var(--surface);border:1px solid var(--border);border-radius:99px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-muted);flex:0 0 auto;}
@@ -677,8 +686,20 @@ var MATCH_STATUSES = ["To Watch","Scheduled","Watched","Partially Watched","Canc
 var LINEUP_STATUSES = ["Starting XI","Substitute"];
 var RECOMMENDATIONS = ["High Interest","Interest","Monitor","Continue Monitoring","No Interest","Not Enough Information"];
 var EVAL_TYPES = ["Live Match","TV Match","Video Match","Highlights","Manual","Training"];
-var PLAYER_STATUSES = ["Elite","WBT","1st League","2nd League","Professional","Amateur"];
+// "Sign"/"Shortlist" are set manually by the scout and drive the Shortlists feature (a player set to
+// either one is auto-placed onto their own birth-year shortlist — see applyShortlistAutoPlacement).
+// "Monitoring" is auto-assigned once a player qualifies (see maybeAutoPromoteToMonitoring) and never
+// auto-downgraded. "Identified" is the default every player gets once they're a real, visible
+// Players Database entry (see assignIdentifiedStatusIfBlank / the pendingInterest promotion point).
+var PLAYER_STATUSES = ["Sign","Shortlist","Monitoring","Identified"];
+// The options PLAYER_STATUSES used to be, before the Shortlists feature — kept only so the
+// one-time migration (migratePlayerAssessmentStatus) can recognize and convert old values.
+var LEGACY_PLAYER_STATUSES = ["Elite","WBT","1st League","2nd League","Professional","Amateur"];
 var STATUS_FIELD_LABEL = "Assessment";
+// Birth years covered by the Shortlists feature, newest first (matches the nav/page listing order).
+var SHORTLIST_BIRTH_YEARS = [2013,2012,2011,2010,2009,2008,2007];
+// Only these two Assessment values put a player on their birth-year shortlist.
+var SHORTLIST_STATUSES = ["Sign","Shortlist"];
 var LOGO_DATA_URI = "data:image/webp;base64,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";
 var AVATAR_COLORS = ["#D3A94A","#2A5C8A","#8A4F9E","#3D7A7A","#B8863A","#6E7480","#A3391C","#5C6B2A"];
 var POSITION_LABELS = {GK:"Goalkeeper",RB:"Right Back",RCB:"Right Centre Back",CB:"Centre Back",LCB:"Left Centre Back",LB:"Left Back",RWB:"Right Wing Back",LWB:"Left Wing Back",DM:"Defensive Midfield",CM:"Central Midfield",AM:"Attacking Midfield",RM:"Right Midfield",LM:"Left Midfield",RW:"Right Winger",LW:"Left Winger",SS:"Second Striker",CF:"Centre Forward",ST:"Striker"};
@@ -1003,6 +1024,9 @@ async function loadInitialData(){
   seed.fixtures = seed.fixtures || [];
   seed.agendaTasks = seed.agendaTasks || [];
   seed.interestedTeams = seed.interestedTeams || [];
+  // One entry per player placed on a birth-year Shortlist pitch — see the Shortlists feature
+  // (addPlayerToShortlist / syncPlayerShortlistMembership).
+  seed.shortlistEntries = seed.shortlistEntries || [];
   // dashboardNote replaced the earlier per-item quickNotes list with a single freeform
   // scratchpad; fold over any quickNotes text so nothing typed there is lost.
   if(seed.dashboardNote===undefined || seed.dashboardNote===null){
@@ -1594,6 +1618,22 @@ function matchPlayersOfInterest(matchId){
 function matchEvaluations(matchId){
   return DB.evaluations.filter(function(e){return e.matchId===matchId;});
 }
+// At least 2 evaluations (any type) in this player's history graded Potential C+ or better
+// (GRADE_RANK>=4: C+, B, B+ or A) — the qualifying bar for automatic "Monitoring" promotion.
+function playerQualifiesForMonitoring(playerId){
+  var qualifying = playerEvaluations(playerId).filter(function(e){ return GRADE_RANK[normalizeGrade(e.potential)]>=4; });
+  return qualifying.length>=2;
+}
+// Auto-promotes to "Monitoring" the moment a player qualifies (playerQualifiesForMonitoring) —
+// called every time an evaluation is created/updated/deleted, via updatePlayerCurrentRatings.
+// Never overrides "Sign"/"Shortlist" (manual always wins) and never re-checks once already
+// "Monitoring" or higher — this is a one-way promotion, so later deleting the qualifying
+// evaluation(s) does NOT demote the player back to "Identified".
+function maybeAutoPromoteToMonitoring(playerId){
+  var p = playerById(playerId);
+  if(!p || p.status==="Sign" || p.status==="Shortlist" || p.status==="Monitoring") return;
+  if(playerQualifiesForMonitoring(playerId)){ p.status = "Monitoring"; p.updatedAt = nowISO(); }
+}
 function updatePlayerCurrentRatings(playerId){
   var p=playerById(playerId);
   if(!p) return;
@@ -1609,6 +1649,7 @@ function updatePlayerCurrentRatings(playerId){
     if(evs[0].potential!==null && evs[0].potential!==undefined && evs[0].potential!=="") p.currentPotential=evs[0].potential;
     if(evs[0].matchLevel!==null && evs[0].matchLevel!==undefined && evs[0].matchLevel!=="") p.currentMatchLevel=evs[0].matchLevel;
   }
+  maybeAutoPromoteToMonitoring(playerId);
   p.updatedAt=nowISO();
 }
 // The 9 attribute fields each match's own evaluation can snapshot (see upsertMatchEvaluation) and
@@ -2079,6 +2120,13 @@ function parseHash(){
   if(parts[0]==="calendar") return {name:"calendar",params:{}};
   if(parts[0]==="agenda") return {name:"agenda",params:{}};
   if(parts[0]==="teams-watch") return {name:"teams-watch",params:{}};
+  if(parts[0]==="shortlists"){
+    if(parts[1]){
+      var year = parseInt(decodeURIComponent(parts[1]),10);
+      if(SHORTLIST_BIRTH_YEARS.indexOf(year)>=0) return {name:"shortlist-detail",params:{year:year}};
+    }
+    return {name:"shortlists",params:{}};
+  }
   return {name:"dashboard",params:{}};
 }
 function navigate(hash){ location.hash = hash; }
@@ -2093,7 +2141,8 @@ var NAV_ITEMS = [
   {key:"agenda",label:"Agenda",hash:"#/agenda",icon:"agenda"},
   {key:"teams-watch",label:"Teams - Watch",hash:"#/teams-watch",icon:"clock"},
   {key:"matches",label:"Matches Database",hash:"#/matches",icon:"matches"},
-  {key:"players",label:"Players Database",hash:"#/players",icon:"players"}
+  {key:"players",label:"Players Database",hash:"#/players",icon:"players"},
+  {key:"shortlists",label:"Shortlists",hash:"#/shortlists",icon:"star"}
 ];
 var TAB_ITEMS = [
   {key:"dashboard",label:"Home",hash:"#/",icon:"dashboard"},
@@ -2112,6 +2161,7 @@ function pageActiveKey(){
   if(ROUTE.name==="calendar") return "calendar";
   if(ROUTE.name==="agenda") return "agenda";
   if(ROUTE.name==="teams-watch") return "teams-watch";
+  if(ROUTE.name==="shortlists"||ROUTE.name==="shortlist-detail") return "shortlists";
   return "dashboard";
 }
 function pageTitleFor(){
@@ -2120,6 +2170,7 @@ function pageTitleFor(){
   if(ROUTE.name==="player-detail"){ var p=playerById(ROUTE.params.id); return p? p.name : "Player"; }
   if(ROUTE.name==="match-new") return "Add Match";
   if(ROUTE.name==="player-new") return "Add Player";
+  if(ROUTE.name==="shortlist-detail") return "Shortlist "+ROUTE.params.year;
   var found = NAV_ITEMS.find(function(n){return n.key===k;});
   return found?found.label:"MF Base";
 }
@@ -2137,7 +2188,7 @@ function renderSidebar(){
     html += '<a class="nav-link'+(n.key===active?' active':'')+'" href="'+n.hash+'">'+ic(n.icon)+'<span>'+n.label+'</span></a>';
   });
   html += '<div class="nav-section-label">Coming Soon</div>';
-  ["Shortlist","Scouting Reports","Clubs Database","Competitions","Agents"].forEach(function(f){
+  ["Scouting Reports","Clubs Database","Competitions","Agents"].forEach(function(f){
     html += '<div class="nav-link nav-future">'+ic("dashboard")+'<span>'+f+'</span></div>';
   });
   html += '</nav>'+
@@ -2191,6 +2242,8 @@ function render(){
       case "calendar": pageHtml = pageCalendar(); break;
       case "agenda": pageHtml = pageAgenda(); break;
       case "teams-watch": pageHtml = pageTeamsWatch(); break;
+      case "shortlists": pageHtml = pageShortlists(); break;
+      case "shortlist-detail": pageHtml = pageShortlistDetail(ROUTE.params.year); break;
       default: pageHtml = pageDashboard();
     }
   }catch(e){
@@ -3603,6 +3656,136 @@ ACTIONS["teams-watch-toggle-fixtures"] = function(el){
 };
 
 /* ============================================================
+   PAGE: SHORTLISTS
+   ============================================================ */
+function shortlistEntriesForSlot(year,slotIndex){
+  return shortlistEntriesForYear(year).filter(function(e){ return e.slotIndex===slotIndex; });
+}
+function removeShortlistEntry(entryId){
+  DB.shortlistEntries = DB.shortlistEntries.filter(function(e){ return e.id!==entryId; });
+}
+// Places (or MOVES) a player onto a specific slot of their birth-year shortlist — used by the
+// manual "add to this slot" picker. A player can only ever hold one spot on a given birth-year
+// shortlist, so picking them for a different slot moves their existing entry rather than creating
+// a second one. Unlike addPlayerToShortlist (the automatic Sign/Shortlist placement), this is not
+// scoped to the player's own Position 1 — the scout can put anyone anywhere.
+function setShortlistSlotForPlayer(year,slotIndex,playerId){
+  var existing = DB.shortlistEntries.find(function(e){ return e.birthYear===year && e.playerId===playerId; });
+  if(existing){ existing.slotIndex = slotIndex; }
+  else { DB.shortlistEntries.push({id:uid("shortlist"),birthYear:year,slotIndex:slotIndex,playerId:playerId,createdAt:nowISO()}); }
+}
+// Players eligible to be manually added to this birth-year shortlist: real (non-pendingInterest)
+// players actually born that year, who aren't already on this shortlist somewhere else.
+function playersEligibleForShortlistYear(year){
+  var alreadyIds = {};
+  shortlistEntriesForYear(year).forEach(function(e){ alreadyIds[e.playerId]=true; });
+  return visiblePlayers().filter(function(p){ return parseInt(p.birthYear,10)===year && !alreadyIds[p.id]; });
+}
+// A simple name-search combo for the shortlist slot modal — same shape as wireMergeSearchCombo,
+// but scoped to this one birth year's still-eligible players instead of excluding one player.
+function wireShortlistAddCombo(id,year,onSelect){
+  var text = document.getElementById(id+"_text");
+  var list = document.getElementById(id+"_list");
+  if(!text||!list) return;
+  function renderList(q){
+    var nn = normName(q);
+    var pool = playersEligibleForShortlistYear(year);
+    var matches = (nn ? pool.filter(function(p){ return normName(p.name).indexOf(nn)>=0; }) : pool).slice(0,8);
+    var html = matches.map(playerComboPreview).join("");
+    if(!html){ html = '<div class="combo-item" style="color:var(--text-faint);cursor:default">'+(pool.length?"No match":"No "+year+"-born players available")+'</div>'; }
+    list.innerHTML = html;
+    list.hidden = false;
+  }
+  text.addEventListener("input",debounce(function(){ renderList(text.value); },120));
+  text.addEventListener("focus",function(){ renderList(text.value); });
+  list.addEventListener("mousedown",function(e){
+    e.preventDefault();
+    var item = e.target.closest("[data-player-id]");
+    if(item){ list.hidden = true; onSelect(playerById(item.dataset.playerId)); }
+  });
+  document.addEventListener("click",function(e){
+    if(!e.target.closest('[data-combo-root="'+id+'"]')) list.hidden = true;
+  });
+}
+function openShortlistSlotModal(year,slotIndex){
+  var slot = FORMATIONS["4-3-3"][slotIndex];
+  if(!slot) return;
+  var entries = shortlistEntriesForSlot(year,slotIndex);
+  var html = '<div class="modal-pad" style="min-height:460px"><div class="modal-head"><div class="modal-title">'+esc(slot.pos)+' · Shortlist '+year+'</div><button class="icon-btn" data-close-modal>'+ic("close")+'</button></div>';
+  html += '<div class="stack" style="gap:6px;margin:6px 0 14px">';
+  html += entries.length ? entries.map(function(e){
+    var p = playerById(e.playerId);
+    if(!p) return "";
+    return '<div class="combo-item" style="cursor:default">'+
+      '<a href="#/players/'+encodeURIComponent(p.id)+'" style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;color:inherit;text-decoration:none">'+avatarHtml(p,30)+
+      '<div style="min-width:0"><div class="combo-item-name">'+esc(p.name)+'</div><div class="combo-item-sub">'+(p.firstPosition?esc(p.firstPosition)+" · ":"")+esc(clubName(p.clubId)||"No club")+'</div></div></a>'+
+      '<button type="button" class="btn btn-icon" data-action="remove-shortlist-entry" data-id="'+e.id+'" title="Remove from this shortlist">'+ic("close")+'</button></div>';
+  }).join("") : '<div style="color:var(--text-faint);font-size:12.5px;padding:4px 0">No players in this slot yet.</div>';
+  html += '</div>';
+  html += '<div class="field"><label class="field-label">Add player (born '+year+')</label><div class="combo" data-combo-root="shortlistAdd"><input class="input" id="shortlistAdd_text" placeholder="Search by player name…" autocomplete="off"><div class="combo-list" id="shortlistAdd_list" hidden></div></div></div>';
+  html += '</div>';
+  openModal(html,{wide:true});
+  wireShortlistAddCombo("shortlistAdd",year,function(p){
+    setShortlistSlotForPlayer(year,slotIndex,p.id);
+    persist({toast:"Added "+p.name+" to the "+year+" shortlist"});
+  });
+}
+ACTIONS["open-shortlist-slot"] = function(el){
+  openShortlistSlotModal(parseInt(el.dataset.year,10),parseInt(el.dataset.slot,10));
+};
+ACTIONS["remove-shortlist-entry"] = function(el){
+  removeShortlistEntry(el.dataset.id);
+  persist({toast:"Removed from shortlist"});
+};
+function shortlistPitchHtml(year){
+  var slots = FORMATIONS["4-3-3"];
+  var jerseys = "";
+  slots.forEach(function(slot,i){
+    var entries = shortlistEntriesForSlot(year,i);
+    var chips = entries.map(function(e){
+      var p = playerById(e.playerId);
+      if(!p) return "";
+      return '<div class="shortlist-chip" data-action="open-shortlist-slot" data-year="'+year+'" data-slot="'+i+'" title="'+escAttr(p.name)+'"><span class="shortlist-chip-name">'+esc(shortPlayerName(p.name))+'</span></div>';
+    }).join("");
+    jerseys += '<div class="shortlist-slot" style="left:'+slot.x+'%;top:'+slot.y+'%">'+
+      '<div class="shortlist-slot-pos">'+esc(slot.pos)+'</div>'+
+      '<div class="shortlist-slot-chips">'+chips+'</div>'+
+      '<button type="button" class="shortlist-slot-add" data-action="open-shortlist-slot" data-year="'+year+'" data-slot="'+i+'" title="Add player">'+ic("plus")+'</button>'+
+    '</div>';
+  });
+  return '<div class="pitch-wrap"><div class="pitch">'+
+    '<div class="pitch-line pitch-halfway"></div><div class="pitch-line pitch-circle"></div><div class="pitch-line pitch-box pitch-box-top"></div><div class="pitch-line pitch-box pitch-box-bottom"></div>'+
+    jerseys+
+  '</div></div>';
+}
+function pageShortlists(){
+  var html = '<div class="stack">';
+  html += '<div class="section-head"><div class="section-title">Shortlists</div></div>';
+  html += '<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px">';
+  SHORTLIST_BIRTH_YEARS.forEach(function(year){
+    var count = shortlistEntriesForYear(year).length;
+    html += '<a class="card card-pad" href="#/shortlists/'+year+'" style="display:flex;flex-direction:column;gap:6px;text-decoration:none;color:inherit">'+
+      '<div style="display:flex;align-items:center;gap:8px">'+ic("star")+'<div class="section-title" style="font-size:16px">'+year+'</div></div>'+
+      '<div class="eyebrow">'+count+' player'+(count===1?"":"s")+'</div>'+
+    '</a>';
+  });
+  html += '</div></div>';
+  return html;
+}
+function pageShortlistDetail(year){
+  if(SHORTLIST_BIRTH_YEARS.indexOf(year)<0){
+    return '<div class="empty-state"><h3>Shortlist not found</h3><a class="btn btn-primary" href="#/shortlists">Back to Shortlists</a></div>';
+  }
+  var count = shortlistEntriesForYear(year).length;
+  var html = '<div class="stack">';
+  html += '<button type="button" class="back-link" data-action="go-back">← Back</button>';
+  html += '<div class="section-head"><div class="section-title">Shortlist '+year+'</div><div class="eyebrow">'+count+' player'+(count===1?"":"s")+' · 4-3-3</div></div>';
+  html += '<div class="card card-pad">'+shortlistPitchHtml(year)+'</div>';
+  html += '</div>';
+  return html;
+}
+
+/* ============================================================
    PAGE: PLAYERS DATABASE
    ============================================================ */
 function playerCompetitions(playerId){
@@ -3976,11 +4159,15 @@ FORM_HANDLERS["save-player"] = function(form){
     if(vals.firstPosition) p.positionUpdatedAt = todayISO();
     if(vals.clubId) p.clubUpdatedAt = todayISO();
     p.updatedAt = nowISO();
+    syncPlayerShortlistMembership(p.id);
     persist({toast:"Player updated", redirectHash:"#/players/"+encodeURIComponent(p.id)});
     return;
   }
   function createNewPlayer(){
     var np = Object.assign({id:uid("player")},vals,{createdAt:nowISO(),updatedAt:nowISO()});
+    // Every player added to the database starts "Identified" unless the scout picked a different
+    // Assessment value on this very form (the field stays visible/editable here).
+    if(!np.status) np.status = "Identified";
     np.manualCharacteristics = vals.characteristics;
     regeneratePlayerAutoSentence(np);
     if(vals.height) np.heightUpdatedAt = todayISO();
@@ -4006,6 +4193,7 @@ FORM_HANDLERS["save-player"] = function(form){
         recommendation:"",scoutId:DB.currentScoutId,createdAt:nowISO()
       });
     }
+    syncPlayerShortlistMembership(np.id);
     persist({toast:"Player successfully added to Players Database", redirectHash:"#/players/"+encodeURIComponent(np.id)});
   }
   // Same name already in the Players Database (or seen in another match's lineup, since every
@@ -4051,6 +4239,8 @@ FORM_HANDLERS["save-player"] = function(form){
           });
           updatePlayerCurrentRatings(existing.id);
         }
+        if(!existing.status) existing.status = "Identified";
+        syncPlayerShortlistMembership(existing.id);
         persist({toast:"Linked to existing player", redirectHash:"#/players/"+encodeURIComponent(existing.id)});
       } else {
         createNewPlayer();
@@ -4317,7 +4507,9 @@ function wirePlayerProfileSelects(){
   document.querySelectorAll('[data-action-select="set-player-status"]').forEach(function(sel){
     sel.addEventListener("change",function(){
       var p = playerById(sel.dataset.id); if(!p) return;
-      p.status = sel.value||""; p.updatedAt = nowISO(); persist({});
+      p.status = sel.value||""; p.updatedAt = nowISO();
+      syncPlayerShortlistMembership(p.id);
+      persist({});
     });
   });
   document.querySelectorAll('[data-action-select="set-player-position-profile"]').forEach(function(sel){
@@ -5889,6 +6081,48 @@ function targetSlotIndicesForPosition(formationKey,slots,playerPos){
   if(playerPos==="AM"||playerPos==="DM") idxs = slotsFor("CM"); // no dedicated slot here — nearest is central midfield
   return idxs;
 }
+// ---- Shortlists (per birth-year 4-3-3 pitch, DB.shortlistEntries) ----------------------------
+// Which single 4-3-3 slot a player's own Position 1 maps onto for the Shortlists pitch — always
+// the 4-3-3 formation (shortlists aren't tied to any one match, so there's no home/away formation
+// choice to reuse). Reuses the exact same side-assignment rules as the match-lineup auto-fill
+// (targetSlotIndicesForPosition) for consistency; when that returns more than one slot (e.g. a
+// plain "CM" matches both 4-3-3 CM slots, having no L/R tag of its own), the left-most (lowest x)
+// one is used, since a shortlist slot holds a POOL of players rather than a starter+substitute
+// pair — there's no second slot to spill the rest onto. A position with no match anywhere (should
+// not happen given the fallback chain, but kept safe) defaults to slot 0 (GK).
+function shortlistSlotIndexForPosition(pos){
+  var idxs = targetSlotIndicesForPosition("4-3-3",FORMATIONS["4-3-3"],pos);
+  return idxs.length ? idxs[0] : 0;
+}
+function shortlistEntriesForYear(birthYear){
+  return DB.shortlistEntries.filter(function(e){ return e.birthYear===birthYear; });
+}
+function removePlayerFromShortlists(playerId){
+  DB.shortlistEntries = DB.shortlistEntries.filter(function(e){ return e.playerId!==playerId; });
+}
+// Places a player onto their own birth-year shortlist, at the slot matching their Position 1 —
+// but only the FIRST time they qualify (if they're already on their birth-year shortlist, nothing
+// moves them — a scout who's since dragged them to a different slot keeps that placement). Players
+// with no birth year, or a birth year outside the 2007-2013 range the Shortlists feature covers,
+// are simply left off — nothing in the UI can place them until that's filled in.
+function addPlayerToShortlist(playerId){
+  var p = playerById(playerId);
+  if(!p) return;
+  var year = parseInt(p.birthYear,10);
+  if(!year || SHORTLIST_BIRTH_YEARS.indexOf(year)<0) return;
+  var already = DB.shortlistEntries.some(function(e){ return e.birthYear===year && e.playerId===playerId; });
+  if(already) return;
+  DB.shortlistEntries.push({id:uid("shortlist"),birthYear:year,slotIndex:shortlistSlotIndexForPosition(p.firstPosition),playerId:playerId,createdAt:nowISO()});
+}
+// Call this any time a player's Assessment status changes (set-player-status, the Add/Edit Player
+// form, and the legacy-status migration below) to keep their shortlist membership in sync: "Sign"
+// or "Shortlist" places them (once — see addPlayerToShortlist), anything else removes them.
+function syncPlayerShortlistMembership(playerId){
+  var p = playerById(playerId);
+  if(!p) return;
+  if(SHORTLIST_STATUSES.indexOf(p.status)>=0) addPlayerToShortlist(playerId);
+  else removePlayerFromShortlists(playerId);
+}
 function autoFillKnownLineup(m,clubId){
   if(!m || !clubId) return false;
   // Runs every time this match's detail page is opened, not just once — a club+escalão with no
@@ -6089,7 +6323,13 @@ function applyInterestFlag(mp,want){
   if(want && !wasInterest){
     mp.interestDate = todayISO(); mp.interestScoutId = DB.currentScoutId;
     var promoted = playerById(mp.playerId);
-    if(promoted && promoted.pendingInterest) promoted.pendingInterest = false;
+    if(promoted && promoted.pendingInterest){
+      promoted.pendingInterest = false;
+      // Becoming a real, visible Players Database entry is "added to the database" for Assessment
+      // purposes — defaults to Identified, same as a player created via the standalone Add Player
+      // form, unless they already carry some other Assessment value for some reason.
+      if(!promoted.status) promoted.status = "Identified";
+    }
     // New Players of Interest join the end of this match's preference order.
     var siblingRanks = matchPlayersOfInterest(mp.matchId).map(function(x){return x.interestRank||0;});
     mp.interestRank = siblingRanks.length ? Math.max.apply(null,siblingRanks)+1 : 1;
@@ -6160,8 +6400,11 @@ function playerHasOtherRecords(playerId,excludeMpId,excludeMatchId){
   // evaluation, already covered by the evaluations check above) — is something that can be
   // entered purely by adding this one lineup entry, so none of it by itself counts as "already a
   // record." Only fields reachable exclusively from the standalone Add/Edit Player form (a
-  // deliberate, match-independent action) count as a real prior record.
-  var extraFields = [p.dob,p.agent,p.photo,p.extraObservations,p.status];
+  // deliberate, match-independent action) count as a real prior record. p.status is deliberately
+  // NOT in this list: every real (non-pendingInterest) player now always carries an Assessment
+  // value (at minimum "Identified"), so including it here would defeat this whole orphan check —
+  // a lineup-only player who's never had anything else filled in would never clean up again.
+  var extraFields = [p.dob,p.agent,p.photo,p.extraObservations];
   return extraFields.some(function(v){ return v!==undefined && v!==null && String(v).trim()!==""; });
 }
 ACTIONS["remove-lineup-entry"] = function(el){
@@ -6684,10 +6927,33 @@ function refreshStaleAutoSentences(){
   // very first render of the session) so it's fixed for good, not just re-derived every load.
   if(changed){ saveLocalFallback(); queueServerSave(); }
 }
+// One-time-per-player backfill from the legacy Assessment values (LEGACY_PLAYER_STATUSES) or a
+// blank status to the new Sign/Shortlist/Monitoring/Identified system — run from init(), AFTER
+// migrateLegacyPendingInterest (so a lineup-only placeholder that still needs to be flagged
+// pendingInterest is caught first there, before this backfill gives it a status that would make it
+// look "touched"). Never touches a player who already carries a new-system value — a manual
+// Sign/Shortlist must never be silently downgraded by a re-run of this migration — and skips
+// pendingInterest placeholders outright, since they're not real Players Database entries yet (see
+// applyInterestFlag for where those get their first Assessment value, on promotion). Safe to
+// re-run unconditionally, same as refreshStaleAutoSentences above.
+function migratePlayerAssessmentStatus(){
+  var changed = false;
+  DB.players.forEach(function(p){
+    if(p.pendingInterest) return;
+    if(PLAYER_STATUSES.indexOf(p.status)>=0) return;
+    var isLegacyOrBlank = !p.status || LEGACY_PLAYER_STATUSES.indexOf(p.status)>=0;
+    if(!isLegacyOrBlank) return; // unrecognized value — leave untouched rather than guess
+    p.status = playerQualifiesForMonitoring(p.id) ? "Monitoring" : "Identified";
+    p.updatedAt = nowISO();
+    changed = true;
+  });
+  if(changed){ saveLocalFallback(); queueServerSave(); }
+}
 async function init(){
   bindGlobalEvents();
   DB = await loadInitialData();
   migrateLegacyPendingInterest();
+  migratePlayerAssessmentStatus();
   refreshStaleAutoSentences();
   ROUTE = parseHash();
   render();
