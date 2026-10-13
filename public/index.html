@@ -403,11 +403,15 @@ td.num,th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric
 .pitch-add-sub svg{width:11px;height:11px;}
 
 /* ---------- Shortlists pitch (one slot can hold a whole POOL of players, not just one+sub) ---------- */
-.shortlist-slot{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;z-index:2;max-width:112px;}
+.shortlist-slot{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;z-index:2;max-width:132px;}
 .shortlist-slot-pos{font-size:10px;font-weight:800;letter-spacing:.05em;color:rgba(255,255,255,.85);text-shadow:0 1px 2px rgba(0,0,0,.6);}
-.shortlist-slot-chips{display:flex;flex-direction:column;align-items:center;gap:3px;max-height:150px;overflow-y:auto;}
-.shortlist-chip{background:rgba(0,0,0,.5);border-radius:99px;padding:2px 9px;cursor:pointer;max-width:108px;-webkit-tap-highlight-color:transparent;}
-.shortlist-chip-name{font-size:10px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;}
+.shortlist-slot-chips{display:flex;flex-direction:column;align-items:center;gap:3px;max-height:160px;overflow-y:auto;}
+/* Unlike the match-lineup pitch jerseys (one line, ellipsis — there's only ever one name per slot),
+   a shortlist slot can hold a whole pool of players, so each chip wraps onto 2 lines instead of
+   truncating — first and last name (shortPlayerName already drops any middle name) always stay
+   fully readable, never cut off mid-word. */
+.shortlist-chip{background:rgba(0,0,0,.5);border-radius:9px;padding:3px 7px;cursor:pointer;max-width:128px;-webkit-tap-highlight-color:transparent;}
+.shortlist-chip-name{font-size:10px;font-weight:700;color:#fff;white-space:normal;word-break:break-word;line-height:1.2;text-align:center;display:block;}
 .shortlist-slot-add{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.16);border:1.5px dashed rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;}
 .shortlist-slot-add svg{width:12px;height:12px;}
 
@@ -3658,8 +3662,23 @@ ACTIONS["teams-watch-toggle-fixtures"] = function(el){
 /* ============================================================
    PAGE: SHORTLISTS
    ============================================================ */
+// Within a slot's pool, players are always ordered by Potential (best grade first — A beats B+
+// beats B, etc., via GRADE_RANK), then by Performance (higher first) for anyone tied on Potential;
+// genuinely tied on both, order is whatever it was (insertion order) — the two ratings are what
+// matters, not an arbitrary tiebreak. Applies everywhere this pool is shown: the pitch chips and
+// the slot's own "add/remove player" modal.
 function shortlistEntriesForSlot(year,slotIndex){
-  return shortlistEntriesForYear(year).filter(function(e){ return e.slotIndex===slotIndex; });
+  var entries = shortlistEntriesForYear(year).filter(function(e){ return e.slotIndex===slotIndex; });
+  entries.sort(function(a,b){
+    var pa = playerById(a.playerId), pb = playerById(b.playerId);
+    var potA = pa ? (GRADE_RANK[normalizeGrade(pa.currentPotential)]||0) : 0;
+    var potB = pb ? (GRADE_RANK[normalizeGrade(pb.currentPotential)]||0) : 0;
+    if(potA!==potB) return potB-potA;
+    var perfA = pa && pa.currentPerformance!=="" && pa.currentPerformance!=null ? parseFloat(pa.currentPerformance) : -1;
+    var perfB = pb && pb.currentPerformance!=="" && pb.currentPerformance!=null ? parseFloat(pb.currentPerformance) : -1;
+    return perfB-perfA;
+  });
+  return entries;
 }
 function removeShortlistEntry(entryId){
   DB.shortlistEntries = DB.shortlistEntries.filter(function(e){ return e.id!==entryId; });
@@ -3716,9 +3735,17 @@ function openShortlistSlotModal(year,slotIndex){
   html += entries.length ? entries.map(function(e){
     var p = playerById(e.playerId);
     if(!p) return "";
+    // Performance/Potential are read live from the player's own profile every time this modal is
+    // built (openShortlistSlotModal runs fresh on open, and again on every persist()-triggered
+    // re-render) — so they always reflect whatever evaluation most recently updated the player's
+    // currentPerformance/currentPotential, with no separate wiring needed to "keep them in sync".
     return '<div class="combo-item" style="cursor:default">'+
       '<a href="#/players/'+encodeURIComponent(p.id)+'" style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;color:inherit;text-decoration:none">'+avatarHtml(p,30)+
       '<div style="min-width:0"><div class="combo-item-name">'+esc(p.name)+'</div><div class="combo-item-sub">'+(p.firstPosition?esc(p.firstPosition)+" · ":"")+esc(clubName(p.clubId)||"No club")+'</div></div></a>'+
+      '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;flex:0 0 auto;min-width:34px" title="Performance / Potential">'+
+        '<span style="font-weight:800;font-size:13px;line-height:1.2;color:'+performanceColor(p.currentPerformance)+'">'+fmtRatingNum(p.currentPerformance)+'</span>'+
+        '<span style="font-weight:800;font-size:11px;line-height:1.2;color:'+gradeColor(p.currentPotential)+'">'+(normalizeGrade(p.currentPotential)||"–")+'</span>'+
+      '</div>'+
       '<button type="button" class="btn btn-icon" data-action="remove-shortlist-entry" data-id="'+e.id+'" title="Remove from this shortlist">'+ic("close")+'</button></div>';
   }).join("") : '<div style="color:var(--text-faint);font-size:12.5px;padding:4px 0">No players in this slot yet.</div>';
   html += '</div>';
@@ -3772,6 +3799,48 @@ function pageShortlists(){
   html += '</div></div>';
   return html;
 }
+// Below the pitch: every player on this birth-year shortlist, as a table — same columns and the
+// same default ordering as the Players Database (by position, oldest birth year first, then name)
+// — so the two pages read consistently. Clicking a row opens that player's profile, same as the
+// Players Database table; the trailing button removes them from this shortlist only (their
+// Assessment and profile are untouched — same action as the "x" inside a slot's own modal).
+function shortlistPlayersTableHtml(year){
+  var entries = shortlistEntriesForYear(year);
+  if(!entries.length){
+    return '<div class="empty-state" style="margin-top:14px"><h3>No players on this shortlist yet</h3><p>Add players to a slot above, or set a player\'s Assessment to Sign or Shortlist.</p></div>';
+  }
+  var rows = entries.map(function(e){
+    var p = playerById(e.playerId);
+    return p ? {e:e, p:p, born:birthYearOf(p), topComp:playerTopCompetition(p.id)} : null;
+  }).filter(Boolean);
+  rows.sort(function(a,b){
+    var pa = positionSortRank(a.p.firstPosition), pb = positionSortRank(b.p.firstPosition);
+    if(pa!==pb) return pa-pb;
+    var aBorn = a.born===null?Infinity:a.born, bBorn = b.born===null?Infinity:b.born;
+    if(aBorn!==bBorn) return aBorn-bBorn;
+    return normName(a.p.name) < normName(b.p.name) ? -1 : (normName(a.p.name) > normName(b.p.name) ? 1 : 0);
+  });
+  var html = '<div class="table-wrap" style="margin-top:14px"><table class="table-compact"><thead><tr>'+
+    '<th>Pos</th><th>Name</th><th>Born</th><th>Nationality</th><th>Club</th><th>Competition</th><th>Performance</th><th>Potential</th><th>'+STATUS_FIELD_LABEL+'</th><th></th>'+
+    '</tr></thead><tbody>';
+  rows.forEach(function(r){
+    var p = r.p;
+    html += '<tr class="clickable" data-nav-row="#/players/'+encodeURIComponent(p.id)+'">'+
+      '<td>'+badgePos(p.firstPosition)+' '+(p.secondPosition?badgePos(p.secondPosition):'')+'</td>'+
+      '<td><div style="font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px">'+playerDisplayName(p)+'</div></td>'+
+      '<td class="num mono">'+(r.born===null?"—":r.born)+'</td>'+
+      '<td style="font-size:19px">'+(p.nationality?flagHtml(p.nationality,false)+(p.nationality2?" "+flagHtml(p.nationality2,false):""):'<span style="color:var(--text-faint);font-size:13px">—</span>')+'</td>'+
+      '<td><div style="display:flex;align-items:center;justify-content:center;gap:6px">'+crestHtml(clubById(p.clubId),16)+(p.clubId?esc(clubName(p.clubId)):'<span style="color:var(--text-faint)">Free Agent</span>')+'</div></td>'+
+      '<td>'+(r.topComp?'<span class="badge" style="background:var(--surface-3);color:var(--text-muted)">'+esc(r.topComp)+'</span>':'<span style="color:var(--text-faint)">—</span>')+'</td>'+
+      '<td class="num">'+(p.currentPerformance?'<span style="font-weight:700;color:'+performanceColor(p.currentPerformance)+'">'+fmtRatingNum(p.currentPerformance)+'</span>':'<span style="color:var(--text-faint)">—</span>')+'</td>'+
+      '<td class="num">'+(p.currentPotential?gradeBadge(p.currentPotential):'<span style="color:var(--text-faint)">—</span>')+'</td>'+
+      '<td>'+(p.status?'<span class="badge" style="background:var(--surface-3);color:var(--text-muted)">'+esc(p.status)+'</span>':'<span style="color:var(--text-faint)">—</span>')+'</td>'+
+      '<td><button class="icon-btn" data-action="remove-shortlist-entry" data-id="'+r.e.id+'" title="Remove from this shortlist">'+ic("close")+'</button></td>'+
+      '</tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
 function pageShortlistDetail(year){
   if(SHORTLIST_BIRTH_YEARS.indexOf(year)<0){
     return '<div class="empty-state"><h3>Shortlist not found</h3><a class="btn btn-primary" href="#/shortlists">Back to Shortlists</a></div>';
@@ -3781,7 +3850,13 @@ function pageShortlistDetail(year){
   html += '<button type="button" class="back-link" data-action="go-back">← Back</button>';
   html += '<div class="section-head"><div class="section-title">Shortlist '+year+'</div><div class="eyebrow">'+count+' player'+(count===1?"":"s")+' · 4-3-3</div></div>';
   html += '<div class="card card-pad">'+shortlistPitchHtml(year)+'</div>';
+  html += shortlistPlayersTableHtml(year);
   html += '</div>';
+  onAfterRender(function(){
+    document.querySelectorAll("[data-nav-row]").forEach(function(row){
+      row.addEventListener("click",function(e){ if(e.target.closest("[data-action]")) return; navigate(row.dataset.navRow); });
+    });
+  });
   return html;
 }
 
