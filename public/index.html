@@ -1218,6 +1218,17 @@ function performanceColor(v){
   return "var(--rate-1)";
 }
 function ratingColor(v){ return performanceColor(v); }
+// Assessment (Sign/Shortlist/Monitoring/Identified) status color — used anywhere that status
+// is shown: the player profile's Assessment selector, the shortlist pitch chip names, and the
+// Assessment column on the shortlist's players table. Keeping this in one place means all three
+// stay visually consistent and only need updating here if the mapping ever changes.
+function assessmentColor(status){
+  if(status==="Sign") return "var(--blue)";
+  if(status==="Shortlist") return "var(--green)";
+  if(status==="Monitoring") return "var(--rate-3)";
+  if(status==="Identified") return "var(--rate-2)";
+  return "var(--text-faint)";
+}
 // Performance is now an average across every evaluated match (see updatePlayerCurrentRatings), so
 // it's almost always a decimal — shown to 1 decimal place, but trimmed to a plain whole number
 // when the average happens to land exactly on one (e.g. "4" instead of "4.0").
@@ -2155,7 +2166,7 @@ var TAB_ITEMS = [
   {key:"__fab",label:"Add",hash:"",icon:"plus"},
   {key:"agenda",label:"Agenda",hash:"#/agenda",icon:"agenda"},
   {key:"calendar",label:"Calendar",hash:"#/calendar",icon:"calendar"},
-  {key:"teams-watch",label:"Watch",hash:"#/teams-watch",icon:"clock"}
+  {key:"shortlists",label:"Shortlists",hash:"#/shortlists",icon:"star"}
 ];
 function pageActiveKey(){
   if(ROUTE.name==="match-new") return "match-new";
@@ -3743,8 +3754,8 @@ function openShortlistSlotModal(year,slotIndex){
       '<a href="#/players/'+encodeURIComponent(p.id)+'" style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;color:inherit;text-decoration:none">'+avatarHtml(p,30)+
       '<div style="min-width:0"><div class="combo-item-name">'+esc(p.name)+'</div><div class="combo-item-sub">'+(p.firstPosition?esc(p.firstPosition)+" · ":"")+esc(clubName(p.clubId)||"No club")+'</div></div></a>'+
       '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;flex:0 0 auto;min-width:34px" title="Performance / Potential">'+
-        '<span style="font-weight:800;font-size:13px;line-height:1.2;color:'+performanceColor(p.currentPerformance)+'">'+fmtRatingNum(p.currentPerformance)+'</span>'+
-        '<span style="font-weight:800;font-size:11px;line-height:1.2;color:'+gradeColor(p.currentPotential)+'">'+(normalizeGrade(p.currentPotential)||"–")+'</span>'+
+        '<span style="font-weight:800;font-size:11px;line-height:1.2;color:'+performanceColor(p.currentPerformance)+'">'+fmtRatingNum(p.currentPerformance)+'</span>'+
+        '<span style="font-weight:800;font-size:13px;line-height:1.2;color:'+gradeColor(p.currentPotential)+'">'+(normalizeGrade(p.currentPotential)||"–")+'</span>'+
       '</div>'+
       '<button type="button" class="btn btn-icon" data-action="remove-shortlist-entry" data-id="'+e.id+'" title="Remove from this shortlist">'+ic("close")+'</button></div>';
   }).join("") : '<div style="color:var(--text-faint);font-size:12.5px;padding:4px 0">No players in this slot yet.</div>';
@@ -3772,7 +3783,7 @@ function shortlistPitchHtml(year){
     var chips = entries.map(function(e){
       var p = playerById(e.playerId);
       if(!p) return "";
-      return '<div class="shortlist-chip" data-action="open-shortlist-slot" data-year="'+year+'" data-slot="'+i+'" title="'+escAttr(p.name)+'"><span class="shortlist-chip-name">'+esc(shortPlayerName(p.name))+'</span></div>';
+      return '<div class="shortlist-chip" data-action="open-shortlist-slot" data-year="'+year+'" data-slot="'+i+'" title="'+escAttr(p.name)+'"><span class="shortlist-chip-name" style="color:'+assessmentColor(p.status)+'">'+esc(shortPlayerName(p.name))+'</span></div>';
     }).join("");
     jerseys += '<div class="shortlist-slot" style="left:'+slot.x+'%;top:'+slot.y+'%">'+
       '<div class="shortlist-slot-pos">'+esc(slot.pos)+'</div>'+
@@ -3834,7 +3845,7 @@ function shortlistPlayersTableHtml(year){
       '<td>'+(r.topComp?'<span class="badge" style="background:var(--surface-3);color:var(--text-muted)">'+esc(r.topComp)+'</span>':'<span style="color:var(--text-faint)">—</span>')+'</td>'+
       '<td class="num">'+(p.currentPerformance?'<span style="font-weight:700;color:'+performanceColor(p.currentPerformance)+'">'+fmtRatingNum(p.currentPerformance)+'</span>':'<span style="color:var(--text-faint)">—</span>')+'</td>'+
       '<td class="num">'+(p.currentPotential?gradeBadge(p.currentPotential):'<span style="color:var(--text-faint)">—</span>')+'</td>'+
-      '<td>'+(p.status?'<span class="badge" style="background:var(--surface-3);color:var(--text-muted)">'+esc(p.status)+'</span>':'<span style="color:var(--text-faint)">—</span>')+'</td>'+
+      '<td>'+(p.status?'<span class="badge" style="background:var(--surface-3);color:'+assessmentColor(p.status)+'">'+esc(p.status)+'</span>':'<span style="color:var(--text-faint)">—</span>')+'</td>'+
       '<td><button class="icon-btn" data-action="remove-shortlist-entry" data-id="'+r.e.id+'" title="Remove from this shortlist">'+ic("close")+'</button></td>'+
       '</tr>';
   });
@@ -4349,8 +4360,8 @@ function pagePlayerDetail(id){
     DB.clubs.slice().sort(function(a,b){return a.name.localeCompare(b.name);}).map(function(c){return '<option value="'+c.id+'"'+(c.id===p.clubId?" selected":"")+'>'+esc(c.name)+'</option>';}).join("")+'</select>';
   var footSelectHtml = '<select class="inline-select" data-action-select="set-player-foot" data-id="'+p.id+'"><option value="">—</option>'+
     FEET.map(function(ft){return '<option value="'+ft+'"'+(ft===p.preferredFoot?" selected":"")+'>'+ft+'</option>';}).join("")+'</select>';
-  var statusSelectHtml = '<select class="inline-select" data-action-select="set-player-status" data-id="'+p.id+'"><option value="">—</option>'+
-    PLAYER_STATUSES.map(function(s){return '<option value="'+s+'"'+(s===p.status?" selected":"")+'>'+s+'</option>';}).join("")+'</select>';
+  var statusSelectHtml = '<select class="inline-select" style="color:'+assessmentColor(p.status)+'" data-action-select="set-player-status" data-id="'+p.id+'"><option value="">—</option>'+
+    PLAYER_STATUSES.map(function(s){return '<option value="'+s+'" style="color:'+assessmentColor(s)+'"'+(s===p.status?" selected":"")+'>'+s+'</option>';}).join("")+'</select>';
   var positionProfileSelectHtml = '<select class="inline-select" data-action-select="set-player-position-profile" data-id="'+p.id+'">'+positionProfileOptionsFor(p.firstPosition,p.positionProfile)+'</select>';
   var secondPositionProfileSelectHtml = '<select class="inline-select" data-action-select="set-player-position2-profile" data-id="'+p.id+'">'+positionProfileOptionsFor(p.secondPosition,p.secondPositionProfile)+'</select>';
   // Structure/Strength/Agility/Acceleration/Pace no longer show on the profile at all (they still
