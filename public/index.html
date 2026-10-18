@@ -6525,10 +6525,17 @@ INLINE_EDIT_HANDLERS["mp-interestNote"] = function(el,val){
   mp.interestNote = val; persist({});
 };
 
-function createPlayerMinimal(name,clubId,characteristics,firstPosition,clubDate){
+// isNationalTeam: true when this player is being created from a national-team fixture's lineup
+// (see isNationalTeamCompetition) — there, clubId actually identifies a COUNTRY (the two "clubs"
+// on a national-team match are really national sides, same reasoning as matchTeamCrest's flag
+// swap-in), so it would be wrong to file that country as the player's Club. Instead it goes into
+// Nationality, and Club is left blank for the real domestic club to be filled in separately.
+function createPlayerMinimal(name,clubId,characteristics,firstPosition,clubDate,isNationalTeam){
+  var realClubId = isNationalTeam ? "" : (clubId||"");
   var p = {
     id:uid("player"), photo:"", name:name, firstPosition:firstPosition||"", secondPosition:"",
-    dob:"", birthYear:"", clubId:clubId||"", clubUpdatedAt:clubId?(clubDate||todayISO()):"", nationality:"", nationality2:"", preferredFoot:"",
+    dob:"", birthYear:"", clubId:realClubId, clubUpdatedAt:realClubId?(clubDate||todayISO()):"",
+    nationality:(isNationalTeam && clubId) ? (clubName(clubId)||"") : "", nationality2:"", preferredFoot:"",
     height:"", characteristics:characteristics||"", extraObservations:"",
     currentPerformance:"", currentPotential:"", agent:"",
     // created from a match lineup — stays out of the Players Database until marked as a Player of Interest.
@@ -6952,9 +6959,10 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
     persist({toast: isNewPlayer ? "New player created and added to lineup" : "Player added to lineup"});
   }
   var clubDate = (mForSlot && mForSlot.date) || todayISO();
+  var isNTMatch = !!(mForSlot && isNationalTeamCompetition(mForSlot.competition));
   if(playerId){ finalize(playerId,false); return; }
   if(!name){
-    var npBlank = createPlayerMinimal("???",clubId,"",position,clubDate);
+    var npBlank = createPlayerMinimal("???",clubId,"",position,clubDate,isNTMatch);
     finalize(npBlank.id,true);
     return;
   }
@@ -6962,10 +6970,10 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
   if(candidates.length){
     openDuplicateModal(candidates,function(res){
       if(res.type==="existing"){ finalize(res.playerId,false); }
-      else { var np = createPlayerMinimal(name,clubId,"",position,clubDate); finalize(np.id,true); }
+      else { var np = createPlayerMinimal(name,clubId,"",position,clubDate,isNTMatch); finalize(np.id,true); }
     });
   } else {
-    var np2 = createPlayerMinimal(name,clubId,"",position,clubDate);
+    var np2 = createPlayerMinimal(name,clubId,"",position,clubDate,isNTMatch);
     finalize(np2.id,true);
   }
 };
