@@ -1155,6 +1155,27 @@ function hashColor(str){
 function normName(s){
   return String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9 ]/g,"").replace(/\s+/g," ").trim();
 }
+// Every player-name search box in the app used to do a single plain substring check against the
+// FULL name string (normName(name).indexOf(normName(query))>=0) — which only matches when the
+// query's words sit CONTIGUOUS and in the same order they appear in the name. Typing a first name
+// plus a last name (skipping a middle name) — e.g. "Hussam Alamri" for "Hussam Ali Alamri" — failed
+// to match, because "hussam alamri" never appears as a contiguous run inside "hussam ali alamri".
+// This instead splits both sides into words and requires every query word to be a substring of
+// SOME word in the name, in any order — so first+last, first+third, last-only, or any other
+// combination of the player's actual name tokens all match, the same way a single-word query
+// already matched anywhere in the name. A single-word query keeps the plain substring check
+// (equivalent, but avoids a pointless split/some for the overwhelmingly common case).
+function nameMatchesQuery(name,query){
+  var nq = normName(query);
+  if(!nq) return false;
+  var nn = normName(name);
+  var qTokens = nq.split(" ").filter(Boolean);
+  if(qTokens.length<=1) return nn.indexOf(nq)>=0;
+  var nameTokens = nn.split(" ").filter(Boolean);
+  return qTokens.every(function(qt){
+    return nameTokens.some(function(nt){ return nt.indexOf(qt)>=0; });
+  });
+}
 function levenshtein(a,b){
   a=a||""; b=b||"";
   var m=a.length,n=b.length;
@@ -1937,6 +1958,21 @@ function mergePlayerInto(sourceId,targetId,opts){
   opts = opts || {};
   DB.matchPlayers.forEach(function(mp){ if(mp.playerId===sourceId) mp.playerId = targetId; });
   DB.evaluations.forEach(function(e){ if(e.playerId===sourceId) e.playerId = targetId; });
+  // playerNotes also carry a playerId (general scouting notes, separate from any one match's
+  // evaluation) — these were previously left behind on the old id and silently vanished once the
+  // source player record was deleted below. Reassign them the same way as matchPlayers/evaluations.
+  DB.playerNotes.forEach(function(n){ if(n.playerId===sourceId) n.playerId = targetId; });
+  // shortlistEntries: a player can only ever hold ONE entry per birth year (setShortlistSlotForPlayer
+  // enforces this), so if the target already has an entry for a year the source was also on, keep
+  // the target's own entry and drop the source's rather than creating a second same-player entry
+  // for that year; otherwise just reassign it like everything else.
+  DB.shortlistEntries = DB.shortlistEntries.filter(function(e){
+    if(e.playerId!==sourceId) return true;
+    var targetHasYear = DB.shortlistEntries.some(function(x){ return x.playerId===targetId && x.birthYear===e.birthYear; });
+    if(targetHasYear) return false;
+    e.playerId = targetId;
+    return true;
+  });
   if(!target.birthYear && source.birthYear) target.birthYear = source.birthYear;
   if(!target.nationality && source.nationality) target.nationality = source.nationality;
   if(!target.heightExact && source.heightExact) target.heightExact = source.heightExact;
@@ -2302,7 +2338,7 @@ function wireGlobalSearch(){
     var q = normName(input.value);
     if(!q){ results.classList.add("empty"); results.innerHTML=""; return; }
     var playerMatches = visiblePlayers().filter(function(p){
-      return normName(p.name).indexOf(q)>=0 || normName(clubName(p.clubId)).indexOf(q)>=0 ||
+      return nameMatchesQuery(p.name,input.value) || normName(clubName(p.clubId)).indexOf(q)>=0 ||
         normName(p.nationality||"").indexOf(q)>=0 || normName(p.firstPosition||"").indexOf(q)>=0 || normName(p.secondPosition||"").indexOf(q)>=0 ||
         normName(posLabel(p.firstPosition)).indexOf(q)>=0 || normName(posLabel(p.secondPosition)).indexOf(q)>=0;
     }).slice(0,6);
@@ -3013,7 +3049,12 @@ function wirePlayerCombo(id,opts){
   function renderList(q){
     var nn = normName(q);
     if(!nn){ list.hidden=true; return; }
-    var matches = DB.players.filter(function(p){return p.id!==opts.excludeId && (!opts.clubId || p.clubId===opts.clubId) && normName(p.name).indexOf(nn)>=0;}).slice(0,6);
+    // For a national-team match, "club" doesn't mean anything — a player's clubId is their real
+    // domestic club, not the country they're being searched under here, so scoping candidates to
+    // it would only ever surface players who happened to get added under that exact country
+    // pseudo-club before (see isNationalTeam at the openPitchSlotModal call site). Search the whole
+    // database by name instead, same as a normal club match would if it had no club scoping at all.
+    var matches = DB.players.filter(function(p){return p.id!==opts.excludeId && (opts.isNationalTeam || !opts.clubId || p.clubId===opts.clubId) && nameMatchesQuery(p.name,q);}).slice(0,6);
     var html = matches.map(playerComboPreview).join("");
     if(!html){ html='<div class="combo-item" style="color:var(--text-faint);cursor:default">'+(opts.emptyMessage||"No existing player found — will create new")+'</div>'; }
     list.innerHTML = html;
@@ -3099,7 +3140,7 @@ function wireMergeSearchCombo(id,excludeId,onSelect){
   function renderList(q){
     var nn = normName(q);
     if(!nn){ list.hidden=true; return; }
-    var matches = DB.players.filter(function(p){return p.id!==excludeId && normName(p.name).indexOf(nn)>=0;}).slice(0,8);
+    var matches = DB.players.filter(function(p){return p.id!==excludeId && nameMatchesQuery(p.name,q);}).slice(0,8);
     var html = matches.map(playerComboPreview).join("");
     if(!html){ html='<div class="combo-item" style="color:var(--text-faint);cursor:default">No match</div>'; }
     list.innerHTML = html;
@@ -3720,7 +3761,7 @@ function wireShortlistAddCombo(id,year,onSelect){
   function renderList(q){
     var nn = normName(q);
     var pool = playersEligibleForShortlistYear(year);
-    var matches = (nn ? pool.filter(function(p){ return normName(p.name).indexOf(nn)>=0; }) : pool).slice(0,8);
+    var matches = (nn ? pool.filter(function(p){ return nameMatchesQuery(p.name,q); }) : pool).slice(0,8);
     var html = matches.map(playerComboPreview).join("");
     if(!html){ html = '<div class="combo-item" style="color:var(--text-faint);cursor:default">'+(pool.length?"No match":"No "+year+"-born players available")+'</div>'; }
     list.innerHTML = html;
@@ -3785,8 +3826,13 @@ function shortlistPitchHtml(year){
       if(!p) return "";
       return '<div class="shortlist-chip" data-action="open-shortlist-slot" data-year="'+year+'" data-slot="'+i+'" title="'+escAttr(p.name)+'"><span class="shortlist-chip-name" style="color:'+assessmentColor(p.status)+'">'+esc(shortPlayerName(p.name))+'</span></div>';
     }).join("");
+    // The 4-3-3 diagram has two plain "CM" slots (left and right of the DM) — on the Shortlists
+    // pitch specifically, the right-hand one is labeled "AM" instead, per Miguel's request. This
+    // only relabels the Shortlists pitch slot itself; the underlying FORMATIONS entry (shared with
+    // match lineups elsewhere) still has pos:"CM", and a player's own Position 1 is unaffected.
+    var slotLabel = (slot.pos==="CM" && slot.x>50) ? "AM" : slot.pos;
     jerseys += '<div class="shortlist-slot" style="left:'+slot.x+'%;top:'+slot.y+'%">'+
-      '<div class="shortlist-slot-pos">'+esc(slot.pos)+'</div>'+
+      '<div class="shortlist-slot-pos">'+esc(slotLabel)+'</div>'+
       '<div class="shortlist-slot-chips">'+chips+'</div>'+
       '<button type="button" class="shortlist-slot-add" data-action="open-shortlist-slot" data-year="'+year+'" data-slot="'+i+'" title="Add player">'+ic("plus")+'</button>'+
     '</div>';
@@ -3930,7 +3976,7 @@ function pagePlayers(){
   var rows = dbPlayers.map(function(p){
     return {p:p, born:birthYearOf(p), last:playerLastObserved(p.id), obs:playerObservationCount(p.id), topComp:playerTopCompetition(p.id)};
   });
-  if(f.q){ var nn=normName(f.q); rows = rows.filter(function(r){return normName(r.p.name).indexOf(nn)>=0 || normName(clubName(r.p.clubId)).indexOf(nn)>=0 || normName(r.p.nationality||"").indexOf(nn)>=0 || normName(r.p.nationality2||"").indexOf(nn)>=0;}); }
+  if(f.q){ var nn=normName(f.q); rows = rows.filter(function(r){return nameMatchesQuery(r.p.name,f.q) || normName(clubName(r.p.clubId)).indexOf(nn)>=0 || normName(r.p.nationality||"").indexOf(nn)>=0 || normName(r.p.nationality2||"").indexOf(nn)>=0;}); }
   if(f.position.length) rows = rows.filter(function(r){return f.position.indexOf(r.p.firstPosition)>=0 || (r.p.secondPosition && f.position.indexOf(r.p.secondPosition)>=0);});
   if(f.club.length) rows = rows.filter(function(r){return f.club.indexOf(r.p.clubId)>=0;});
   if(f.nationality.length) rows = rows.filter(function(r){return f.nationality.indexOf(r.p.nationality)>=0 || (r.p.nationality2 && f.nationality.indexOf(r.p.nationality2)>=0);});
@@ -4108,15 +4154,18 @@ function pagePlayerForm(existingId){
     '<div class="field"><label class="field-label">Structure</label><select class="select" name="estrutura"><option value="">—</option>'+ESTRUTURA_LEVELS.map(function(v){return '<option value="'+v+'"'+(p.estrutura===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
     '<div class="field"><label class="field-label">Athletic</label><select class="select" name="strength">'+athleticOptionsHtml(p.strength)+'</select></div>'+
   '</div>';
+  // Strength (força física — distinct from Athletic above) shares a line with Maturation.
+  // Agility/Acceleration/Pace now come right after this row (they used to sit right before it) —
+  // Edit Player and Add Player should read Structure/Athletic, then Strength/Maturation, then
+  // Agility/Acceleration/Pace, per Miguel's request.
+  html += '<div class="strength-maturation-row">'+
+    '<div class="field"><label class="field-label">Strength</label><select class="select" name="strengthLevel">'+speedNumOptionsHtml(p.strengthLevel)+'</select></div>'+
+    '<div class="field"><label class="field-label">Maturation</label><select class="select" name="maturation"><option value="">—</option>'+MATURATION_LEVELS.map(function(v){return '<option value="'+v+'"'+(p.maturation===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
+  '</div>';
   html += '<div class="form-grid" style="grid-template-columns:1fr 1fr 1fr">'+
     '<div class="field"><label class="field-label">Agility</label><select class="select" name="agilityLevel">'+speedNumOptionsHtml(p.agilityLevel)+'</select></div>'+
     '<div class="field"><label class="field-label"><span class="lbl-desktop">Acceleration</span><span class="lbl-mobile">Accelera</span></label><select class="select" name="accelerationLevel">'+speedNumOptionsHtml(p.accelerationLevel)+'</select></div>'+
     '<div class="field"><label class="field-label">Pace</label><select class="select" name="speedLevel">'+speedNumOptionsHtml(p.speedLevel)+'</select></div>'+
-  '</div>';
-  // Strength (força física — distinct from Athletic above) shares a line with Maturation.
-  html += '<div class="strength-maturation-row">'+
-    '<div class="field"><label class="field-label">Strength</label><select class="select" name="strengthLevel">'+speedNumOptionsHtml(p.strengthLevel)+'</select></div>'+
-    '<div class="field"><label class="field-label">Maturation</label><select class="select" name="maturation"><option value="">—</option>'+MATURATION_LEVELS.map(function(v){return '<option value="'+v+'"'+(p.maturation===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
   '</div>';
   html += '<div class="field"><label class="field-label">Performance</label><div class="pillgroup" data-name="performance"><input type="hidden" name="currentPerformance" value="'+escAttr(p.currentPerformance||"")+'">'+[1,2,3,4,5].map(function(n){return '<button type="button" class="pill-opt'+(String(n)===String(p.currentPerformance)?" on":"")+'" data-value="'+n+'">'+n+'</button>';}).join("")+'</div></div>';
   html += '<div class="field"><label class="field-label">Potential</label><div class="pillgroup" data-name="potential"><input type="hidden" name="currentPotential" value="'+escAttr(normalizeGrade(p.currentPotential)||"")+'">'+GRADE_LETTERS.map(function(g){return '<button type="button" class="pill-opt'+(g===normalizeGrade(p.currentPotential)?" on":"")+'" data-value="'+g+'">'+g+'</button>';}).join("")+'</div></div>';
@@ -6566,6 +6615,9 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
   var mForSlot = matchById(matchId);
   var slots = mForSlot ? formationFor(mForSlot,clubId) : FORMATIONS["4-3-3"];
   var slot = slots[slotIndex] || {pos:""};
+  // National-team match: the "club" on each side is really a country pseudo-club, not a real
+  // domestic club — see wirePlayerCombo's isNationalTeam handling below.
+  var isNTMatchForSlot = !!(mForSlot && isNationalTeamCompetition(mForSlot.competition));
   var mp = mpId ? byId(DB.matchPlayers,mpId) : null;
   var p = mp ? playerById(mp.playerId) : null;
   var isEdit = !!mp;
@@ -6733,12 +6785,19 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
   html += '</form></div>';
   openModal(html,{wide:true});
   // Suggestions are scoped to this lineup's own club (any age group within it) — narrower and
-  // easier to pick from than the whole database. The shirt-number prefill, though, IS scoped to
-  // this match's own escalão — a player can wear a different number up/down an age group, so only
-  // a same-escalão past number is trusted as a default here.
+  // easier to pick from than the whole database. For a national-team match, though, that "club" is
+  // really just a country pseudo-club, and nothing about a player's actual (domestic) club says
+  // whether they're eligible for that country, so scoping by it would only ever surface players
+  // someone already parked under that exact pseudo-club before — every other player, including
+  // ones with real caps at that nationality, would be invisible. There, search the whole database
+  // by name instead, like a normal club match would with no club scoping at all; eligibility is
+  // nationality, which the coach judges themselves when picking a result, same as before. The
+  // shirt-number prefill, though, IS scoped to this match's own escalão — a player can wear a
+  // different number up/down an age group, so only a same-escalão past number is trusted as a
+  // default here.
   var slotAgeGroup = mForSlot ? matchAgeGroup(mForSlot) : "";
-  if(!isEdit){ wirePlayerCombo("pitchSlotName",{clubId:clubId,ageGroup:slotAgeGroup}); wireShirtNumberCombo("pitchSlotNumber","pitchSlotName",clubId,slotAgeGroup); }
-  else if(p){ wirePlayerCombo("pitchSlotEditName",{excludeId:p.id,emptyMessage:"No match",ageGroup:slotAgeGroup}); }
+  if(!isEdit){ wirePlayerCombo("pitchSlotName",{clubId:clubId,isNationalTeam:isNTMatchForSlot,ageGroup:slotAgeGroup}); wireShirtNumberCombo("pitchSlotNumber","pitchSlotName",clubId,slotAgeGroup); }
+  else if(p){ wirePlayerCombo("pitchSlotEditName",{excludeId:p.id,isNationalTeam:isNTMatchForSlot,emptyMessage:"No match",ageGroup:slotAgeGroup}); }
   wireCountryCombo("pitchSlotNat");
   // Position Profile's option list depends on Position 1 — refresh it live as Position 1 changes,
   // trying to keep whatever was already selected if it still applies to the new group.
