@@ -291,7 +291,7 @@ input.eval-param-input{width:44px;min-height:28px;padding:2px 4px;text-align:cen
 /* ---------- tables ---------- */
 .table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);}
 table{width:100%;border-collapse:collapse;font-size:13px;min-width:640px;}
-thead th{position:sticky;top:0;background:var(--surface-2);text-align:left;padding:9px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);font-weight:700;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;}
+thead th{position:sticky;top:0;z-index:1;background:var(--surface-2);text-align:left;padding:9px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);font-weight:700;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;}
 thead th:hover{color:var(--text);}
 thead th.sorted{color:var(--accent-strong);}
 tbody td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle;white-space:nowrap;}
@@ -352,7 +352,7 @@ td.num,th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric
 .autosaved-tick.show{display:inline-flex;}
 
 /* ---------- club/player combobox ---------- */
-.combo{position:relative;}
+.combo{position:relative;z-index:10;}
 .combo-list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow);z-index:40;max-height:280px;overflow-y:auto;}
 .combo-item{display:flex;align-items:center;gap:9px;padding:9px 11px;cursor:pointer;}
 .combo-item:hover,.combo-item.hi{background:var(--surface-2);}
@@ -2826,13 +2826,14 @@ function wireQuickFilterSuggest(textId,suggListId,getSuggestions,applyValue){
   });
 }
 function quickSuggestList(candidates,q,limit){
-  var nn = normName(q);
   var seen = {}; var out = [];
   candidates.forEach(function(s){
     if(!s) return;
     var key = normName(s);
     if(!key || seen[key]) return;
-    if(key.indexOf(nn)<0) return;
+    // nameMatchesQuery (not a plain substring check) so a multi-word query like "ahmed mar" still
+    // finds "Ahmed Marzouk" the same way every other name search in the app does.
+    if(!nameMatchesQuery(s,q)) return;
     seen[key] = true;
     out.push(s);
   });
@@ -4073,9 +4074,14 @@ function pagePlayers(){
     var qEl=document.getElementById("pf_q");
     if(qEl) qEl.addEventListener("input",debounce(function(){ PLAYER_FILTERS.q=qEl.value; render(); },220));
     wireQuickFilterSuggest("pf_q","pf_q_sugg",function(q){
-      var names = visiblePlayers().map(function(p){return p.name;});
+      // Search the WHOLE database here, not visiblePlayers() — that list is filtered off
+      // PLAYER_FILTERS.q, which is updated by a separate, slower-debounced listener on this same
+      // input, so right after typing it can still hold the previous keystroke's value and silently
+      // drop a real match (e.g. "ahmed mar" not surfacing "Ahmed Marzouk") until the other listener
+      // catches up. Matching directly against DB.players with the just-typed q has no such lag.
+      var names = DB.players.map(function(p){return p.name;});
       var clubs = DB.clubs.map(function(c){return c.name;});
-      var nats = visiblePlayers().map(function(p){return p.nationality;});
+      var nats = DB.players.map(function(p){return p.nationality;});
       return quickSuggestList(names.concat(clubs,nats),q);
     },function(v){ PLAYER_FILTERS.q=v; render(); });
     var clearEl=document.getElementById("pf_clear");
@@ -6731,14 +6737,17 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
     '<div class="field"><label class="field-label">Structure</label><select class="select" name="estrutura" id="pitchSlotEstrutura"><option value="">—</option>'+ESTRUTURA_LEVELS.map(function(v){return '<option value="'+v+'"'+(pfEstrutura===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
     '<div class="field"><label class="field-label">Athletic</label><select class="select" name="strength" id="pitchSlotStrength">'+athleticOptionsHtml(pfStrength)+'</select></div>'+
   '</div>';
+  // Strength/Maturation come right before Agility/Acceleration/Pace — kept in sync with the
+  // standalone Add/Edit Player form's order (Structure, Athletic, Strength, Maturation, Agility,
+  // Acceleration, Pace), per Miguel's request that this also apply to the lineup/pitch-slot modal.
+  html += '<div class="strength-maturation-row">'+
+    '<div class="field"><label class="field-label">Strength</label><select class="select" name="strengthLevel" id="pitchSlotStrengthLevel">'+speedNumOptionsHtml(pfStrengthLevel)+'</select></div>'+
+    '<div class="field"><label class="field-label">Maturation</label><select class="select" name="maturation" id="pitchSlotMaturation"><option value="">—</option>'+MATURATION_LEVELS.map(function(v){return '<option value="'+v+'"'+(pfMaturation===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
+  '</div>';
   html += '<div class="form-grid" style="grid-template-columns:1fr 1fr 1fr">'+
     '<div class="field"><label class="field-label">Agility</label><select class="select" name="agilityLevel" id="pitchSlotAgility">'+speedNumOptionsHtml(pfAgility)+'</select></div>'+
     '<div class="field"><label class="field-label"><span class="lbl-desktop">Acceleration</span><span class="lbl-mobile">Accelera</span></label><select class="select" name="accelerationLevel" id="pitchSlotAcceleration">'+speedNumOptionsHtml(pfAcceleration)+'</select></div>'+
     '<div class="field"><label class="field-label">Pace</label><select class="select" name="speedLevel" id="pitchSlotSpeed">'+speedNumOptionsHtml(pfSpeed)+'</select></div>'+
-  '</div>';
-  html += '<div class="strength-maturation-row">'+
-    '<div class="field"><label class="field-label">Strength</label><select class="select" name="strengthLevel" id="pitchSlotStrengthLevel">'+speedNumOptionsHtml(pfStrengthLevel)+'</select></div>'+
-    '<div class="field"><label class="field-label">Maturation</label><select class="select" name="maturation" id="pitchSlotMaturation"><option value="">—</option>'+MATURATION_LEVELS.map(function(v){return '<option value="'+v+'"'+(pfMaturation===v?" selected":"")+'>'+v+'</option>';}).join("")+'</select></div>'+
   '</div>';
   html += '<div class="field"><label class="field-label">Performance</label><div class="pillgroup" data-name="performance"><input type="hidden" name="performance" value="'+escAttr(ev?ev.performance||"":"")+'">'+[1,2,3,4,5].map(function(n){
     var refMark = (refEval && String(n)===String(refEval.performance)) ? '<span class="pill-opt-ref-mark" title="Last evaluated: '+esc(String(n))+'">*</span>' : '';
