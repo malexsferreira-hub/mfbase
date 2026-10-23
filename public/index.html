@@ -405,13 +405,15 @@ td.num,th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric
 /* ---------- Shortlists pitch (one slot can hold a whole POOL of players, not just one+sub) ---------- */
 .shortlist-slot{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;z-index:2;max-width:132px;}
 .shortlist-slot-pos{font-size:10px;font-weight:800;letter-spacing:.05em;color:rgba(255,255,255,.85);text-shadow:0 1px 2px rgba(0,0,0,.6);}
-.shortlist-slot-chips{display:flex;flex-direction:column;align-items:center;gap:3px;max-height:160px;overflow-y:auto;}
-/* Unlike the match-lineup pitch jerseys (one line, ellipsis — there's only ever one name per slot),
-   a shortlist slot can hold a whole pool of players, so each chip wraps onto 2 lines instead of
-   truncating — first and last name (shortPlayerName already drops any middle name) always stay
-   fully readable, never cut off mid-word. */
-.shortlist-chip{background:rgba(0,0,0,.5);border-radius:9px;padding:3px 7px;cursor:pointer;max-width:128px;-webkit-tap-highlight-color:transparent;}
-.shortlist-chip-name{font-size:10px;font-weight:700;color:#fff;white-space:normal;word-break:break-word;line-height:1.2;text-align:center;display:block;}
+/* All the players sharing one slot sit on a single line (comma-separated) instead of each getting
+   its own stacked, padded chip — Miguel asked for this across every shortlist/position so a slot
+   has more room before it needs to wrap at all, rather than growing one line per player straight
+   away. One shared pill now holds the whole line; wraps to a second line only once it genuinely
+   doesn't fit in the slot's max-width, instead of a fixed-height scrollbar. */
+.shortlist-slot-chips{display:flex;flex-direction:row;flex-wrap:wrap;justify-content:center;align-items:baseline;row-gap:2px;max-width:132px;background:rgba(0,0,0,.5);border-radius:9px;padding:3px 7px;}
+.shortlist-slot-chips:empty{background:none;padding:0;}
+.shortlist-chip{font-size:10px;font-weight:700;color:#fff;white-space:nowrap;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.shortlist-chip-sep{font-size:10px;color:rgba(255,255,255,.55);margin:0 1px;}
 .shortlist-slot-add{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.16);border:1.5px dashed rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;}
 .shortlist-slot-add svg{width:12px;height:12px;}
 
@@ -3822,11 +3824,15 @@ function shortlistPitchHtml(year){
   var jerseys = "";
   slots.forEach(function(slot,i){
     var entries = shortlistEntriesForSlot(year,i);
-    var chips = entries.map(function(e){
+    // One shared line per slot (see .shortlist-slot-chips) — every player's name is its own
+    // clickable span, joined by a plain (non-clickable) comma separator, rather than each wrapped
+    // in its own stacked pill as before.
+    var chipNames = entries.map(function(e){
       var p = playerById(e.playerId);
-      if(!p) return "";
-      return '<div class="shortlist-chip" data-action="open-shortlist-slot" data-year="'+year+'" data-slot="'+i+'" title="'+escAttr(p.name)+'"><span class="shortlist-chip-name" style="color:'+assessmentColor(p.status)+'">'+esc(shortPlayerName(p.name))+'</span></div>';
-    }).join("");
+      if(!p) return null;
+      return '<span class="shortlist-chip" data-action="open-shortlist-slot" data-year="'+year+'" data-slot="'+i+'" title="'+escAttr(p.name)+'" style="color:'+assessmentColor(p.status)+'">'+esc(shortPlayerName(p.name))+'</span>';
+    }).filter(Boolean);
+    var chips = chipNames.join('<span class="shortlist-chip-sep">, </span>');
     // The 4-3-3 diagram has two plain "CM" slots (left and right of the DM) — on the Shortlists
     // pitch specifically, the right-hand one is labeled "AM" instead, per Miguel's request. This
     // only relabels the Shortlists pitch slot itself; the underlying FORMATIONS entry (shared with
