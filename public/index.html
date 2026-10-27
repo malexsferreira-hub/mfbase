@@ -1820,9 +1820,20 @@ function firstMatchEvaluation(playerId){
 // creation order) — excludes the match passed in. Used only to show a reference asterisk on the
 // Performance/Potential pill matching their last graded value for an auto-filled lineup entry that
 // has no evaluation of its own here yet; never used to pre-select or save anything.
-function lastMatchEvaluationElsewhere(playerId,excludeMatchId){
+//
+// `field`, when given (e.g. "performance" or "potential"), skips any evaluation row where that
+// field is blank. A "Match" evaluation row gets created/updated the moment ANY field changes —
+// Height, Foot, Maturation, Characteristics, etc. — not only when Performance/Potential were
+// actually graded (see FORM_HANDLERS["save-pitch-slot"]'s hasAttrSnapshot check). So the most
+// RECENT qualifying row isn't necessarily the most recent GRADED one: a scout might log a later
+// match's physical attributes without touching Performance/Potential yet, which used to make the
+// reference asterisk vanish entirely instead of falling back further to the last match that was
+// actually graded. Passing `field` here is what makes it skip past that gradeless row.
+function lastMatchEvaluationElsewhere(playerId,excludeMatchId,field){
   var rows = DB.evaluations.filter(function(e){
-    return e.playerId===playerId && e.evaluationType==="Match" && e.matchId && e.matchId!==excludeMatchId;
+    if(e.playerId!==playerId || e.evaluationType!=="Match" || !e.matchId || e.matchId===excludeMatchId) return false;
+    if(field && !e[field]) return false;
+    return true;
   }).map(function(e){ return {ev:e, match:matchById(e.matchId)}; }).filter(function(r){return !!r.match;});
   if(!rows.length) return null;
   rows.sort(function(a,b){ return (b.match.date||"").localeCompare(a.match.date||""); });
@@ -6723,7 +6734,11 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
   // Performance/Potential get filled in and saved, so the scout can still compare at a glance; it
   // never pre-selects or saves anything, and the current match's own value always stays the one
   // that's actually selected ("on"), asterisk or not.
-  var refEval = p ? lastMatchEvaluationElsewhere(p.id,matchId) : null;
+  // Looked up independently per field (not one shared "last evaluation elsewhere") — a later match
+  // may have been logged with other fields but no Performance/Potential grade yet, and that must
+  // never hide a real grade from an earlier match; see lastMatchEvaluationElsewhere's comment.
+  var refEvalPerformance = p ? lastMatchEvaluationElsewhere(p.id,matchId,"performance") : null;
+  var refEvalPotential = p ? lastMatchEvaluationElsewhere(p.id,matchId,"potential") : null;
   // These 8 fields pre-fill from THIS match's own already-recorded snapshot (ev.height, etc.) when
   // one exists — not the player's current profile value, which may have moved on since (a later
   // match, or a direct profile edit) — so reopening this match's own entry and hitting Save again
@@ -6837,11 +6852,11 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
     '<div class="field"><label class="field-label">Pace</label><select class="select" name="speedLevel" id="pitchSlotSpeed">'+speedNumOptionsHtml(pfSpeed)+'</select></div>'+
   '</div>';
   html += '<div class="field"><label class="field-label">Performance</label><div class="pillgroup" data-name="performance"><input type="hidden" name="performance" value="'+escAttr(ev?ev.performance||"":"")+'">'+[1,2,3,4,5].map(function(n){
-    var refMark = (refEval && String(n)===String(refEval.performance)) ? '<span class="pill-opt-ref-mark" title="Last evaluated: '+esc(String(n))+'">*</span>' : '';
+    var refMark = (refEvalPerformance && String(n)===String(refEvalPerformance.performance)) ? '<span class="pill-opt-ref-mark" title="Last evaluated: '+esc(String(n))+'">*</span>' : '';
     return '<button type="button" class="pill-opt'+(ev&&String(n)===String(ev.performance)?" on":"")+'" data-value="'+n+'">'+n+refMark+'</button>';
   }).join("")+'</div></div>';
   html += '<div class="field"><label class="field-label">Potential</label><div class="pillgroup" data-name="potential"><input type="hidden" name="potential" value="'+escAttr(ev?ev.potential||"":"")+'">'+GRADE_LETTERS.map(function(g){
-    var refMark = (refEval && g===normalizeGrade(refEval.potential)) ? '<span class="pill-opt-ref-mark" title="Last evaluated: '+esc(g)+'">*</span>' : '';
+    var refMark = (refEvalPotential && g===normalizeGrade(refEvalPotential.potential)) ? '<span class="pill-opt-ref-mark" title="Last evaluated: '+esc(g)+'">*</span>' : '';
     return '<button type="button" class="pill-opt'+(ev&&g===normalizeGrade(ev.potential)?" on":"")+'" data-value="'+g+'">'+g+refMark+'</button>';
   }).join("")+'</div></div>';
   html += '<div class="field"><label class="field-label">Match Level</label><div class="pillgroup" data-name="matchLevel"><input type="hidden" name="matchLevel" value="'+escAttr(ev?ev.matchLevel||"":"")+'">'+MATCH_LEVELS.map(function(m){return '<button type="button" class="pill-opt'+(ev&&m===ev.matchLevel?" on":"")+'" data-value="'+m+'">'+m+'</button>';}).join("")+'</div></div>';
