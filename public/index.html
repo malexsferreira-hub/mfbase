@@ -3043,6 +3043,39 @@ function prefillKnownPlayerBrief(nameField,p,ageGroup){
     }
   }
 }
+// Miguel (mobile): "quando meto um número do edit player/add player na lineup, não consigo ver
+// por completo as sugestões, fica cortado a meio." On mobile, the on-screen keyboard shrinks the
+// VISIBLE viewport without the page's own layout (or the modal's 88vh max-height) resizing to
+// match, and the Number/Name fields sit near the top of a long form with autofocus — so the
+// keyboard pops up immediately and the suggestion dropdown opening below them ends up mostly
+// hidden behind it, with no way to scroll down to it (the modal's own scroll can't reach past the
+// keyboard overlay). Fix: whenever the normal spot wouldn't leave room for the dropdown's usual
+// 280px, measure the actually-visible viewport (window.visualViewport excludes the keyboard where
+// supported) and switch the dropdown to position:fixed anchored to the input's own on-screen
+// position, clamped to whatever room is actually visible but never below ~2 full suggestion rows
+// (so it can overlap other fields rather than disappear) — its own overflow-y:auto still scrolls
+// to the rest. When there IS enough room (desktop, or mobile with the keyboard closed), this
+// leaves the normal modal-relative absolute positioning untouched.
+function fitComboListToViewport(input,list){
+  var MIN_VISIBLE = 128, DEFAULT_MAX = 280, MARGIN = 8;
+  var rect = input.getBoundingClientRect();
+  var vv = window.visualViewport;
+  var viewportH = vv ? vv.height : window.innerHeight;
+  var viewportW = vv ? vv.width : window.innerWidth;
+  var spaceBelow = viewportH - rect.bottom - MARGIN;
+  if(spaceBelow >= DEFAULT_MAX){
+    list.style.position = ""; list.style.top = ""; list.style.left = ""; list.style.width = ""; list.style.maxHeight = "";
+    return;
+  }
+  var h = Math.max(MIN_VISIBLE, spaceBelow);
+  var w = Math.max(rect.width, 260);
+  var left = Math.min(Math.max(MARGIN, rect.left), viewportW - w - MARGIN);
+  list.style.position = "fixed";
+  list.style.top = (rect.bottom + 4) + "px";
+  list.style.left = left + "px";
+  list.style.width = w + "px";
+  list.style.maxHeight = h + "px";
+}
 function wirePlayerCombo(id,opts){
   opts = opts || {};
   var text = document.getElementById(id+"_text");
@@ -3062,6 +3095,7 @@ function wirePlayerCombo(id,opts){
     if(!html){ html='<div class="combo-item" style="color:var(--text-faint);cursor:default">'+(opts.emptyMessage||"No existing player found — will create new")+'</div>'; }
     list.innerHTML = html;
     list.hidden = false;
+    fitComboListToViewport(text,list);
   }
   text.addEventListener("input",debounce(function(){ hidden.value=""; renderList(text.value); },120));
   text.addEventListener("focus",function(){ if(text.value) renderList(text.value); });
@@ -3090,6 +3124,7 @@ function wireShirtNumberCombo(numId,nameId,clubId,ageGroup){
     if(!matches.length){ list.hidden=true; return; }
     list.innerHTML = matches.map(playerComboPreview).join("");
     list.hidden = false;
+    fitComboListToViewport(text,list);
   }
   text.addEventListener("input",debounce(function(){ renderList(text.value); },120));
   text.addEventListener("focus",function(){ if(text.value) renderList(text.value); });
