@@ -144,6 +144,12 @@ select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.o
 .sidebar-foot{padding:12px;border-top:1px solid var(--border);}
 .sync-offline-badge{display:inline-flex;align-items:center;gap:4px;background:#fbe4e1;color:#a3372c;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:4px 9px;border-radius:99px;}
 .sync-offline-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:#c0392b;}
+.conflict-banner{position:sticky;top:0;z-index:500;background:#a3372c;color:#fff;box-shadow:0 2px 10px rgba(0,0,0,.18);}
+.conflict-banner-inner{max-width:1100px;margin:0 auto;padding:12px 16px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;}
+.conflict-banner-text{font-size:13.5px;line-height:1.4;flex:1;min-width:220px;}
+.conflict-banner-text strong{display:block;font-size:14px;margin-bottom:2px;}
+.conflict-banner .btn-primary{background:#fff;color:#a3372c;border:none;flex:0 0 auto;}
+.conflict-banner .btn-primary:hover{background:#f4e9e8;}
 .scout-chip{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--radius-sm);}
 .scout-avatar{width:28px;height:28px;border-radius:50%;background:var(--surface-3);display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;color:var(--text-muted);flex:0 0 auto;}
 .scout-name{font-size:12.5px;font-weight:600;}
@@ -992,6 +998,12 @@ var ROUTE = {name:"dashboard",params:{}};
 var UI = { openQuickAdd:null, searchOpen:false, comboState:{} };
 var SERVER_SYNC = "unknown"; // "ok" | "offline" | "unknown" — surfaced in the UI so a failed save is never silent
 var LAST_SYNCED_UPDATED_AT = null;
+// Set the moment the server refuses a save because another tab/device saved more recent changes
+// in between (HTTP 409 — see runServerSave()). Once set, all further autosaves freeze (nothing new
+// is sent or pulled in) and render() shows a blocking banner — the only honest options are "throw
+// away the newer save" or "throw away what's on this screen", and only Miguel can decide that, so
+// instead of silently picking one, the app stops and asks him to reload. Cleared only by a reload.
+var SAVE_CONFLICT = null; // null | {currentUpdatedAt}
 
 // Loads the database from the server (the real, shared, cross-device source of truth). Falls back
 // to a local cached copy only if the network request itself fails outright (e.g. briefly offline),
@@ -2019,6 +2031,11 @@ function mergePlayerInto(sourceId,targetId,opts){
 function serialize(){
   return JSON.stringify(DB);
 }
+// What actually goes over the wire on a save: the data plus the updatedAt this copy of DB was last
+// synced against, so the server can tell whether someone else saved in between (see lib/db.js).
+function serializeEnvelope(){
+  return JSON.stringify({data: DB, baseUpdatedAt: LAST_SYNCED_UPDATED_AT});
+}
 function saveLocalFallback(){
   try{ localStorage.setItem("touchline-db-cache", serialize()); }catch(e){}
 }
@@ -2044,6 +2061,7 @@ function queueServerSave(){
   runServerSave();
 }
 async function runServerSave(){
+  if(SAVE_CONFLICT) return; // frozen until Miguel reloads — see the banner in render()
   saveQueued = false;
   pendingSave = true;
   if(saveRetryTimer){ clearTimeout(saveRetryTimer); saveRetryTimer = null; }
@@ -2051,9 +2069,21 @@ async function runServerSave(){
     var res = await fetch("/api/db",{
       method:"PUT", credentials:"same-origin",
       headers:{"Content-Type":"application/json"},
-      body: serialize()
+      body: serializeEnvelope()
     });
     if(res.status===401){ location.href="/login"; return; }
+    if(res.status===409){
+      // Someone else (another tab/device) already saved changes newer than the ones this save was
+      // based on. Refusing beats silently overwriting them — this is exactly the bug that caused
+      // the real data-loss incident (2026-10-27). No auto-merge: freeze here and tell Miguel to
+      // reload before doing anything else, same as tests/save-conflict.test.js expects.
+      var conflictBody = null;
+      try{ conflictBody = await res.json(); }catch(e){}
+      SAVE_CONFLICT = { currentUpdatedAt: (conflictBody && conflictBody.currentUpdatedAt) || null };
+      console.warn("MF Base: save refused (409) — another device saved newer changes. Reload required.", SAVE_CONFLICT);
+      render();
+      return; // pendingSave stays true forever — queueServerSave() no-ops from here on
+    }
     if(!res.ok) throw new Error("PUT /api/db failed: "+res.status);
     var body = await res.json();
     LAST_SYNCED_UPDATED_AT = body.updatedAt || null;
@@ -2252,6 +2282,18 @@ function renderSidebar(){
 function renderTopbar(){
   return '<div class="topbar"><div class="page-title-mobile">'+esc(pageTitleFor())+'</div>'+(SERVER_SYNC==="offline"?'<span class="sync-offline-badge">Offline</span>':'')+'</div>';
 }
+// Blocking banner shown when a save was refused because another tab/device saved newer changes
+// first (see SAVE_CONFLICT / runServerSave()). No dismiss button on purpose — reloading is the
+// only safe way out, since anything still unsaved on this screen is, by definition, older than
+// what the server now has.
+function renderConflictBanner(){
+  if(!SAVE_CONFLICT) return "";
+  return '<div class="conflict-banner"><div class="conflict-banner-inner">'+
+    '<div class="conflict-banner-text"><strong>Outro dispositivo guardou alterações mais recentes.</strong>'+
+    'Para não perderes nada, recarrega agora — o que está neste ecrã ainda não foi guardado.</div>'+
+    '<button class="btn btn-primary" data-action="reload-after-conflict">Recarregar agora</button>'+
+    '</div></div>';
+}
 function renderTabbar(){
   var active = pageActiveKey();
   var html = '<div class="tabbar">';
@@ -2304,6 +2346,7 @@ function render(){
     pageHtml = '<div class="empty-state"><h3>Something went wrong rendering this page</h3><p>'+esc(e.message)+'</p><a class="btn btn-primary" href="#/">Back to Dashboard</a></div>';
   }
   document.getElementById("app").innerHTML =
+    renderConflictBanner()+
     '<div class="shell">'+
       renderSidebar()+
       '<div class="main">'+renderTopbar()+'<div class="content">'+pageHtml+'</div></div>'+
@@ -2439,6 +2482,7 @@ function confirmModal(message,confirmLabel,onConfirm){
    GENERIC ACTION DISPATCH
    ============================================================ */
 var ACTIONS = {};
+ACTIONS["reload-after-conflict"] = function(){ location.reload(); };
 ACTIONS["open-search"] = function(){ openSearchModal(); };
 // Mobile "+" tab: offers a choice instead of jumping straight to Add Match.
 ACTIONS["open-add-menu"] = function(){
@@ -5950,7 +5994,9 @@ FORM_HANDLERS["save-match"] = function(form){
     m.updatedAt = nowISO();
     persist({toast:"Match updated", redirectHash:"#/matches/"+encodeURIComponent(m.id)});
   } else {
-    m = Object.assign({id:uid("match"),matchObservations:""},vals,{createdAt:nowISO(),updatedAt:nowISO()});
+    // fromCalendar:true so a manually-added match shows up on the Agenda immediately, the same as
+    // a fixture-sync-imported one — matches what Miguel actually expects/saw before (2026-10-27).
+    m = Object.assign({id:uid("match"),matchObservations:"",fromCalendar:true},vals,{createdAt:nowISO(),updatedAt:nowISO()});
     DB.matches.push(m);
     persist({toast:"Match created — add your lineups", redirectHash:"#/matches/"+encodeURIComponent(m.id)});
   }
