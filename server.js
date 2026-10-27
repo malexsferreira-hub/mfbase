@@ -155,11 +155,30 @@ function createServer(db, opts) {
         }
         if (pathname === "/api/db" && req.method === "PUT") {
           const bodyBuf = await readBody(req, 25 * 1024 * 1024); // 25MB ceiling — plenty for this app's data
-          let data;
-          try { data = JSON.parse(bodyBuf.toString("utf8")); } catch (e) { return sendJson(res, 400, { error: "invalid_json" }); }
-          if (!data || typeof data !== "object") return sendJson(res, 400, { error: "invalid_body" });
-          const result = await db.saveDb(data);
-          return sendJson(res, 200, { ok: true, updatedAt: result.updatedAt });
+          let parsed;
+          try { parsed = JSON.parse(bodyBuf.toString("utf8")); } catch (e) { return sendJson(res, 400, { error: "invalid_json" }); }
+          if (!parsed || typeof parsed !== "object") return sendJson(res, 400, { error: "invalid_body" });
+          // Current frontend sends the conflict-safe envelope {data, baseUpdatedAt}. A bare DB
+          // object (no "baseUpdatedAt" key at all) is accepted too, for any client that hasn't
+          // picked up the envelope yet — saved unconditionally, same as before this safeguard
+          // existed, since there's no baseline to check it against.
+          let data, baseUpdatedAt;
+          if (parsed.data && typeof parsed.data === "object" && Object.prototype.hasOwnProperty.call(parsed, "baseUpdatedAt")) {
+            data = parsed.data;
+            baseUpdatedAt = parsed.baseUpdatedAt || null;
+          } else {
+            data = parsed;
+            baseUpdatedAt = null;
+          }
+          try {
+            const result = await db.saveDb(data, baseUpdatedAt);
+            return sendJson(res, 200, { ok: true, updatedAt: result.updatedAt });
+          } catch (err) {
+            if (err && err.code === "CONFLICT") {
+              return sendJson(res, 409, { error: "conflict", currentUpdatedAt: err.currentUpdatedAt });
+            }
+            throw err;
+          }
         }
         if (pathname.indexOf("/api/") === 0) {
           return sendJson(res, 404, { error: "not_found" });
