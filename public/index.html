@@ -6770,13 +6770,22 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
   } else {
     // Typing a number they've worn before surfaces them here too — same idea as the name combo,
     // for when the coach knows the number but not the name yet.
-    html += '<div class="namenum-row"><div class="field"><label class="field-label">Number</label><div class="combo" data-combo-root="pitchSlotNumber">'+
+    html += '<div class="namenum-row"><div class="field"><label class="field-label">Number</label><div class="combo" data-combo-root="pitchSlotNumber" style="z-index:20">'+
       '<input class="input" type="number" min="1" max="99" name="shirtNumber" id="pitchSlotNumber_text" value="" placeholder="#" autocomplete="off" autofocus>'+
       // The Number field itself is deliberately narrow (.namenum-row gives it 0.6fr vs Name's
       // 1.6fr) — but its suggestion dropdown shows a full player card (name, position, club, age
       // group), so it overrides the usual left:0/right:0 (which would match the narrow field) with
       // a wider min-width, letting it overlay out over the Name field next to it rather than
       // wrapping every name onto two lines.
+      //
+      // Miguel (2026-10-28, screenshot): the suggestion card was showing up PARTLY HIDDEN BEHIND the
+      // Name field's own input instead of over it. Root cause: .combo{position:relative;z-index:10}
+      // applies equally to every combo wrapper, including the Name field's own .combo right next to
+      // this one in the DOM — two siblings with the SAME z-index stack by DOM order, and Name comes
+      // after Number, so Name's combo (input included) painted on top regardless of this list's own
+      // z-index:40 (that 40 only wins inside ITS OWN .combo, not against a sibling .combo). Bumping
+      // *this* combo's own z-index above its sibling's default 10 is what actually lets the dropdown
+      // spill out over the Name field as intended.
       '<div class="combo-list" id="pitchSlotNumber_list" style="right:auto;min-width:280px" hidden></div>'+
     '</div></div>';
   }
