@@ -4601,11 +4601,25 @@ function pagePlayerDetail(id){
     '<textarea class="textarea" data-autosave="player-extra" data-id="'+p.id+'" data-initial="'+escAttr(p.extraObservations||"")+'" placeholder="Anything else worth remembering about this player.">'+esc(p.extraObservations||"")+'</textarea>'+
   '</div>';
 
-  // Evaluation History — merges Match History (role, interest) with formal evaluations
+  // Evaluation History — merges Match History (role, interest) with formal evaluations.
+  // Miguel (2026-11-02): "eu quero que o jogo, se eu não editei nada, não apareça na evaluation
+  // history. Se preencher alguma coisa, basta preencher um parametro ou escrever alguma coisa, aí
+  // pode aparecer." — so a match the player was only auto-filled/added into (no grade, no attribute,
+  // no characteristics text ever recorded) must NOT show up as a row here, even though it still
+  // counts as an "appearance" elsewhere (Players Database obs. count, lastKnownShirtNumber, etc. —
+  // those stay as they are, this only changes which rows this one table shows). matchEvalHasContent
+  // mirrors the exact fields FORM_HANDLERS["save-pitch-slot"] checks before it ever creates/updates
+  // a Match evaluation in the first place, so "has an evaluation row" and "that row has something in
+  // it" normally coincide — this guards the rare case where every field was later cleared back out.
+  function matchEvalHasContent(e){
+    return !!(e && (e.performance || e.potential || e.matchLevel || (e.characteristics&&e.characteristics.trim()) ||
+      e.preferredFoot || e.height || e.estrutura || e.strength || e.maturation ||
+      e.agilityLevel || e.accelerationLevel || e.speedLevel || e.strengthLevel));
+  }
   var historyRows = matches.map(function(r){
     var ev = DB.evaluations.find(function(e){return e.matchId===r.match.id && e.playerId===p.id && e.evaluationType==="Match";});
     return {date:r.match.date, type:"Match", match:r.match, mp:r.mp, ev:ev||null};
-  }).concat(evals.filter(function(e){return !e.matchId;}).map(function(e){
+  }).filter(function(r){ return matchEvalHasContent(r.ev); }).concat(evals.filter(function(e){return !e.matchId;}).map(function(e){
     return {date:e.date, type:e.evaluationType||"Manual", match:null, mp:null, ev:e};
   })).sort(function(a,b){return (b.date||"").localeCompare(a.date||"");});
 
