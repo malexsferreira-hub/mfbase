@@ -1738,6 +1738,41 @@ function revertPlayerAttributesAfterEvalDelete(playerId,deletedEval){
   });
   if(changed){ regeneratePlayerAutoSentence(p); p.updatedAt = nowISO(); }
 }
+// Miguel (2026-11-05): "Sempre que mudo parametros, seja qual for, têm de ser atualizados no seu
+// perfil e consequentemente na frase automático das suas general characteristics." — the per-field
+// incremental tracking (applyPitchSlotField, called only from the full pitch-slot "Edit Player"
+// modal) turned out to have at least one real gap: a quick-edit path (the Players of Interest mini
+// window, see openPoiDetailModal) used to write Height/Foot straight onto the profile with no date
+// comparison at all, so it could freeze the profile on a stale value even though a later-dated
+// match's evaluation already had something different recorded. Rather than patch every write path
+// to get the incremental tracking right everywhere, this recomputes each of the 9 attribute fields
+// from scratch from the player's OWN evaluation history every time any Match evaluation is
+// saved/deleted/merged — exactly the same "latest-dated non-blank entry wins" rule, just re-derived
+// fresh each time instead of carried forward field-by-field across saves, so it's correct regardless
+// of which path wrote the data or what order things were entered in. A field with NO evaluation
+// ever recording it is left alone (a direct Add/Edit Player entry with no match behind it is never
+// wiped). Mirrors revertPlayerAttributesAfterEvalDelete's own "most recent non-blank wins" logic,
+// just unconditional instead of delete-guarded, since recomputing from the full history is always
+// safe to re-run.
+function recomputePlayerAttributesFromHistory(playerId){
+  var p = playerById(playerId);
+  if(!p) return;
+  var evs = playerEvaluations(playerId); // most-recent-first by date
+  var changed = false;
+  EVAL_SNAPSHOT_ATTR_FIELDS.forEach(function(field){
+    var dateField = field+"UpdatedAt";
+    var rv, rd;
+    for(var i=0;i<evs.length;i++){
+      var e = evs[i];
+      if(e[field]!==undefined && e[field]!==null && e[field]!==""){ rv=e[field]; rd=e.date||""; break; }
+    }
+    if(rv===undefined) return; // no evaluation ever set this field — leave the profile as-is
+    if(String(p[field])!==String(rv) || p[dateField]!==rd){
+      p[field] = rv; p[dateField] = rd; changed = true;
+    }
+  });
+  if(changed){ regeneratePlayerAutoSentence(p); p.updatedAt = nowISO(); }
+}
 // Height tracks the most recently *dated* observation, not just the most recently entered one —
 // so going back to fill in an older match afterwards never overwrites what a newer match already
 // established (a young player's height can shift month to month). `dateField` remembers the
@@ -1914,6 +1949,7 @@ function upsertMatchEvaluation(playerId,matchId,patch){
       maybeSeedGeneralCharacteristics(playerId,patch.characteristics);
     }
   }
+  recomputePlayerAttributesFromHistory(playerId);
   updatePlayerCurrentRatings(playerId);
   return ev;
 }
@@ -6091,8 +6127,17 @@ function openPoiDetailModal(mpId){
   onCommit("poiNat_text",function(v){ p.nationality = (v||"").trim(); p.updatedAt = nowISO(); });
   onCommit("poiBirthYear",function(v){ p.birthYear = v||""; p.updatedAt = nowISO(); });
   onCommit("poiShirtNumber",function(v){ mp.shirtNumber = v||""; });
-  onCommit("poiFoot",function(v){ p.preferredFoot = v||""; regeneratePlayerAutoSentence(p); p.updatedAt = nowISO(); });
-  onCommit("poiHeight",function(v){ p.height = v||""; if(v) p.heightUpdatedAt = todayISO(); regeneratePlayerAutoSentence(p); p.updatedAt = nowISO(); });
+  // Miguel (2026-11-05): Foot/Height used to be written straight onto the profile here, stamped
+  // with today's real-world date and with no comparison against whatever's already on file — so
+  // editing an OLDER match's Foot/Height through this quick window could silently freeze the
+  // profile on stale data even though a more-recently-dated match already had something different
+  // recorded (confirmed happening on real profiles, not just theoretical). Routing both through
+  // upsertMatchEvaluation instead: it records the edit on THIS match's own evaluation (keeping the
+  // Evaluation History detail view honest about what was actually observed here) and then
+  // recomputes the profile from the player's full history, so whichever match is genuinely the most
+  // recently dated always wins — exactly the same rule the full Edit Player modal already follows.
+  onCommit("poiFoot",function(v){ upsertMatchEvaluation(mp.playerId,mp.matchId,{preferredFoot:v||""}); });
+  onCommit("poiHeight",function(v){ upsertMatchEvaluation(mp.playerId,mp.matchId,{height:v||""}); });
   onCommit("poiPos1",function(v){ p.firstPosition = v||""; if(v) p.positionUpdatedAt = todayISO(); p.updatedAt = nowISO(); });
   onCommit("poiPosProfile",function(v){ p.positionProfile = v||""; if(v) p.positionProfileUpdatedAt = todayISO(); p.updatedAt = nowISO(); });
   onCommit("poiPos2",function(v){ p.secondPosition = v||""; if(v) p.secondPositionUpdatedAt = todayISO(); p.updatedAt = nowISO(); });
