@@ -1824,6 +1824,33 @@ function applyObservedPosition(p,position,sourceDate){
     p.secondPositionUpdatedAt = sourceDate;
   }
 }
+// Miguel (2026-11-12): "se eu troco a primeira posição de um jogador e consequente profile, tens
+// de atualizar no perfil dele na playersdatabase, assim como a segunda posição se também puser. Se
+// a 2ª posição estiver sem preenchimento no jogo, deixas em branco também no perfil dele. Trocas
+// sempre para as posições e profiles mais recentes, consoante data dos jogos." — overrides the old
+// "Position 1 is sticky identity" design above (applyObservedPosition): Position 1, Position 2 and
+// both their Profiles must always mirror whichever match is most recently dated, blank included.
+// DB.matchPlayers (the lineup entry itself) is the real source of truth for what position someone
+// played where — not the profile's own incrementally-tracked fields — so this recomputes from
+// there every time, the same self-healing idea as recomputePlayerAttributesFromHistory, rather than
+// tracking position field-by-field across saves (which is exactly what let Suhayb's and Aguero's
+// profiles go stale: a save for an older-entered match, or a quick-edit path, could leave Position
+// 1/2 not matching the lineup of their actual most recent match).
+function recomputePlayerPositionsFromHistory(playerId){
+  var p = playerById(playerId);
+  if(!p) return;
+  var rows = playerMatchRows(playerId); // most-recent match first
+  if(!rows.length) return; // no match appearance yet — leave whatever's on file (e.g. Add Player)
+  var latest = rows[0], mp = latest.mp, d = latest.match.date || "";
+  var newFirst = mp.position || "", newSecond = mp.position2 || "";
+  var newFirstProfile = mp.positionProfile || "", newSecondProfile = mp.secondPositionProfile || "";
+  var changed = false;
+  if(newFirst && (p.firstPosition!==newFirst || p.positionUpdatedAt!==d)){ p.firstPosition=newFirst; p.positionUpdatedAt=d; changed=true; }
+  if((p.secondPosition||"")!==newSecond || p.secondPositionUpdatedAt!==d){ p.secondPosition=newSecond; p.secondPositionUpdatedAt=d; changed=true; }
+  if((p.positionProfile||"")!==newFirstProfile || p.positionProfileUpdatedAt!==d){ p.positionProfile=newFirstProfile; p.positionProfileUpdatedAt=d; changed=true; }
+  if((p.secondPositionProfile||"")!==newSecondProfile || p.secondPositionProfileUpdatedAt!==d){ p.secondPositionProfile=newSecondProfile; p.secondPositionProfileUpdatedAt=d; changed=true; }
+  if(changed){ p.updatedAt = nowISO(); }
+}
 // Fill-if-blank only: seeds the player's manual General Characteristics text from `text` if (and
 // only if) they don't have any manual text of their own yet — never overwrites something already
 // there. The auto sentence, if any, is recomposed alongside it either way.
@@ -1996,6 +2023,8 @@ function recomputePlayerDerivedFields(playerId){
   });
   if(evs.length) p.characteristics = evs[0].characteristics||"";
   updatePlayerCurrentRatings(playerId);
+  recomputePlayerAttributesFromHistory(playerId);
+  recomputePlayerPositionsFromHistory(playerId);
   p.updatedAt = nowISO();
 }
 // A player added without a name yet ("???", or any placeholder) can later turn out to already be
@@ -6099,10 +6128,16 @@ function openPoiDetailModal(mpId){
   html += gridRow("number","Number",'<input class="input" type="number" min="1" max="99" id="poiShirtNumber" value="'+escAttr(mp.shirtNumber||"")+'" placeholder="#">');
   html += gridRow("foot","Foot",'<select class="select" id="poiFoot"><option value="">—</option>'+FEET.map(function(ft){return '<option value="'+ft+'"'+(ft===p.preferredFoot?" selected":"")+'>'+ft+'</option>';}).join("")+'</select>');
   html += gridRow("height","Height",'<select class="select" id="poiHeight"><option value="">—</option>'+HEIGHT_LEVELS.map(function(h){return '<option value="'+h+'"'+(h===p.height?" selected":"")+'>'+h+'</option>';}).join("")+'</select>');
-  html += gridRow("pos1","Position 1",'<select class="select" id="poiPos1">'+positionOptionsAbbrev(p.firstPosition)+'</select>');
-  html += gridRow("pos1prof","Position 1 - Profile",'<select class="select" id="poiPosProfile">'+positionProfileOptionsFor(p.firstPosition,p.positionProfile||"")+'</select>');
-  html += gridRow("pos2","Position 2",'<select class="select" id="poiPos2">'+positionOptionsAbbrev(p.secondPosition)+'</select>');
-  html += gridRow("pos2prof","Position 2 - Profile",'<select class="select" id="poiPos2Profile">'+positionProfileOptionsFor(p.secondPosition,p.secondPositionProfile||"")+'</select>');
+  // Pre-fill from THIS match's own lineup entry when it has one, falling back to the profile's
+  // current value only the first time (mirrors attrPrefill in the full pitch-slot modal) — so
+  // reopening this window shows what was actually recorded here, not whatever another match last
+  // left on the profile.
+  var poiPos1 = mp.position || p.firstPosition || "";
+  var poiPos2 = mp.position2 || p.secondPosition || "";
+  html += gridRow("pos1","Position 1",'<select class="select" id="poiPos1">'+positionOptionsAbbrev(poiPos1)+'</select>');
+  html += gridRow("pos1prof","Position 1 - Profile",'<select class="select" id="poiPosProfile">'+positionProfileOptionsFor(poiPos1,mp.positionProfile||p.positionProfile||"")+'</select>');
+  html += gridRow("pos2","Position 2",'<select class="select" id="poiPos2">'+positionOptionsAbbrev(poiPos2)+'</select>');
+  html += gridRow("pos2prof","Position 2 - Profile",'<select class="select" id="poiPos2Profile">'+positionProfileOptionsFor(poiPos2,mp.secondPositionProfile||p.secondPositionProfile||"")+'</select>');
   html += gridRow("potential","Potential",'<select class="select" id="poiPotential"><option value="">—</option>'+GRADE_LETTERS.map(function(g){return '<option value="'+g+'"'+(g===normalizeGrade(ev?ev.potential:"")?" selected":"")+'>'+g+'</option>';}).join("")+'</select>');
   html += gridRow("performance","Performance",'<select class="select" id="poiPerformance"><option value="">—</option>'+[1,2,3,4,5].map(function(n){return '<option value="'+n+'"'+(ev&&String(n)===String(ev.performance)?" selected":"")+'>'+n+'</option>';}).join("")+'</select>');
   html += gridRow("matchlevel","Match Level",'<select class="select" id="poiMatchLevel"><option value="">—</option>'+MATCH_LEVELS.map(function(m2){return '<option value="'+m2+'"'+(ev&&m2===ev.matchLevel?" selected":"")+'>'+m2+'</option>';}).join("")+'</select>');
@@ -6138,10 +6173,15 @@ function openPoiDetailModal(mpId){
   // recently dated always wins — exactly the same rule the full Edit Player modal already follows.
   onCommit("poiFoot",function(v){ upsertMatchEvaluation(mp.playerId,mp.matchId,{preferredFoot:v||""}); });
   onCommit("poiHeight",function(v){ upsertMatchEvaluation(mp.playerId,mp.matchId,{height:v||""}); });
-  onCommit("poiPos1",function(v){ p.firstPosition = v||""; if(v) p.positionUpdatedAt = todayISO(); p.updatedAt = nowISO(); });
-  onCommit("poiPosProfile",function(v){ p.positionProfile = v||""; if(v) p.positionProfileUpdatedAt = todayISO(); p.updatedAt = nowISO(); });
-  onCommit("poiPos2",function(v){ p.secondPosition = v||""; if(v) p.secondPositionUpdatedAt = todayISO(); p.updatedAt = nowISO(); });
-  onCommit("poiPos2Profile",function(v){ p.secondPositionProfile = v||""; if(v) p.secondPositionProfileUpdatedAt = todayISO(); p.updatedAt = nowISO(); });
+  // Miguel (2026-11-12): same fix as Foot/Height above, applied to Position 1/2 and their Profiles
+  // — these used to write straight onto the profile with no regard for match date, which is exactly
+  // what let a quick edit on an older match silently overwrite what a more recent match's lineup
+  // actually has. Now they edit THIS match's own lineup entry (mp), then recompute the profile from
+  // whichever match is genuinely the most recently dated (recomputePlayerPositionsFromHistory).
+  onCommit("poiPos1",function(v){ mp.position = v||""; recomputePlayerPositionsFromHistory(mp.playerId); });
+  onCommit("poiPosProfile",function(v){ mp.positionProfile = v||""; recomputePlayerPositionsFromHistory(mp.playerId); });
+  onCommit("poiPos2",function(v){ mp.position2 = v||""; recomputePlayerPositionsFromHistory(mp.playerId); });
+  onCommit("poiPos2Profile",function(v){ mp.secondPositionProfile = v||""; recomputePlayerPositionsFromHistory(mp.playerId); });
   onCommit("poiPotential",function(v){ upsertMatchEvaluation(mp.playerId,mp.matchId,{potential:v||""}); });
   onCommit("poiPerformance",function(v){ upsertMatchEvaluation(mp.playerId,mp.matchId,{performance:v||""}); });
   onCommit("poiMatchLevel",function(v){ upsertMatchEvaluation(mp.playerId,mp.matchId,{matchLevel:v||""}); });
@@ -6878,11 +6918,11 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
   // replace an untouched default with their known position without ever overwriting a real choice.
   html += '<div class="form-grid" style="grid-template-columns:0.7fr 1.5fr">'+
     '<div class="field"><label class="field-label">Position 1</label><select class="select" name="position" id="pitchSlotPos1" data-slot-default="'+escAttr(slot.pos||"")+'">'+positionOptionsAbbrev(pos1Val)+'</select></div>'+
-    '<div class="field"><label class="field-label">Position 1 - Profile</label><select class="select" name="positionProfile" id="pitchSlotPosProfile">'+positionProfileOptionsFor(pos1Val,p?p.positionProfile||"":"")+'</select></div>'+
+    '<div class="field"><label class="field-label">Position 1 - Profile</label><select class="select" name="positionProfile" id="pitchSlotPosProfile">'+positionProfileOptionsFor(pos1Val,(mp&&mp.positionProfile)||(p?p.positionProfile:"")||"")+'</select></div>'+
   '</div>';
   html += '<div class="form-grid" style="grid-template-columns:0.7fr 1.5fr">'+
     '<div class="field"><label class="field-label">Position 2</label><select class="select" name="position2" id="pitchSlotPos2">'+positionOptionsAbbrev(pos2Val)+'</select></div>'+
-    '<div class="field"><label class="field-label">Position 2 - Profile</label><select class="select" name="secondPositionProfile" id="pitchSlotPos2Profile">'+positionProfileOptionsFor(pos2Val,p?p.secondPositionProfile||"":"")+'</select></div>'+
+    '<div class="field"><label class="field-label">Position 2 - Profile</label><select class="select" name="secondPositionProfile" id="pitchSlotPos2Profile">'+positionProfileOptionsFor(pos2Val,(mp&&mp.secondPositionProfile)||(p?p.secondPositionProfile:"")||"")+'</select></div>'+
   '</div>';
   // Pure manual text only, right after the position/profile fields — the auto-generated Portuguese
   // sentence never shows up here, for either a brand-new evaluation or an edit of an existing one.
@@ -7081,16 +7121,16 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
     } : null;
     if(pl){
       // fill-if-missing for birth year/nationality: don't clobber info the player profile already
-      // has. Preferred Foot, Height, Estrutura, Maturation and the 3 Níveis are different — they
-      // always track whichever dated entry is most recent (see applyLatestPlayerField). The
-      // player's main Position is their identity and, once established, isn't overwritten by a
-      // match at all — a match observing a different position updates the Second Position instead
-      // (applyObservedPosition), called once per position recorded this match (Position 1 & 2).
+      // has. Preferred Foot, Height, Estrutura, Maturation and the 3 Níveis track whichever dated
+      // entry is most recent (see applyPitchSlotField); Position 1/2 and their Profiles likewise
+      // always mirror the player's most recently dated match (recomputePlayerPositionsFromHistory).
       if(birthYear && !pl.birthYear) pl.birthYear = birthYear;
       if(nationality && !pl.nationality) pl.nationality = nationality;
       var srcDate = (mForSlot && mForSlot.date) || todayISO();
-      applyObservedPosition(pl,position,srcDate);
-      if(position2) applyObservedPosition(pl,position2,srcDate);
+      // Position 1/2 and their Profiles are recomputed from the lineup entry itself (mpForBrief,
+      // whose position/position2/positionProfile/secondPositionProfile are set by the caller just
+      // before calling applyBrief) via recomputePlayerPositionsFromHistory below, not tracked
+      // field-by-field here — see that function's comment for why.
 
       applyPitchSlotField(pl,"preferredFoot","preferredFootUpdatedAt",preferredFoot,srcDate);
       applyPitchSlotField(pl,"height","heightUpdatedAt",height,srcDate);
@@ -7101,8 +7141,7 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
       applyPitchSlotField(pl,"accelerationLevel","accelerationLevelUpdatedAt",accelerationLevel,srcDate);
       applyPitchSlotField(pl,"speedLevel","speedLevelUpdatedAt",speedLevel,srcDate);
       applyPitchSlotField(pl,"strengthLevel","strengthLevelUpdatedAt",strengthLevel,srcDate);
-      applyPitchSlotField(pl,"positionProfile","positionProfileUpdatedAt",positionProfile,srcDate);
-      applyPitchSlotField(pl,"secondPositionProfile","secondPositionProfileUpdatedAt",secondPositionProfile,srcDate);
+      recomputePlayerPositionsFromHistory(playerId);
 
       // Keep the auto Portuguese sentence (and General Characteristics, which mirrors it plus
       // whatever manual text sits alongside it) fresh — always, regardless of evaluation count.
@@ -7146,6 +7185,8 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
       mp.shirtNumber = shirtNumber;
       mp.position = position;
       mp.position2 = position2;
+      mp.positionProfile = positionProfile;
+      mp.secondPositionProfile = secondPositionProfile;
       mp.matchCharacteristics = characteristics;
       mp.interestNote = notes;
       mp.replacedPlayerId = replacedMpId;
@@ -7185,7 +7226,8 @@ FORM_HANDLERS["save-pitch-slot"] = function(form){
   function finalize(pid,isNewPlayer){
     var mpNew = {
       id:uid("mp"), matchId:matchId, playerId:pid, clubId:clubId,
-      shirtNumber:shirtNumber, position:position, position2:position2, slotIndex:slotIndex,
+      shirtNumber:shirtNumber, position:position, position2:position2,
+      positionProfile:positionProfile, secondPositionProfile:secondPositionProfile, slotIndex:slotIndex,
       lineupStatus:forceStatus, matchCharacteristics:characteristics,
       playerOfInterest:false, interestNote:notes, interestPriority:"",
       replacedPlayerId:replacedMpId, subMinute:subMinute, createdAt:nowISO()
