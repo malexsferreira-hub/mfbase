@@ -3108,13 +3108,14 @@ function prefillKnownPlayerBrief(nameField,p,ageGroup){
   fillIfEmpty(form.querySelector('input[name="birthYear"]'), p.birthYear);
   // height/positionProfile/strength(Athletic)/estrutura/maturation/levels are <select>s —
   // '[name=...]' (not 'input[name=...]') matches either an <input> or a <select>.
-  // Position 2 is deliberately NOT prefilled here (unlike Position 1): the pitch-slot save handler
-  // applies position2, when present, as an explicit observation that takes priority over the
-  // auto-derived-from-Position-1-difference logic (applyObservedPosition runs for position, then
-  // again for position2 with the same date, and the second call wins by design when the coach
-  // genuinely set it for this match). A stale prefilled position2 from an earlier match would
-  // therefore silently override a correctly-derived new Second Position for this one — so Position
-  // 2 stays blank unless the coach sets it themselves for this specific match.
+  // Miguel (2026-11-12): since recomputePlayerPositionsFromHistory now mirrors Position 2 straight
+  // from THIS match's own mp.position2 (blank included — see that function), leaving Position 2
+  // blank here by default is no longer harmless the way it was under the old
+  // applyObservedPosition design (where a blank position2 input was simply skipped, never touching
+  // the profile). Left blank now, saving this brand-new lineup entry for any reason — adding a
+  // shirt number, say — would silently wipe out a known Second Position the coach never meant to
+  // touch. So Position 2 gets the same prefill-then-override treatment as Position 1 below: filled
+  // from the player's own secondPosition if the coach hasn't already set something for this match.
   fillIfEmpty(form.querySelector('[name="height"]'), p.height);
   // Position 1's <select> is never actually "empty" the way an <input> is — it always starts
   // pre-selected with whichever position the clicked pitch-slot implies (see pos1Val in
@@ -3140,6 +3141,11 @@ function prefillKnownPlayerBrief(nameField,p,ageGroup){
     profileEl.innerHTML = positionProfileOptionsFor(posEl.value,profileVal);
   }
   fillPositionProfile('[name="position"]','[name="positionProfile"]', p.positionProfile);
+  // Position 2 has no "slot default" to compare against (an unassigned slot never implies a second
+  // position) — its untouched state is simply "", so fillIfEmpty's own empty check is exactly the
+  // right test here, same as every other plain field above.
+  fillIfEmpty(form.querySelector('[name="position2"]'), p.secondPosition);
+  fillPositionProfile('[name="position2"]','[name="secondPositionProfile"]', p.secondPositionProfile);
   fillIfEmpty(form.querySelector('[name="strength"]'), p.strength);
   fillIfEmpty(form.querySelector('[name="estrutura"]'), p.estrutura);
   fillIfEmpty(form.querySelector('[name="maturation"]'), p.maturation);
@@ -5234,7 +5240,10 @@ FORM_HANDLERS["save-evaluation"] = function(form){
   var position = fd.get("position")||"";
   if(matchId && position){
     var mp = DB.matchPlayers.find(function(x){return x.matchId===matchId && x.playerId===playerId;});
-    if(mp) mp.position = position;
+    // This standalone (off-formation) evaluation has no Position 2 field at all — recomputing here
+    // still has to run so the profile picks up this match's Position 1 when it's genuinely the most
+    // recent one on file, same rule as the on-pitch lineup modal (recomputePlayerPositionsFromHistory).
+    if(mp){ mp.position = position; recomputePlayerPositionsFromHistory(playerId); }
   }
   if(matchId){
     upsertMatchEvaluation(playerId,matchId,patch);
