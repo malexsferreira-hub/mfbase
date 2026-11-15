@@ -1874,15 +1874,17 @@ function maybeSeedGeneralCharacteristics(playerId,text){
 // discarded unless the profile's manual text happened to still be completely blank
 // (maybeSeedGeneralCharacteristics above). Replaces that with the same recompute-from-history
 // approach already used for attributes/positions: every "Match" evaluation's own Characteristics
-// text (skipping blank ones), in the order those matches were actually played, joined by a blank
-// line so each match's note reads as its own paragraph. Editing an old match's text later just
-// updates that match's own paragraph in place rather than duplicating it, since this always
-// rebuilds the whole thing fresh from the evaluations themselves — nothing here is tracked
-// incrementally. A "Manual" (no-match) evaluation has no date to place in this history and isn't
-// what Miguel is describing here, so it's left out — maybeSeedGeneralCharacteristics above still
-// covers that matchless case exactly as before. Leaves the profile's own manual text alone when
-// the player has no match with any Characteristics text yet, so typing something directly on a
-// brand-new player's profile (Add Player, or before their first evaluated match) still works.
+// text (skipping blank ones), in the order those matches were actually played, joined one per
+// line. Miguel later (same day) clarified he just wants each match on its own line, not a full
+// blank-line paragraph break, hence the single "\n" join rather than "\n\n". Editing an old
+// match's text later just updates that match's own line in place rather than duplicating it,
+// since this always rebuilds the whole thing fresh from the evaluations themselves — nothing here
+// is tracked incrementally. A "Manual" (no-match) evaluation has no date to place in this history
+// and isn't what Miguel is describing here, so it's left out — maybeSeedGeneralCharacteristics
+// above still covers that matchless case exactly as before. Leaves the profile's own manual text
+// alone when the player has no match with any Characteristics text yet, so typing something
+// directly on a brand-new player's profile (Add Player, or before their first evaluated match)
+// still works.
 function recomputePlayerCharacteristicsFromHistory(playerId){
   var p = playerById(playerId);
   if(!p) return;
@@ -1897,7 +1899,7 @@ function recomputePlayerCharacteristicsFromHistory(playerId){
   });
   var combined = rows.map(function(r){
     return spliceAutoText(r.ev.characteristics||"",p.autoCharacteristics||"","");
-  }).filter(function(t){ return t.trim(); }).join("\n\n");
+  }).filter(function(t){ return t.trim(); }).join("\n");
   if((p.manualCharacteristics||"")!==combined){
     p.manualCharacteristics = combined;
     p.characteristics = composeGeneralCharacteristics(p.autoCharacteristics||"",combined);
