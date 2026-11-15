@@ -1865,18 +1865,44 @@ function maybeSeedGeneralCharacteristics(playerId,text){
     p.updatedAt = nowISO();
   }
 }
-// The player's earliest-dated "Match" evaluation (ties broken by creation order) — this is what
-// "the first match they were evaluated in" means, not whichever match happened to be entered
-// first chronologically by the scout.
-function firstMatchEvaluation(playerId){
-  var matchEvals = DB.evaluations.filter(function(e){return e.playerId===playerId && e.evaluationType==="Match" && e.matchId;});
-  if(!matchEvals.length) return null;
-  matchEvals.sort(function(a,b){
-    var d = (a.date||"").localeCompare(b.date||"");
+// Miguel (2026-11-15): "podes pôr todas as características que eu for metendo sobre eles,
+// automaticamente. Ou seja, agora está só as do primeiro jogo visto. Adiciona também de todos os
+// jogos posteriormente vistos... Essas características escritas em cada jogo podem ficar
+// separadas por um parágrafo, para saber que são de diferentes jogos." — General Characteristics'
+// manual text used to only ever mirror the player's FIRST evaluated match (the check right above
+// this function, inside upsertMatchEvaluation): every later match's own Characteristics text was
+// discarded unless the profile's manual text happened to still be completely blank
+// (maybeSeedGeneralCharacteristics above). Replaces that with the same recompute-from-history
+// approach already used for attributes/positions: every "Match" evaluation's own Characteristics
+// text (skipping blank ones), in the order those matches were actually played, joined by a blank
+// line so each match's note reads as its own paragraph. Editing an old match's text later just
+// updates that match's own paragraph in place rather than duplicating it, since this always
+// rebuilds the whole thing fresh from the evaluations themselves — nothing here is tracked
+// incrementally. A "Manual" (no-match) evaluation has no date to place in this history and isn't
+// what Miguel is describing here, so it's left out — maybeSeedGeneralCharacteristics above still
+// covers that matchless case exactly as before. Leaves the profile's own manual text alone when
+// the player has no match with any Characteristics text yet, so typing something directly on a
+// brand-new player's profile (Add Player, or before their first evaluated match) still works.
+function recomputePlayerCharacteristicsFromHistory(playerId){
+  var p = playerById(playerId);
+  if(!p) return;
+  var rows = DB.evaluations.filter(function(e){
+    return e.playerId===playerId && e.evaluationType==="Match" && e.matchId && (e.characteristics||"").trim();
+  }).map(function(e){ return {ev:e, match:matchById(e.matchId)}; }).filter(function(r){ return !!r.match; });
+  if(!rows.length) return;
+  rows.sort(function(a,b){
+    var d = (a.match.date||"").localeCompare(b.match.date||"");
     if(d) return d;
-    return (a.createdAt||"").localeCompare(b.createdAt||"");
+    return (a.ev.createdAt||"").localeCompare(b.ev.createdAt||"");
   });
-  return matchEvals[0];
+  var combined = rows.map(function(r){
+    return spliceAutoText(r.ev.characteristics||"",p.autoCharacteristics||"","");
+  }).filter(function(t){ return t.trim(); }).join("\n\n");
+  if((p.manualCharacteristics||"")!==combined){
+    p.manualCharacteristics = combined;
+    p.characteristics = composeGeneralCharacteristics(p.autoCharacteristics||"",combined);
+    p.updatedAt = nowISO();
+  }
 }
 // The player's most recent "Match" evaluation elsewhere, by that OTHER match's own date (not
 // creation order) — excludes the match passed in. Used only to show a reference asterisk on the
@@ -1902,11 +1928,12 @@ function lastMatchEvaluationElsewhere(playerId,excludeMatchId,field){
   return rows[0].ev;
 }
 // The player's earliest-dated evaluation of ANY type (Match or Manual/standalone) — ties broken by
-// creation order. Unlike firstMatchEvaluation above (used only for the General-Characteristics sync
-// rule), this is what "their very first evaluation" means for display purposes: the Players of
-// Interest mini-window's Description and the Evaluation History detail view both show the auto
-// sentence alongside this one evaluation's own manual text, and just the manual text for every
-// evaluation after it.
+// creation order. This is what "their very first evaluation" means for display purposes: the
+// Players of Interest mini-window's Description and the Evaluation History detail view both show
+// the auto sentence alongside this one evaluation's own manual text, and just the manual text for
+// every evaluation after it. (General Characteristics itself no longer singles out the first
+// match this way — see recomputePlayerCharacteristicsFromHistory above, which folds in every
+// match's own text instead.)
 function firstEverEvaluation(playerId){
   var evs = DB.evaluations.filter(function(e){return e.playerId===playerId;});
   if(!evs.length) return null;
@@ -1957,24 +1984,7 @@ function upsertMatchEvaluation(playerId,matchId,patch){
     DB.evaluations.push(ev);
   }
   if(patch.characteristics!==undefined){
-    var first = firstMatchEvaluation(playerId);
-    if(first && first.id===ev.id){
-      // Editing the characteristics of the player's FIRST evaluated match keeps the profile's
-      // General Characteristics manual text in sync with it — not just seeded once, but kept
-      // matching on every later edit to that same first-match entry. The auto sentence is
-      // recomposed alongside it, never copied from the (pure-manual) match text itself.
-      var p = playerById(playerId);
-      if(p){
-        // Strip a stale auto-sentence prefix here too — the match's own Characteristics box is
-        // meant to be pure manual text, but an older save (before that stripping was fixed) could
-        // have frozen a copy of it in here, which would otherwise double up every time it's synced.
-        p.manualCharacteristics = spliceAutoText(ev.characteristics||"",p.autoCharacteristics||"","");
-        p.characteristics = composeGeneralCharacteristics(p.autoCharacteristics||"",p.manualCharacteristics);
-        p.updatedAt = nowISO();
-      }
-    } else {
-      maybeSeedGeneralCharacteristics(playerId,patch.characteristics);
-    }
+    recomputePlayerCharacteristicsFromHistory(playerId);
   }
   recomputePlayerAttributesFromHistory(playerId);
   updatePlayerCurrentRatings(playerId);
@@ -2010,21 +2020,17 @@ function findPlayerCandidates(name,clubId,nationality,birthYear){
 }
 // Recomputes a player's derived fields from their FULL evaluation history (Match + Manual alike),
 // after that history has changed shape (a merge is the only caller today). General Characteristics
-// stay whatever the earliest-dated evaluation of any type says — same rule as the single-evaluation
-// sync in upsertMatchEvaluation, just replayed over the combined set instead of one at a time.
-// Performance/Potential (updatePlayerCurrentRatings) already read across all evaluation types.
+// are rebuilt the same way as any other save — every "Match" evaluation's own text, in match-date
+// order (recomputePlayerCharacteristicsFromHistory) — now that a merge can bring in matches from
+// both profiles at once. Performance/Potential (updatePlayerCurrentRatings) already read across
+// all evaluation types.
 function recomputePlayerDerivedFields(playerId){
   var p = playerById(playerId);
   if(!p) return;
-  var evs = DB.evaluations.filter(function(e){return e.playerId===playerId;}).slice().sort(function(a,b){
-    var d = (a.date||"").localeCompare(b.date||"");
-    if(d) return d;
-    return (a.createdAt||"").localeCompare(b.createdAt||"");
-  });
-  if(evs.length) p.characteristics = evs[0].characteristics||"";
   updatePlayerCurrentRatings(playerId);
   recomputePlayerAttributesFromHistory(playerId);
   recomputePlayerPositionsFromHistory(playerId);
+  recomputePlayerCharacteristicsFromHistory(playerId);
   p.updatedAt = nowISO();
 }
 // A player added without a name yet ("???", or any placeholder) can later turn out to already be
