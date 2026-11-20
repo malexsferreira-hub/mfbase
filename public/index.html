@@ -1628,9 +1628,15 @@ function playerObservationCount(playerId){
 // their usual escalão) — so the most recent match they were logged in is only a safe default when
 // it was in the SAME escalão as the one they're being added to now. Pass the target match's
 // escalão to scope it that way; omit it only when there's genuinely no escalão to compare against.
-function lastKnownShirtNumber(playerId,ageGroup){
+// Miguel (20/11/2026): "Se os jogadores jogarem na seleção, podem ter numero diferente. Mas quando
+// estão na lineup dos clubes, mantem o numero que corresponde ao clube" — a national-team match and
+// a club match can derive the SAME nominal escalão string (e.g. both "U17"), so the escalão filter
+// above isn't enough on its own; also filter by NT-vs-club context via isNationalTeamCompetition,
+// so a player's NT number never leaks into a club lineup at the "same" escalão, or vice versa.
+function lastKnownShirtNumber(playerId,ageGroup,isNationalTeam){
   var rows = playerMatchRows(playerId).filter(function(r){return r.mp.shirtNumber;});
   if(ageGroup) rows = rows.filter(function(r){return matchAgeGroup(r.match)===ageGroup;});
+  rows = rows.filter(function(r){return isNationalTeamCompetition(r.match.competition)===!!isNationalTeam;});
   return rows.length ? rows[0].mp.shirtNumber : "";
 }
 // Every player who has ever worn a given shirt number in any match — used to surface a suggestion
@@ -3108,11 +3114,11 @@ function playerComboPreview(p){
 // already carries (from Add Player or an earlier match), so a brand-new player with nothing on
 // file yet still leaves every field blank for this match, same as before. Position 2 is the one
 // exception — see the note further down — it's left blank even for a known player.
-function prefillKnownPlayerBrief(nameField,p,ageGroup){
+function prefillKnownPlayerBrief(nameField,p,ageGroup,isNationalTeam){
   var form = nameField.closest("form");
   if(!form) return;
   function fillIfEmpty(el,val){ if(el && !el.value && val) el.value = val; }
-  fillIfEmpty(form.querySelector('input[name="shirtNumber"]'), lastKnownShirtNumber(p.id,ageGroup));
+  fillIfEmpty(form.querySelector('input[name="shirtNumber"]'), lastKnownShirtNumber(p.id,ageGroup,isNationalTeam));
   fillIfEmpty(form.querySelector('input[name="birthYear"]'), p.birthYear);
   // height/positionProfile/strength(Athletic)/estrutura/maturation/levels are <select>s —
   // '[name=...]' (not 'input[name=...]') matches either an <input> or a <select>.
@@ -3239,7 +3245,7 @@ function wirePlayerCombo(id,opts){
     if(item){
       var p = playerById(item.dataset.playerId);
       hidden.value = p.id; text.value = p.name; list.hidden = true;
-      prefillKnownPlayerBrief(text,p,opts.ageGroup);
+      prefillKnownPlayerBrief(text,p,opts.ageGroup,opts.isNationalTeam);
     }
   });
   document.addEventListener("click",function(e){
@@ -3249,7 +3255,9 @@ function wirePlayerCombo(id,opts){
 // Same idea as wirePlayerCombo, but keyed off a shirt number instead of a name — for when the
 // coach knows the number a player has worn before but not their name yet. Picking a suggestion
 // fills in the name-combo fields (hidden playerId + visible name) plus the usual base-info prefill.
-function wireShirtNumberCombo(numId,nameId,clubId,ageGroup){
+// isNationalTeam mirrors wirePlayerCombo's opts.isNationalTeam — needed so the shirt-number prefill
+// doesn't cross NT/club context either (Miguel, 20/11/2026 — see lastKnownShirtNumber's comment).
+function wireShirtNumberCombo(numId,nameId,clubId,ageGroup,isNationalTeam){
   var text = document.getElementById(numId+"_text");
   var list = document.getElementById(numId+"_list");
   if(!text||!list) return;
@@ -3274,7 +3282,7 @@ function wireShirtNumberCombo(numId,nameId,clubId,ageGroup){
       if(nameText) nameText.value = p.name;
       var nameList = document.getElementById(nameId+"_list");
       if(nameList) nameList.hidden = true;
-      prefillKnownPlayerBrief(text,p,ageGroup);
+      prefillKnownPlayerBrief(text,p,ageGroup,isNationalTeam);
     }
   });
   document.addEventListener("click",function(e){
@@ -6531,7 +6539,10 @@ function autoFillKnownLineup(m,clubId){
       if(isStarter){ occupiedStarterSlots[slotIndex]=true; starterCount++; }
       DB.matchPlayers.push({
         id:uid("mp"), matchId:m.id, playerId:p.id, clubId:clubId,
-        shirtNumber:lastKnownShirtNumber(p.id,ageGroup), position:p.firstPosition, position2:p.secondPosition||"", slotIndex:slotIndex,
+        // false: this auto-fill only ever pulls from the real club roster (candidates are filtered to
+        // p.clubId===clubId above), so the number to default to is always the player's CLUB number at
+        // this escalão, never an NT one (Miguel, 20/11/2026 — see lastKnownShirtNumber's comment).
+        shirtNumber:lastKnownShirtNumber(p.id,ageGroup,false), position:p.firstPosition, position2:p.secondPosition||"", slotIndex:slotIndex,
         lineupStatus:isStarter?"Starting XI":"Substitute", matchCharacteristics:"",
         playerOfInterest:false, interestNote:"", interestPriority:"",
         replacedPlayerId:"", subMinute:"", createdAt:nowISO()
@@ -7030,9 +7041,11 @@ function openPitchSlotModal(matchId,clubId,slotIndex,mpId,forceStatus,presetSub)
   // nationality, which the coach judges themselves when picking a result, same as before. The
   // shirt-number prefill, though, IS scoped to this match's own escalão — a player can wear a
   // different number up/down an age group, so only a same-escalão past number is trusted as a
-  // default here.
+  // default here. It's also scoped to NT-vs-club context (isNTMatchForSlot), since a national-team
+  // match and a club match can land on the same nominal escalão string (e.g. both "U17") and a
+  // player's NT number must never be suggested for a club lineup, or vice versa (Miguel, 20/11/2026).
   var slotAgeGroup = mForSlot ? matchAgeGroup(mForSlot) : "";
-  if(!isEdit){ wirePlayerCombo("pitchSlotName",{clubId:clubId,isNationalTeam:isNTMatchForSlot,ageGroup:slotAgeGroup}); wireShirtNumberCombo("pitchSlotNumber","pitchSlotName",clubId,slotAgeGroup); }
+  if(!isEdit){ wirePlayerCombo("pitchSlotName",{clubId:clubId,isNationalTeam:isNTMatchForSlot,ageGroup:slotAgeGroup}); wireShirtNumberCombo("pitchSlotNumber","pitchSlotName",clubId,slotAgeGroup,isNTMatchForSlot); }
   else if(p){ wirePlayerCombo("pitchSlotEditName",{excludeId:p.id,isNationalTeam:isNTMatchForSlot,emptyMessage:"No match",ageGroup:slotAgeGroup}); }
   wireCountryCombo("pitchSlotNat");
   // Position Profile's option list depends on Position 1 — refresh it live as Position 1 changes,
